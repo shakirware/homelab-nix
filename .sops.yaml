@@ -1,0 +1,11 @@
+creation_rules:
+  - path_regex: secrets/env\.yaml$
+    key_groups:
+      - age:
+          - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+
+  - path_regex: secrets/vm-media\.yaml$
+    key_groups:
+      - age:
+          - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age1m44t8p50prjf4pyxjxz0lhyjjwg6d2a4jsxecj4svpuh89q84slq57prrd

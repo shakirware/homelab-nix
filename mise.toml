@@ -1,0 +1,5 @@
+[env]
+_.file = { path = "secrets/env.yaml", redact = true }
+
+[tools]
+opentofu = "1.11.3"

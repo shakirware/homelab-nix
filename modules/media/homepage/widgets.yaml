@@ -1,0 +1,18 @@
+- resources:
+    label: System
+    cpu: true
+    memory: true
+
+- resources:
+    label: Storage
+    expanded: true
+    disk:
+      - /srv/media
+
+- datetime:
+    text_size: xl
+    locale: en-GB
+    format:
+      dateStyle: medium
+      timeStyle: short
+      hourCycle: h23

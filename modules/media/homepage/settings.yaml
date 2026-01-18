@@ -1,0 +1,29 @@
+title: Homelab
+description: Media & automation
+theme: dark
+color: slate
+
+# Makes external links open in a new tab (you already want this)
+target: _blank
+
+# Visual style
+headerStyle: boxed
+iconStyle: theme
+statusStyle: dot
+
+# Quality-of-life
+language: en-GB
+
+layout:
+  Media:
+    style: row
+    columns: 4
+  Automation:
+    style: row
+    columns: 4
+  Downloading:
+    style: row
+    columns: 3
+  Monitoring:
+    style: row
+    columns: 3
