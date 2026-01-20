@@ -1,67 +1,63 @@
 - Media:
     - Jellyfin:
         icon: jellyfin.png
-        href: http://__MEDIA_IP__:8096
-        siteMonitor: http://__MEDIA_IP__:8096/health
+        href: https://__JELLYFIN_HOST__
         description: Media server
     - Jellyseerr:
         icon: jellyseerr.png
-        href: http://__MEDIA_IP__:5055
-        siteMonitor: http://__MEDIA_IP__:5055
+        href: https://__JELLYSEERR_HOST__
         description: Requests & approvals for Jellyfin
     - Jellystat:
         icon: jellystat.png
-        href: http://__MEDIA_IP__:4001
-        siteMonitor: http://__MEDIA_IP__:4001
+        href: https://__JELLYSTAT_HOST__
         description: Playback stats & activity dashboard
     - Tuliprox:
         icon: mdi-television-classic
-        href: http://__MEDIA_IP__:8901/
-        siteMonitor: http://__MEDIA_IP__:8901/
+        href: https://__TULIPROX_HOST__
         description: IPTV proxy
 
 - Automation:
     - Sonarr:
         icon: sonarr.png
-        href: http://__MEDIA_IP__:8989
-        siteMonitor: http://__MEDIA_IP__:8989
+        href: https://__SONARR_HOST__
         description: TV shows automation
     - Radarr:
         icon: radarr.png
-        href: http://__MEDIA_IP__:7878
-        siteMonitor: http://__MEDIA_IP__:7878
+        href: https://__RADARR_HOST__
         description: Movies automation
     - Prowlarr:
         icon: prowlarr.png
-        href: http://__MEDIA_IP__:9696
-        siteMonitor: http://__MEDIA_IP__:9696
+        href: https://__PROWLARR_HOST__
         description: Indexer manager
     - Profilarr:
         icon: mdi-format-list-bulleted
-        href: http://__MEDIA_IP__:6868
-        siteMonitor: http://__MEDIA_IP__:6868
+        href: https://__PROFILARR_HOST__
         description: Profiles/quality automation for Arr apps
+    - Cleanuparr:
+        icon: mdi-broom
+        href: https://__CLEANUPARR_HOST__
+        description: Cleanup for Arr libraries
 
 - Downloading:
     - qBittorrent:
         icon: qbittorrent.png
-        href: http://__MEDIA_IP__:8080
-        siteMonitor: http://__MEDIA_IP__:8080
+        href: https://__QBITTORRENT_HOST__
         description: Downloader UI
 
 - Monitoring:
     - Homepage:
-        icon: nginx.png
-        href: http://__MEDIA_IP__/
-        siteMonitor: http://__MEDIA_IP__/
+        icon: mdi-view-dashboard
+        href: https://__HOMEPAGE_HOST__
         description: This dashboard
+    - AdGuard:
+        icon: mdi-shield-check
+        href: https://__ADGUARD_HOST__
+        description: DNS & ad blocking
     - Proxmox:
         icon: mdi-server
-        href: https://__PROXMOX_IP__:8006
-        siteMonitor: https://__PROXMOX_IP__:8006
+        href: https://__PROXMOX_HOST__:8006
         description: Hypervisor UI
     - Router:
         icon: mdi-router-wireless
-        href: http://__ROUTER_IP__/
-        siteMonitor: http://__ROUTER_IP__/
+        href: http://__ROUTER_HOST__
         description: Gateway admin

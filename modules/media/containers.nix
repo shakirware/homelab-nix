@@ -12,13 +12,16 @@ let
     jellystat = "cyfershepard/jellystat:1.1.7";
     profilarr = "santiagosayshey/profilarr:v1.1.3";
     tuliprox = "ghcr.io/euzu/tuliprox:3.2.0";
+    cleanuparr = "ghcr.io/cleanuparr/cleanuparr:2.5.1";
   };
 
   tz = "Europe/London";
   puid = "1000";
   pgid = "1001";
 
-  lanIp = "0.0.0.0";
+  # Bind application ports to localhost only.
+  # Caddy (80/443) is the only thing exposed to the LAN.
+  lanIp = "127.0.0.1";
 
   jellystatNet = "jellystat-net";
   dbIp = "10.90.0.2";
@@ -35,6 +38,7 @@ in {
     extraOptions =
       [ "--network=${vpnNet}" "--cap-add=NET_ADMIN" "--device=/dev/net/tun" ];
 
+    # Only bound locally; Caddy proxies to these via 127.0.0.1
     ports = [
       "${lanIp}:8080:8080"
       "${lanIp}:6881:6881"
@@ -48,6 +52,7 @@ in {
       VPN_TYPE = "wireguard";
       IPV6 = "off";
 
+      # This is inside the container; keep as-is
       FIREWALL_OUTBOUND_SUBNETS = "192.168.0.0/16";
       FIREWALL_INPUT_PORTS = "8080,9696,6881,8901";
     };
@@ -67,7 +72,11 @@ in {
 
     volumes = [ "/srv/appdata/jellyfin:/config" "/srv/media:/data" ];
 
-    ports = [ "${lanIp}:8096:8096" "${lanIp}:7359:7359/udp" ];
+    ports = [
+      "${lanIp}:8096:8096"
+      # Discovery is UDP; keep local-only (Caddy doesn't need this).
+      "${lanIp}:7359:7359/udp"
+    ];
 
     extraOptions = [ "--device=/dev/dri:/dev/dri" ];
   };
@@ -92,32 +101,38 @@ in {
   virtualisation.oci-containers.containers.sonarr = {
     image = images.sonarr;
     autoStart = true;
+
     environment = {
       PUID = puid;
       PGID = pgid;
       TZ = tz;
     };
+
     volumes = [
       "/srv/appdata/sonarr:/config"
       "/srv/downloads:/downloads"
       "/srv/media:/media"
     ];
+
     ports = [ "${lanIp}:8989:8989" ];
   };
 
   virtualisation.oci-containers.containers.radarr = {
     image = images.radarr;
     autoStart = true;
+
     environment = {
       PUID = puid;
       PGID = pgid;
       TZ = tz;
     };
+
     volumes = [
       "/srv/appdata/radarr:/config"
       "/srv/downloads:/downloads"
       "/srv/media:/media"
     ];
+
     ports = [ "${lanIp}:7878:7878" ];
   };
 
@@ -144,7 +159,9 @@ in {
       TZ = tz;
       PORT = "5055";
     };
+
     volumes = [ "/srv/appdata/jellyseerr:/app/config" ];
+
     ports = [ "${lanIp}:5055:5055" ];
   };
 
@@ -158,6 +175,7 @@ in {
     };
 
     environmentFiles = [ config.sops.templates."jellystat-db.env".path ];
+
     volumes =
       [ "/srv/appdata/jellystat/postgres-data:/var/lib/postgresql/data" ];
 
@@ -177,7 +195,9 @@ in {
     };
 
     environmentFiles = [ config.sops.templates."jellystat.env".path ];
+
     volumes = [ "/srv/appdata/jellystat:/app/backend/backup-data" ];
+
     ports = [ "${lanIp}:4001:3000" ];
 
     extraOptions =
@@ -190,6 +210,7 @@ in {
 
     environment = { TZ = tz; };
     volumes = [ "/srv/appdata/profilarr:/config" ];
+
     ports = [ "${lanIp}:6868:6868" ];
   };
 
@@ -206,11 +227,30 @@ in {
       "/srv/appdata/tuliprox/config/config.yml:/app/config.yml:ro"
       "/srv/appdata/tuliprox/config/source.yml:/app/source.yml:ro"
       "/srv/appdata/tuliprox/config/api-proxy.yml:/app/api-proxy.yml:ro"
-
       "/srv/appdata/tuliprox/data:/data"
       "/srv/appdata/tuliprox/backup:/backup"
       "/srv/appdata/tuliprox/downloads:/downloads"
     ];
+  };
+
+  virtualisation.oci-containers.containers.cleanuparr = {
+    image = images.cleanuparr;
+    autoStart = true;
+
+    environment = {
+      PORT = "11011";
+      PUID = puid;
+      PGID = pgid;
+      TZ = tz;
+    };
+
+    volumes = [
+      "/srv/appdata/cleanuparr:/config"
+      "/srv/appdata/sonarr:/sonarr:ro"
+      "/srv/appdata/radarr:/radarr:ro"
+    ];
+
+    ports = [ "${lanIp}:11011:11011" ];
   };
 
   systemd.services.podman-gluetun = {
@@ -256,6 +296,7 @@ in {
       "podman.service"
     ];
   };
+
   systemd.services.podman-jellyfin.unitConfig.RequiresMountsFor =
     [ "/srv/media" ];
   systemd.services.podman-sonarr.unitConfig.RequiresMountsFor =
@@ -270,7 +311,4 @@ in {
   systemd.services.podman-radarr.after =
     [ "network-online.target" "srv-media.mount" ];
 
-  networking.firewall.allowedTCPPorts =
-    [ 8096 8080 6881 8989 7878 9696 5055 4001 6868 8901 ];
-  networking.firewall.allowedUDPPorts = lib.mkAfter [ 7359 6881 ];
 }

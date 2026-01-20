@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, ... }:
 
 let
   tz = "Europe/London";
@@ -10,6 +10,28 @@ let
   mediaIp = ips.media;
   proxmoxIp = ips.proxmox;
   routerIp = ips.router;
+
+  baseDomain = config.homelab.baseDomain;
+
+  # Hostnames (served via Caddy)
+  homepageHost = "homepage.${baseDomain}";
+  adguardHost = "adguard.${baseDomain}";
+  jellyfinHost = "jellyfin.${baseDomain}";
+  jellyseerrHost = "jellyseerr.${baseDomain}";
+  jellystatHost = "jellystat.${baseDomain}";
+  sonarrHost = "sonarr.${baseDomain}";
+  radarrHost = "radarr.${baseDomain}";
+  profilarrHost = "profilarr.${baseDomain}";
+  cleanuparrHost = "cleanuparr.${baseDomain}";
+  qbittorrentHost = "qbittorrent.${baseDomain}";
+  prowlarrHost = "prowlarr.${baseDomain}";
+  tuliproxHost = "tuliprox.${baseDomain}";
+
+  # Infra hostnames
+  proxmoxHost = "proxmox.${baseDomain}";
+  routerHost = "router.${baseDomain}";
+  storageHost = "storage.${baseDomain}";
+  mediaHost = "media.${baseDomain}";
 
   cfgDir = "/srv/appdata/homepage";
 
@@ -41,8 +63,25 @@ in {
 
       sed \
         -e "s|__MEDIA_IP__|${mediaIp}|g" \
+        -e "s|__ADGUARD_HOST__|${adguardHost}|g" \
         -e "s|__PROXMOX_IP__|${proxmoxIp}|g" \
         -e "s|__ROUTER_IP__|${routerIp}|g" \
+        -e "s|__BASE_DOMAIN__|${baseDomain}|g" \
+        -e "s|__HOMEPAGE_HOST__|${homepageHost}|g" \
+        -e "s|__JELLYFIN_HOST__|${jellyfinHost}|g" \
+        -e "s|__JELLYSEERR_HOST__|${jellyseerrHost}|g" \
+        -e "s|__JELLYSTAT_HOST__|${jellystatHost}|g" \
+        -e "s|__SONARR_HOST__|${sonarrHost}|g" \
+        -e "s|__RADARR_HOST__|${radarrHost}|g" \
+        -e "s|__PROFILARR_HOST__|${profilarrHost}|g" \
+        -e "s|__CLEANUPARR_HOST__|${cleanuparrHost}|g" \
+        -e "s|__QBITTORRENT_HOST__|${qbittorrentHost}|g" \
+        -e "s|__PROWLARR_HOST__|${prowlarrHost}|g" \
+        -e "s|__TULIPROX_HOST__|${tuliproxHost}|g" \
+        -e "s|__PROXMOX_HOST__|${proxmoxHost}|g" \
+        -e "s|__ROUTER_HOST__|${routerHost}|g" \
+        -e "s|__STORAGE_HOST__|${storageHost}|g" \
+        -e "s|__MEDIA_HOST__|${mediaHost}|g" \
         ${servicesTmpl} > ${cfgDir}/services.yaml
 
       chown ${puid}:${pgid} ${cfgDir}/services.yaml
@@ -71,20 +110,4 @@ in {
     after = [ "homepage-config.service" ];
     requires = [ "homepage-config.service" ];
   };
-
-  services.nginx.enable = true;
-  services.nginx.recommendedProxySettings = true;
-
-  services.nginx.virtualHosts."_" = {
-    listen = [{
-      addr = "0.0.0.0";
-      port = 80;
-    }];
-    locations."/" = {
-      proxyPass = "http://127.0.0.1:3000";
-      proxyWebsockets = true;
-    };
-  };
-
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 80 ];
 }

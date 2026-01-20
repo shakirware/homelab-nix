@@ -36,6 +36,7 @@
       commonModules = [
         sops-nix.nixosModules.sops
         ./modules/common/addresses.nix
+        ./modules/common/domains.nix
         ./modules/common/base.nix
         ./modules/common/networking.nix
         ./modules/common/proxmox-hardware.nix

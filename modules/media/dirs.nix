@@ -18,5 +18,6 @@
     "d /srv/appdata/tuliprox/data 2775 shakir media - -"
     "d /srv/appdata/tuliprox/backup 2775 shakir media - -"
     "d /srv/appdata/tuliprox/downloads 2775 shakir media - -"
+    "d /srv/appdata/cleanuparr 2775 shakir media - -"
   ];
 }

@@ -16,3 +16,16 @@
       dateStyle: medium
       timeStyle: short
       hourCycle: h23
+
+- ping:
+    hosts:
+      - host: 192.168.1.2
+        label: vm-gw
+      - host: 192.168.1.120
+        label: vm-media
+      - host: 192.168.1.110
+        label: vm-storage
+      - host: 192.168.1.100
+        label: proxmox
+      - host: 192.168.1.1
+        label: router

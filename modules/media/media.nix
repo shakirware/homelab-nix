@@ -9,5 +9,6 @@
     ./jellystat-net.nix
     ./vpn-net.nix
     ./homepage.nix
+    ./caddy.nix
   ];
 }
