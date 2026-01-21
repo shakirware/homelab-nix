@@ -4,6 +4,12 @@ creation_rules:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
 
+  - path_regex: secrets/vm-gw\.yaml$
+    key_groups:
+      - age:
+          - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age17x3tpqlhj5zetv6xgaevn8c6lmwusrg60wqc9gpvxsxs8e20nfpq0ade2g
+
   - path_regex: secrets/vm-media\.yaml$
     key_groups:
       - age:
