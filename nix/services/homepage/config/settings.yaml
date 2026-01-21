@@ -1,0 +1,33 @@
+title: Homelab
+description: Media & automation
+theme: dark
+color: slate
+
+target: _blank
+
+headerStyle: boxed
+iconStyle: theme
+statusStyle: dot
+
+language: en-GB
+
+layout:
+  Media:
+    icon: mdi-movie-open
+    style: column
+    columns: 4
+
+  Automation:
+    icon: mdi-robot
+    style: column
+    columns: 4
+
+  Downloading:
+    icon: mdi-download
+    style: column
+    columns: 3
+
+  Monitoring:
+    icon: mdi-monitor-dashboard
+    style: column
+    columns: 3
