@@ -32,38 +32,28 @@
       sshOptions = [ "-o" "IdentitiesOnly=yes" ]
         ++ (if sshKeyEnv == "" then [ ] else [ "-i" sshKeyEnv ]);
 
-      # Shared for all hosts
-      commonModules = [
-        sops-nix.nixosModules.sops
-        ./modules/common/addresses.nix
-        ./modules/common/domains.nix
-        ./modules/common/base.nix
-        ./modules/common/networking.nix
-        ./modules/common/proxmox-hardware.nix
-      ];
-
-      mkHost = hostName: extraModules:
+      mkHost = hostName: modulePath:
         nixpkgs.lib.nixosSystem {
           inherit system;
 
           specialArgs = { inherit lab home; };
 
           modules = [
+            sops-nix.nixosModules.sops
             { networking.hostName = hostName; }
-            ./hosts/${hostName}/configuration.nix
-          ] ++ commonModules ++ extraModules;
+            modulePath
+          ];
         };
     in {
       nixosConfigurations = {
-        vm-gw = mkHost "vm-gw" [ ./modules/gw/gw.nix ];
-        vm-storage = mkHost "vm-storage" [ ./modules/storage/storage.nix ];
-        vm-media = mkHost "vm-media" [ ./modules/media/media.nix ];
+        vm-gw = mkHost "vm-gw" ./nix/hosts/vm-gw/default.nix;
+        vm-media = mkHost "vm-media" ./nix/hosts/vm-media/default.nix;
+        vm-storage = mkHost "vm-storage" ./nix/hosts/vm-storage/default.nix;
         vm-sensitive =
-          mkHost "vm-sensitive" [ ./modules/sensitive/sensitive.nix ];
+          mkHost "vm-sensitive" ./nix/hosts/vm-sensitive/default.nix;
       };
 
       packages.${system} = {
-        # Build the Proxmox template image
         proxmox-template = nixos-generators.nixosGenerate {
           system = system;
           format = "proxmox";
@@ -80,8 +70,10 @@
         meta = { nixpkgs = import nixpkgs { system = system; }; };
 
         defaults = { ... }: {
-          imports = [ ({ ... }: { _module.args = { inherit lab home; }; }) ]
-            ++ commonModules;
+          imports = [
+            sops-nix.nixosModules.sops
+            ({ ... }: { _module.args = { inherit lab home; }; })
+          ];
 
           deployment.targetUser = targetUser;
           deployment.sshOptions = sshOptions;
@@ -89,31 +81,35 @@
 
         vm-gw = {
           deployment.targetHost = "vm-gw";
-          imports = [ ./hosts/vm-gw/configuration.nix ./modules/gw/gw.nix ];
+          imports = [
+            { networking.hostName = "vm-gw"; }
+            ./nix/hosts/vm-gw/default.nix
+          ];
         };
 
         vm-media = {
           deployment.targetHost = "vm-media";
-          imports =
-            [ ./hosts/vm-media/configuration.nix ./modules/media/media.nix ];
+          imports = [
+            { networking.hostName = "vm-media"; }
+            ./nix/hosts/vm-media/default.nix
+          ];
         };
 
         vm-storage = {
           deployment.targetHost = "vm-storage";
           imports = [
-            ./hosts/vm-storage/configuration.nix
-            ./modules/storage/storage.nix
+            { networking.hostName = "vm-storage"; }
+            ./nix/hosts/vm-storage/default.nix
           ];
         };
 
         vm-sensitive = {
           deployment.targetHost = "vm-sensitive";
           imports = [
-            ./hosts/vm-sensitive/configuration.nix
-            ./modules/sensitive/sensitive.nix
+            { networking.hostName = "vm-sensitive"; }
+            ./nix/hosts/vm-sensitive/default.nix
           ];
         };
       };
-
     };
 }

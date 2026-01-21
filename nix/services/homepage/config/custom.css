@@ -1,0 +1,87 @@
+:root {
+  --hl-card-radius: 18px;
+  --hl-card-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+  --hl-card-shadow-hover: 0 10px 28px rgba(0, 0, 0, 0.3);
+  --hl-card-border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+body {
+  letter-spacing: 0.2px;
+}
+
+.card,
+.service-card,
+.widget,
+.tile {
+  border-radius: var(--hl-card-radius) !important;
+}
+
+.card,
+.service-card {
+  border: var(--hl-card-border) !important;
+  box-shadow: var(--hl-card-shadow) !important;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
+
+.card:hover,
+.service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--hl-card-shadow-hover) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.service-icon,
+.icon,
+.service-card img {
+  border-radius: 14px !important;
+}
+
+.section-title,
+.group-title,
+h2 {
+  font-weight: 700 !important;
+  letter-spacing: 0.3px;
+}
+
+table,
+.table,
+.widget table {
+  border-collapse: collapse !important;
+}
+
+.widget table td,
+.widget table th,
+table td,
+table th {
+  padding: 8px 10px !important;
+}
+
+hr,
+.divider,
+table tr {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+button,
+.btn,
+input,
+select,
+textarea {
+  border-radius: 14px !important;
+}
+
+a {
+  transition: opacity 120ms ease;
+}
+a:hover {
+  opacity: 0.92;
+}
+
+.status,
+.status-dot,
+.status-indicator {
+  filter: saturate(1.05);
+}

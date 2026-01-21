@@ -1,0 +1,36 @@
+- logo:
+    icon: mdi-server
+
+- greeting:
+    text_size: xl
+    text: Homelab
+
+- resources:
+    label: System
+    cpu: true
+    memory: true
+    uptime: true
+
+- resources:
+    label: Storage
+    expanded: true
+    disk:
+      - /srv/media
+
+- openmeteo:
+    label: London
+    latitude: 52.629285
+    longitude: 1.29849
+    timezone: Europe/London
+    units: metric
+    cache: 5
+    format:
+      maximumFractionDigits: 1
+
+- datetime:
+    text_size: xl
+    locale: en-GB
+    format:
+      dateStyle: medium
+      timeStyle: short
+      hourCycle: h23
