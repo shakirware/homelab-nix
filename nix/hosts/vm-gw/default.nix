@@ -6,12 +6,11 @@ in {
     [ ../../profiles/base ../../profiles/ops ../../services/nfs-client ];
 
   systemd.network.networks."10-lan" = {
-    matchConfig.Name = "ens18";
+    matchConfig.MACAddress = "bc:24:11:b5:da:e2";
     networkConfig = {
       DHCP = "no";
       Address = [ "${ips.gw}/24" ];
       Gateway = ips.router;
-
       DNS = [ ips.gw ];
     };
   };

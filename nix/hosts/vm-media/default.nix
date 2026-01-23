@@ -5,12 +5,11 @@ in {
   imports = [ ../../profiles/base ../../profiles/media ];
 
   systemd.network.networks."10-lan" = {
-    matchConfig.Name = "ens18";
+    matchConfig.MACAddress = "bc:24:11:bb:ac:8b";
     networkConfig = {
       DHCP = "no";
       Address = [ "${ips.media}/24" ];
       Gateway = ips.router;
-
       DNS = [ ips.gw ];
     };
   };

@@ -20,3 +20,6 @@ deploy-gw:
 
 deploy-sensitive:
 	nix run .#colmena -- apply --on vm-sensitive
+
+deploy-apps:
+	nix run .#colmena -- apply --on vm-apps

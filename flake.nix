@@ -51,6 +51,7 @@
         vm-storage = mkHost "vm-storage" ./nix/hosts/vm-storage/default.nix;
         vm-sensitive =
           mkHost "vm-sensitive" ./nix/hosts/vm-sensitive/default.nix;
+        vm-apps = mkHost "vm-apps" ./nix/hosts/vm-apps/default.nix;
       };
 
       packages.${system} = {
@@ -108,6 +109,14 @@
           imports = [
             { networking.hostName = "vm-sensitive"; }
             ./nix/hosts/vm-sensitive/default.nix
+          ];
+        };
+
+        vm-apps = {
+          deployment.targetHost = "vm-apps";
+          imports = [
+            { networking.hostName = "vm-apps"; }
+            ./nix/hosts/vm-apps/default.nix
           ];
         };
       };
