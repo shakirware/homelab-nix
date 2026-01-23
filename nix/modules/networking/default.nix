@@ -16,9 +16,4 @@ in {
 
   networking.nameservers =
     lib.mkDefault (if hasGw then [ ips.gw ] else [ "1.1.1.1" "9.9.9.9" ]);
-
-  systemd.network.networks."10-lan" = lib.mkDefault {
-    matchConfig.Name = "ens18";
-    networkConfig = { DHCP = "yes"; };
-  };
 }
