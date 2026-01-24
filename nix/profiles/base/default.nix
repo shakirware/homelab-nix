@@ -32,6 +32,8 @@
   time.timeZone = "Europe/London";
   i18n.defaultLocale = "en_GB.UTF-8";
 
+  homelab.baseDomain = lib.mkDefault "shakr.dev";
+
   services.openssh.enable = true;
   services.openssh.openFirewall = true;
   services.openssh.settings = {

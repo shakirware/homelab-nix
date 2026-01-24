@@ -63,6 +63,7 @@ in {
       install -m 0664 -o ${puid} -g ${pgid} ${widgetsYaml}  ${cfgDir}/widgets.yaml
 
       sed \
+        -e "s|__GW_IP__|${ips.gw}|g" \
         -e "s|__MEDIA_IP__|${mediaIp}|g" \
         -e "s|__PROXMOX_IP__|${proxmoxIp}|g" \
         -e "s|__ROUTER_IP__|${routerIp}|g" \

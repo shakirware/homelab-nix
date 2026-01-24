@@ -1,13 +1,12 @@
 - Media:
     - Jellyfin:
         icon: mdi-jellyfish
-        href: http://__JELLYFIN_HOST__
+        href: https://__JELLYFIN_HOST__
         description: Media server
-        ping: __JELLYFIN_HOST__
-        siteMonitor: http://__JELLYFIN_HOST__
+        siteMonitor: https://__JELLYFIN_HOST__
         widget:
           type: jellyfin
-          url: http://__JELLYFIN_HOST__
+          url: http://__MEDIA_IP__:8096
           key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
           showEpisodeNumber: true
           enableNowPlaying: true
@@ -15,13 +14,12 @@
 
     - Jellyseerr:
         icon: mdi-movie-search
-        href: http://__JELLYSEERR_HOST__
+        href: https://__JELLYSEERR_HOST__
         description: Requests & approvals for Jellyfin
-        ping: __JELLYSEERR_HOST__
-        siteMonitor: http://__JELLYSEERR_HOST__
+        siteMonitor: https://__JELLYSEERR_HOST__
         widget:
           type: jellyseerr
-          url: http://__JELLYSEERR_HOST__
+          url: http://__MEDIA_IP__:5055
           key: {{HOMEPAGE_VAR_JELLYSEERR_KEY}}
           fields: ["pending", "approved", "available", "issues"]
           highlight:
@@ -50,13 +48,12 @@
 
     - Jellystat:
         icon: mdi-chart-areaspline
-        href: http://__JELLYSTAT_HOST__
+        href: https://__JELLYSTAT_HOST__
         description: Playback stats & activity dashboard
-        ping: __JELLYSTAT_HOST__
-        siteMonitor: http://__JELLYSTAT_HOST__
+        siteMonitor: https://__JELLYSTAT_HOST__
         widget:
           type: jellystat
-          url: http://__JELLYSTAT_HOST__
+          url: http://__MEDIA_IP__:4001
           key: {{HOMEPAGE_VAR_JELLYSTAT_KEY}}
           days: 30
           fields: ["movies", "episodes", "other"]
@@ -64,13 +61,12 @@
 - Automation:
     - Sonarr:
         icon: mdi-television-classic
-        href: http://__SONARR_HOST__
+        href: https://__SONARR_HOST__
         description: TV shows automation
-        ping: __SONARR_HOST__
-        siteMonitor: http://__SONARR_HOST__
+        siteMonitor: https://__SONARR_HOST__
         widget:
           type: sonarr
-          url: http://__SONARR_HOST__
+          url: http://__MEDIA_IP__:8989
           key: {{HOMEPAGE_VAR_SONARR_KEY}}
           enableQueue: false
           fields: ["wanted", "queued", "series"]
@@ -97,13 +93,12 @@
 
     - Radarr:
         icon: mdi-movie-open
-        href: http://__RADARR_HOST__
+        href: https://__RADARR_HOST__
         description: Movies automation
-        ping: __RADARR_HOST__
-        siteMonitor: http://__RADARR_HOST__
+        siteMonitor: https://__RADARR_HOST__
         widget:
           type: radarr
-          url: http://__RADARR_HOST__
+          url: http://__MEDIA_IP__:7878
           key: {{HOMEPAGE_VAR_RADARR_KEY}}
           enableQueue: true
           fields: ["wanted", "missing", "queued", "movies"]
@@ -130,13 +125,12 @@
 
     - Prowlarr:
         icon: mdi-magnify-scan
-        href: http://__PROWLARR_HOST__
+        href: https://__PROWLARR_HOST__
         description: Indexer manager
-        ping: __PROWLARR_HOST__
-        siteMonitor: http://__PROWLARR_HOST__
+        siteMonitor: https://__PROWLARR_HOST__
         widget:
           type: prowlarr
-          url: http://__PROWLARR_HOST__
+          url: http://__MEDIA_IP__:9696
           key: {{HOMEPAGE_VAR_PROWLARR_KEY}}
           fields: ["numberOfQueries", "numberOfFailQueries", "numberOfGrabs", "numberOfFailGrabs"]
           highlight:
@@ -165,21 +159,19 @@
 
     - Profilarr:
         icon: mdi-format-list-bulleted
-        href: http://__PROFILARR_HOST__
+        href: https://__PROFILARR_HOST__
         description: Profiles/quality automation for Arr apps
-        ping: __PROFILARR_HOST__
-        siteMonitor: http://__PROFILARR_HOST__
+        siteMonitor: https://__PROFILARR_HOST__
 
 - Downloading:
     - qBittorrent:
         icon: mdi-download-network
-        href: http://__QBITTORRENT_HOST__
+        href: https://__QBITTORRENT_HOST__
         description: Downloader UI
-        ping: __QBITTORRENT_HOST__
-        siteMonitor: http://__QBITTORRENT_HOST__
+        siteMonitor: https://__QBITTORRENT_HOST__
         widget:
           type: qbittorrent
-          url: http://__QBITTORRENT_HOST__
+          url: http://__MEDIA_IP__:8080
           username: {{HOMEPAGE_VAR_QBITTORRENT_USER}}
           password: {{HOMEPAGE_VAR_QBITTORRENT_PASS}}
           fields: ["download", "upload", "seed", "leech"]
@@ -198,20 +190,18 @@
 - Monitoring:
     - Homepage:
         icon: mdi-view-dashboard
-        href: http://__HOMEPAGE_HOST__
+        href: https://__HOMEPAGE_HOST__
         description: This dashboard
-        ping: __HOMEPAGE_HOST__
-        siteMonitor: http://__HOMEPAGE_HOST__
+        siteMonitor: https://__HOMEPAGE_HOST__
 
     - AdGuard:
         icon: mdi-shield-check
-        href: http://__ADGUARD_HOST__
+        href: https://__ADGUARD_HOST__
         description: DNS & ad blocking
-        ping: __ADGUARD_HOST__
-        siteMonitor: http://__ADGUARD_HOST__
+        siteMonitor: https://__ADGUARD_HOST__
         widget:
           type: adguard
-          url: http://__ADGUARD_HOST__
+          url: http://__GW_IP__:3000
           username: {{HOMEPAGE_VAR_ADGUARD_USER}}
           password: {{HOMEPAGE_VAR_ADGUARD_PASS}}
           fields: ["queries", "blocked", "filtered", "latency"]
@@ -230,12 +220,12 @@
 
     - Proxmox:
         icon: mdi-server
-        href: https://__PROXMOX_HOST__:8006
+        href: https://__PROXMOX_HOST__
         description: Hypervisor UI
-        ping: __PROXMOX_HOST__
+        siteMonitor: https://__PROXMOX_HOST__
         widget:
           type: proxmox
-          url: https://__PROXMOX_HOST__:8006
+          url: https:__PROXMOX_IP__:8006
           username: {{HOMEPAGE_VAR_PROXMOX_TOKEN}}
           password: {{HOMEPAGE_VAR_PROXMOX_SECRET}}
           node: pve
@@ -244,5 +234,4 @@
         icon: mdi-router-wireless
         href: http://__ROUTER_HOST__
         description: Gateway admin
-        ping: __ROUTER_HOST__
         siteMonitor: http://__ROUTER_HOST__
