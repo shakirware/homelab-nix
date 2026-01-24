@@ -12,4 +12,10 @@ in {
       DNS = [ ips.gw ];
     };
   };
+
+  sops = {
+    defaultSopsFile = ../../../secrets/vm-apps.yaml;
+    defaultSopsFormat = "yaml";
+    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+  };
 }

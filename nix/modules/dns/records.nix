@@ -10,10 +10,11 @@ in {
   config.homelab.domains = lib.mkDefault ({
     # Infra
     "router.${base}" = ips.router;
-    "proxmox.${base}" = ips.proxmox;
+    "proxmox.${base}" = ips.gw;
     "gw.${base}" = ips.gw;
     "storage.${base}" = ips.storage;
     "media.${base}" = ips.media;
+    "apps.${base}" = ips.apps;
 
     # Web hostnames
     "adguard.${base}" = ips.gw;
@@ -31,6 +32,9 @@ in {
     "qbittorrent.${base}" = ips.gw;
 
     "iptv.${base}" = ips.gw;
+
+    # Obsidian LiveSync (CouchDB behind Caddy)
+    "obsidian-sync.${base}" = ips.gw;
   } // lib.optionalAttrs hasSensitive { "sensitive.${base}" = ips.sensitive; });
 
   config.homelab.webHosts = lib.mkDefault ([
@@ -44,8 +48,9 @@ in {
       upstream = "127.0.0.1:3001";
     }
     {
-      host = "uptime.${base}";
-      upstream = "127.0.0.1:3002";
+      host = "proxmox.${base}";
+      upstream = "https://${ips.proxmox}:8006";
+      upstreamTlsInsecure = true;
     }
 
     # Media on vm-media
@@ -87,6 +92,12 @@ in {
     {
       host = "profilarr.${base}";
       upstream = "${ips.media}:6868";
+    }
+
+    # Obsidian LiveSync (CouchDB) on vm-apps
+    {
+      host = "obsidian-sync.${base}";
+      upstream = "${ips.apps}:5984";
     }
   ]);
 }

@@ -18,11 +18,23 @@
       options = {
         host = lib.mkOption {
           type = lib.types.str;
-          description = "Hostname to serve ";
+          description = "Hostname to serve";
         };
         upstream = lib.mkOption {
           type = lib.types.str;
           description = "Upstream address";
+        };
+        corsAllowOrigin = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description =
+            "If set, Caddy will handle CORS + OPTIONS preflight for this vhost.";
+        };
+        upstreamTlsInsecure = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description =
+            "Skip TLS verification when proxying to an HTTPS upstream.";
         };
       };
     });
