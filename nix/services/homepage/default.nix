@@ -13,7 +13,9 @@ let
   ips = config.homelab.ips;
   baseDomain = config.homelab.baseDomain;
 
+  gwIp = ips.gw;
   mediaIp = ips.media;
+  appsIp = ips.apps;
   proxmoxIp = ips.proxmox;
   routerIp = ips.router;
 
@@ -34,6 +36,8 @@ let
   routerHost = "router.${baseDomain}";
   storageHost = "storage.${baseDomain}";
   mediaHost = "media.${baseDomain}";
+
+  obsidianSyncHost = "obsidian-sync.${baseDomain}";
 
   settingsYaml = ./config/settings.yaml;
   widgetsYaml = ./config/widgets.yaml;
@@ -63,8 +67,9 @@ in {
       install -m 0664 -o ${puid} -g ${pgid} ${widgetsYaml}  ${cfgDir}/widgets.yaml
 
       sed \
-        -e "s|__GW_IP__|${ips.gw}|g" \
+        -e "s|__GW_IP__|${gwIp}|g" \
         -e "s|__MEDIA_IP__|${mediaIp}|g" \
+        -e "s|__APPS_IP__|${appsIp}|g" \
         -e "s|__PROXMOX_IP__|${proxmoxIp}|g" \
         -e "s|__ROUTER_IP__|${routerIp}|g" \
         -e "s|__BASE_DOMAIN__|${baseDomain}|g" \
@@ -84,6 +89,7 @@ in {
         -e "s|__STORAGE_HOST__|${storageHost}|g" \
         -e "s|__MEDIA_HOST__|${mediaHost}|g" \
         -e "s|__PROFILARR_HOST__|${profilarrHost}|g" \
+        -e "s|__OBSIDIAN_SYNC_HOST__|${obsidianSyncHost}|g" \
         ${servicesTmpl} > ${cfgDir}/services.yaml
 
       chown ${puid}:${pgid} ${cfgDir}/services.yaml
@@ -121,5 +127,4 @@ in {
     requires = [ "homepage-config.service" "srv-media.mount" ];
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
-
 }

@@ -31,4 +31,8 @@ in {
     POSTGRES_PASSWORD=${config.sops.placeholder."jellystat/postgres_password"}
     JWT_SECRET=${config.sops.placeholder."jellystat/jwt_secret"}
   '';
+
+  homelab.secrets.envTemplates."iptv-proxy" = {
+    env = { M3U_URL_1 = "iptv/m3u_url_1"; };
+  };
 }

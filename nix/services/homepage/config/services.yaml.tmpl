@@ -1,9 +1,9 @@
 - Media:
     - Jellyfin:
         icon: mdi-jellyfish
-        href: https://__JELLYFIN_HOST__
+        href: http://__MEDIA_IP__:8096
         description: Media server
-        siteMonitor: https://__JELLYFIN_HOST__
+        siteMonitor: http://__MEDIA_IP__:8096
         widget:
           type: jellyfin
           url: http://__MEDIA_IP__:8096
@@ -14,9 +14,9 @@
 
     - Jellyseerr:
         icon: mdi-movie-search
-        href: https://__JELLYSEERR_HOST__
+        href: http://__MEDIA_IP__:5055
         description: Requests & approvals for Jellyfin
-        siteMonitor: https://__JELLYSEERR_HOST__
+        siteMonitor: http://__MEDIA_IP__:5055
         widget:
           type: jellyseerr
           url: http://__MEDIA_IP__:5055
@@ -48,9 +48,9 @@
 
     - Jellystat:
         icon: mdi-chart-areaspline
-        href: https://__JELLYSTAT_HOST__
+        href: http://__MEDIA_IP__:4001
         description: Playback stats & activity dashboard
-        siteMonitor: https://__JELLYSTAT_HOST__
+        siteMonitor: http://__MEDIA_IP__:4001
         widget:
           type: jellystat
           url: http://__MEDIA_IP__:4001
@@ -61,9 +61,9 @@
 - Automation:
     - Sonarr:
         icon: mdi-television-classic
-        href: https://__SONARR_HOST__
+        href: http://__MEDIA_IP__:8989
         description: TV shows automation
-        siteMonitor: https://__SONARR_HOST__
+        siteMonitor: http://__MEDIA_IP__:8989
         widget:
           type: sonarr
           url: http://__MEDIA_IP__:8989
@@ -93,9 +93,9 @@
 
     - Radarr:
         icon: mdi-movie-open
-        href: https://__RADARR_HOST__
+        href: http://__MEDIA_IP__:7878
         description: Movies automation
-        siteMonitor: https://__RADARR_HOST__
+        siteMonitor: http://__MEDIA_IP__:7878
         widget:
           type: radarr
           url: http://__MEDIA_IP__:7878
@@ -125,9 +125,9 @@
 
     - Prowlarr:
         icon: mdi-magnify-scan
-        href: https://__PROWLARR_HOST__
+        href: http://__MEDIA_IP__:9696
         description: Indexer manager
-        siteMonitor: https://__PROWLARR_HOST__
+        siteMonitor: http://__MEDIA_IP__:9696
         widget:
           type: prowlarr
           url: http://__MEDIA_IP__:9696
@@ -159,16 +159,16 @@
 
     - Profilarr:
         icon: mdi-format-list-bulleted
-        href: https://__PROFILARR_HOST__
+        href: http://__MEDIA_IP__:6868
         description: Profiles/quality automation for Arr apps
-        siteMonitor: https://__PROFILARR_HOST__
+        siteMonitor: http://__MEDIA_IP__:6868
 
 - Downloading:
     - qBittorrent:
         icon: mdi-download-network
-        href: https://__QBITTORRENT_HOST__
+        href: http://__MEDIA_IP__:8080
         description: Downloader UI
-        siteMonitor: https://__QBITTORRENT_HOST__
+        siteMonitor: http://__MEDIA_IP__:8080
         widget:
           type: qbittorrent
           url: http://__MEDIA_IP__:8080
@@ -196,9 +196,9 @@
 
     - AdGuard:
         icon: mdi-shield-check
-        href: https://__ADGUARD_HOST__
+        href: http://__GW_IP__:3000
         description: DNS & ad blocking
-        siteMonitor: https://__ADGUARD_HOST__
+        siteMonitor: http://__GW_IP__:3000
         widget:
           type: adguard
           url: http://__GW_IP__:3000
@@ -220,18 +220,24 @@
 
     - Proxmox:
         icon: mdi-server
-        href: https://__PROXMOX_HOST__
+        href: https://__PROXMOX_IP__:8006
         description: Hypervisor UI
-        siteMonitor: https://__PROXMOX_HOST__
+        siteMonitor: https://__PROXMOX_IP__:8006
         widget:
           type: proxmox
-          url: https:__PROXMOX_IP__:8006
+          url: https://__PROXMOX_IP__:8006
           username: {{HOMEPAGE_VAR_PROXMOX_TOKEN}}
           password: {{HOMEPAGE_VAR_PROXMOX_SECRET}}
           node: pve
 
+    - Obsidian Sync (CouchDB):
+        icon: mdi-notebook
+        href: https://__OBSIDIAN_SYNC_HOST__/_utils/
+        description: CouchDB Fauxton UI
+        siteMonitor: http://__APPS_IP__:5984
+
     - Router:
         icon: mdi-router-wireless
-        href: http://__ROUTER_HOST__
+        href: http://__ROUTER_IP__
         description: Gateway admin
-        siteMonitor: http://__ROUTER_HOST__
+        siteMonitor: http://__ROUTER_IP__
