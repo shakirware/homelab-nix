@@ -6,10 +6,9 @@
     text: Homelab
 
 - resources:
-    label: System
+    label: Media Server
     cpu: true
     memory: true
-    uptime: true
 
 - resources:
     label: Storage
@@ -34,3 +33,16 @@
       dateStyle: medium
       timeStyle: short
       hourCycle: h23
+
+- glances:
+    label: Proxmox Host
+    href: https://__PROXMOX_HOST__
+    url: http://__PROXMOX_IP__:61208
+    version: 4
+    cpu: true
+    mem: true
+    uptime: true
+    cputemp: true
+    disk:
+      - /
+    expanded: true
