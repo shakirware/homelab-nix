@@ -31,3 +31,8 @@ layout:
     icon: mdi-monitor-dashboard
     style: column
     columns: 3
+
+  Personal:
+    icon: mdi-account
+    style: column
+    columns: 3

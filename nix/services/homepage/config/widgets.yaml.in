@@ -36,8 +36,8 @@
 
 - glances:
     label: Proxmox Host
-    href: https://__PROXMOX_HOST__
-    url: http://__PROXMOX_IP__:61208
+    href: https://@PROXMOX_HOST@
+    url: http://@PROXMOX_IP@:61208
     version: 4
     cpu: true
     mem: true
