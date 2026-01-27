@@ -2,7 +2,7 @@
 
 let ips = config.homelab.ips;
 in {
-  imports = [ ../../profiles/base ];
+  imports = [ ../../profiles/base ../../profiles/sensitive ];
 
   systemd.network.networks."10-lan" = {
     matchConfig.MACAddress = "bc:24:11:6d:92:b4";

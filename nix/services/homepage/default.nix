@@ -36,12 +36,60 @@ let
   routerHost = "router.${baseDomain}";
   storageHost = "storage.${baseDomain}";
   mediaHost = "media.${baseDomain}";
-
   obsidianSyncHost = "obsidian-sync.${baseDomain}";
+  actualHost = "actual.${baseDomain}";
 
+  # settings.yaml: copied as-is (no placeholders)
   settingsYaml = ./config/settings.yaml;
-  widgetsYaml = ./config/widgets.yaml;
-  servicesTmpl = ./config/services.yaml.tmpl;
+
+  # Templates: MUST use @VARS@ placeholders
+  widgetsTpl = ./config/widgets.yaml.in;
+  servicesTpl = ./config/services.yaml.in;
+
+  # Single source of truth for substitutions (safe if template doesn’t use all keys)
+  vars = {
+    GW_IP = gwIp;
+    MEDIA_IP = mediaIp;
+    APPS_IP = appsIp;
+    PROXMOX_IP = proxmoxIp;
+    ROUTER_IP = routerIp;
+
+    BASE_DOMAIN = baseDomain;
+
+    HOMEPAGE_HOST = homepageHost;
+    ADGUARD_HOST = adguardHost;
+    UPTIME_HOST = uptimeHost;
+
+    JELLYFIN_HOST = jellyfinHost;
+    JELLYSEERR_HOST = jellyseerrHost;
+    JELLYSTAT_HOST = jellystatHost;
+
+    SONARR_HOST = sonarrHost;
+    RADARR_HOST = radarrHost;
+    PROWLARR_HOST = prowlarrHost;
+    QBITTORRENT_HOST = qbittorrentHost;
+    IPTV_HOST = iptvHost;
+    PROFILARR_HOST = profilarrHost;
+
+    PROXMOX_HOST = proxmoxHost;
+    ROUTER_HOST = routerHost;
+    STORAGE_HOST = storageHost;
+    MEDIA_HOST = mediaHost;
+
+    OBSIDIAN_SYNC_HOST = obsidianSyncHost;
+    ACTUAL_HOST = actualHost;
+  };
+
+  keys = builtins.attrNames vars;
+  placeholders = map (k: "@${k}@") keys;
+  values = map (k: vars.${k}) keys;
+
+  render = src: outName:
+    pkgs.writeText outName
+    (lib.replaceStrings placeholders values (builtins.readFile src));
+
+  widgetsRendered = render widgetsTpl "widgets.yaml";
+  servicesRendered = render servicesTpl "services.yaml";
 in {
   systemd.tmpfiles.rules =
     [ "d ${cfgDir} 2775 ${config.homelab.ids.user} media - -" ];
@@ -56,76 +104,19 @@ in {
       RemainAfterExit = true;
     };
 
-    # coreutils = install/chown/chmod, gnused = sed
-    path = [ pkgs.coreutils pkgs.gnused ];
+    path = [ pkgs.coreutils ];
 
     script = ''
       set -euo pipefail
 
       install -d -m 2775 -o ${config.homelab.ids.user} -g media ${cfgDir}
 
-      # settings.yaml currently has no placeholders
+      # settings.yaml has no placeholders
       install -m 0664 -o ${puid} -g ${pgid} ${settingsYaml} ${cfgDir}/settings.yaml
 
-      # Render widgets.yaml (it DOES contain placeholders like __PROXMOX_IP__)
-      sed \
-        -e "s|__GW_IP__|${gwIp}|g" \
-        -e "s|__MEDIA_IP__|${mediaIp}|g" \
-        -e "s|__APPS_IP__|${appsIp}|g" \
-        -e "s|__PROXMOX_IP__|${proxmoxIp}|g" \
-        -e "s|__ROUTER_IP__|${routerIp}|g" \
-        -e "s|__BASE_DOMAIN__|${baseDomain}|g" \
-        -e "s|__HOMEPAGE_HOST__|${homepageHost}|g" \
-        -e "s|__ADGUARD_HOST__|${adguardHost}|g" \
-        -e "s|__UPTIME_HOST__|${uptimeHost}|g" \
-        -e "s|__JELLYFIN_HOST__|${jellyfinHost}|g" \
-        -e "s|__JELLYSEERR_HOST__|${jellyseerrHost}|g" \
-        -e "s|__JELLYSTAT_HOST__|${jellystatHost}|g" \
-        -e "s|__SONARR_HOST__|${sonarrHost}|g" \
-        -e "s|__RADARR_HOST__|${radarrHost}|g" \
-        -e "s|__PROWLARR_HOST__|${prowlarrHost}|g" \
-        -e "s|__QBITTORRENT_HOST__|${qbittorrentHost}|g" \
-        -e "s|__IPTV_HOST__|${iptvHost}|g" \
-        -e "s|__PROXMOX_HOST__|${proxmoxHost}|g" \
-        -e "s|__ROUTER_HOST__|${routerHost}|g" \
-        -e "s|__STORAGE_HOST__|${storageHost}|g" \
-        -e "s|__MEDIA_HOST__|${mediaHost}|g" \
-        -e "s|__PROFILARR_HOST__|${profilarrHost}|g" \
-        -e "s|__OBSIDIAN_SYNC_HOST__|${obsidianSyncHost}|g" \
-        ${widgetsYaml} > ${cfgDir}/widgets.yaml
-
-      chown ${puid}:${pgid} ${cfgDir}/widgets.yaml
-      chmod 0664 ${cfgDir}/widgets.yaml
-
-      # Render services.yaml template (already templated)
-      sed \
-        -e "s|__GW_IP__|${gwIp}|g" \
-        -e "s|__MEDIA_IP__|${mediaIp}|g" \
-        -e "s|__APPS_IP__|${appsIp}|g" \
-        -e "s|__PROXMOX_IP__|${proxmoxIp}|g" \
-        -e "s|__ROUTER_IP__|${routerIp}|g" \
-        -e "s|__BASE_DOMAIN__|${baseDomain}|g" \
-        -e "s|__HOMEPAGE_HOST__|${homepageHost}|g" \
-        -e "s|__ADGUARD_HOST__|${adguardHost}|g" \
-        -e "s|__UPTIME_HOST__|${uptimeHost}|g" \
-        -e "s|__JELLYFIN_HOST__|${jellyfinHost}|g" \
-        -e "s|__JELLYSEERR_HOST__|${jellyseerrHost}|g" \
-        -e "s|__JELLYSTAT_HOST__|${jellystatHost}|g" \
-        -e "s|__SONARR_HOST__|${sonarrHost}|g" \
-        -e "s|__RADARR_HOST__|${radarrHost}|g" \
-        -e "s|__PROWLARR_HOST__|${prowlarrHost}|g" \
-        -e "s|__QBITTORRENT_HOST__|${qbittorrentHost}|g" \
-        -e "s|__IPTV_HOST__|${iptvHost}|g" \
-        -e "s|__PROXMOX_HOST__|${proxmoxHost}|g" \
-        -e "s|__ROUTER_HOST__|${routerHost}|g" \
-        -e "s|__STORAGE_HOST__|${storageHost}|g" \
-        -e "s|__MEDIA_HOST__|${mediaHost}|g" \
-        -e "s|__PROFILARR_HOST__|${profilarrHost}|g" \
-        -e "s|__OBSIDIAN_SYNC_HOST__|${obsidianSyncHost}|g" \
-        ${servicesTmpl} > ${cfgDir}/services.yaml
-
-      chown ${puid}:${pgid} ${cfgDir}/services.yaml
-      chmod 0664 ${cfgDir}/services.yaml
+      # rendered templates
+      install -m 0664 -o ${puid} -g ${pgid} ${widgetsRendered}  ${cfgDir}/widgets.yaml
+      install -m 0664 -o ${puid} -g ${pgid} ${servicesRendered} ${cfgDir}/services.yaml
     '';
   };
 

@@ -1,12 +1,12 @@
 - Media:
     - Jellyfin:
         icon: mdi-jellyfish
-        href: https://__JELLYFIN_HOST__
+        href: https://@JELLYFIN_HOST@
         description: Media server
-        siteMonitor: https://__JELLYFIN_HOST__
+        siteMonitor: https://@JELLYFIN_HOST@
         widget:
           type: jellyfin
-          url: http://__MEDIA_IP__:8096
+          url: http://@MEDIA_IP@:8096
           key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
           showEpisodeNumber: true
           enableNowPlaying: true
@@ -14,12 +14,12 @@
 
     - Jellyseerr:
         icon: mdi-movie-search
-        href: https://__JELLYSEERR_HOST__
+        href: https://@JELLYSEERR_HOST@
         description: Requests & approvals for Jellyfin
-        siteMonitor: https://__JELLYSEERR_HOST__
+        siteMonitor: https://@JELLYSEERR_HOST@
         widget:
           type: jellyseerr
-          url: http://__MEDIA_IP__:5055
+          url: http://@MEDIA_IP@:5055
           key: {{HOMEPAGE_VAR_JELLYSEERR_KEY}}
           fields: ["pending", "approved", "available", "issues"]
           highlight:
@@ -48,12 +48,12 @@
 
     - Jellystat:
         icon: mdi-chart-areaspline
-        href: https://__JELLYSTAT_HOST__
+        href: https://@JELLYSTAT_HOST@
         description: Playback stats & activity dashboard
-        siteMonitor: https://__JELLYSTAT_HOST__
+        siteMonitor: https://@JELLYSTAT_HOST@
         widget:
           type: jellystat
-          url: http://__MEDIA_IP__:4001
+          url: http://@MEDIA_IP@:4001
           key: {{HOMEPAGE_VAR_JELLYSTAT_KEY}}
           days: 30
           fields: ["movies", "episodes", "other"]
@@ -61,12 +61,12 @@
 - Automation:
     - Sonarr:
         icon: mdi-television-classic
-        href: https://__SONARR_HOST__
+        href: https://@SONARR_HOST@
         description: TV shows automation
-        siteMonitor: https://__SONARR_HOST__
+        siteMonitor: https://@SONARR_HOST@
         widget:
           type: sonarr
-          url: http://__MEDIA_IP__:8989
+          url: http://@MEDIA_IP@:8989
           key: {{HOMEPAGE_VAR_SONARR_KEY}}
           enableQueue: false
           fields: ["wanted", "queued", "series"]
@@ -93,12 +93,12 @@
 
     - Radarr:
         icon: mdi-movie-open
-        href: https://__RADARR_HOST__
+        href: https://@RADARR_HOST@
         description: Movies automation
-        siteMonitor: https://__RADARR_HOST__
+        siteMonitor: https://@RADARR_HOST@
         widget:
           type: radarr
-          url: http://__MEDIA_IP__:7878
+          url: http://@MEDIA_IP@:7878
           key: {{HOMEPAGE_VAR_RADARR_KEY}}
           enableQueue: true
           fields: ["wanted", "missing", "queued", "movies"]
@@ -125,12 +125,12 @@
 
     - Prowlarr:
         icon: mdi-magnify-scan
-        href: https://__PROWLARR_HOST__
+        href: https://@PROWLARR_HOST@
         description: Indexer manager
-        siteMonitor: https://__PROWLARR_HOST__
+        siteMonitor: https://@PROWLARR_HOST@
         widget:
           type: prowlarr
-          url: http://__MEDIA_IP__:9696
+          url: http://@MEDIA_IP@:9696
           key: {{HOMEPAGE_VAR_PROWLARR_KEY}}
           fields: ["numberOfQueries", "numberOfFailQueries", "numberOfGrabs", "numberOfFailGrabs"]
           highlight:
@@ -159,19 +159,19 @@
 
     - Profilarr:
         icon: mdi-format-list-bulleted
-        href: https://__PROFILARR_HOST__
+        href: https://@PROFILARR_HOST@
         description: Profiles/quality automation for Arr apps
-        siteMonitor: https://__PROFILARR_HOST__
+        siteMonitor: https://@PROFILARR_HOST@
 
 - Downloading:
     - qBittorrent:
         icon: mdi-download-network
-        href: https://__QBITTORRENT_HOST__
+        href: https://@QBITTORRENT_HOST@
         description: Downloader UI
-        siteMonitor: https://__QBITTORRENT_HOST__
+        siteMonitor: https://@QBITTORRENT_HOST@
         widget:
           type: qbittorrent
-          url: http://__MEDIA_IP__:8080
+          url: http://@MEDIA_IP@:8080
           username: {{HOMEPAGE_VAR_QBITTORRENT_USER}}
           password: {{HOMEPAGE_VAR_QBITTORRENT_PASS}}
           fields: ["download", "upload", "seed", "leech"]
@@ -190,18 +190,18 @@
 - Monitoring:
     - Homepage:
         icon: mdi-view-dashboard
-        href: https://__HOMEPAGE_HOST__
+        href: https://@HOMEPAGE_HOST@
         description: This dashboard
-        siteMonitor: https://__HOMEPAGE_HOST__
+        siteMonitor: https://@HOMEPAGE_HOST@
 
     - AdGuard:
         icon: mdi-shield-check
-        href: https://__ADGUARD_HOST__
+        href: https://@ADGUARD_HOST@
         description: DNS & ad blocking
-        siteMonitor: https://__ADGUARD_HOST__
+        siteMonitor: https://@ADGUARD_HOST@
         widget:
           type: adguard
-          url: http://__GW_IP__:3000
+          url: http://@GW_IP@:3000
           username: {{HOMEPAGE_VAR_ADGUARD_USER}}
           password: {{HOMEPAGE_VAR_ADGUARD_PASS}}
           fields: ["queries", "blocked", "filtered", "latency"]
@@ -220,25 +220,31 @@
 
     - Proxmox:
         icon: mdi-server
-        href: https://__PROXMOX_HOST__
+        href: https://@PROXMOX_HOST@
         description: Hypervisor UI
-        siteMonitor: https://__PROXMOX_HOST__
+        siteMonitor: https://@PROXMOX_HOST@
         widget:
           type: proxmox
-          # Keep API direct to avoid proxy/cert weirdness
-          url: https://__PROXMOX_IP__:8006
+          url: https://@PROXMOX_IP@:8006
           username: {{HOMEPAGE_VAR_PROXMOX_TOKEN}}
           password: {{HOMEPAGE_VAR_PROXMOX_SECRET}}
           node: pve
 
     - Obsidian Sync (CouchDB):
         icon: mdi-notebook
-        href: https://__OBSIDIAN_SYNC_HOST__/_utils/
+        href: https://@OBSIDIAN_SYNC_HOST@/_utils/
         description: CouchDB UI
-        siteMonitor: https://__OBSIDIAN_SYNC_HOST__
+        siteMonitor: https://@OBSIDIAN_SYNC_HOST@
 
     - Router:
         icon: mdi-router-wireless
-        href: http://__ROUTER_IP__
+        href: http://@ROUTER_IP@
         description: Gateway admin
-        siteMonitor: http://__ROUTER_IP__
+        siteMonitor: http://@ROUTER_IP@
+
+- Personal:
+    - Actual Budget:
+        icon: mdi-cash-multiple
+        href: https://@ACTUAL_HOST@
+        description: Budgeting
+        siteMonitor: https://@ACTUAL_HOST@
