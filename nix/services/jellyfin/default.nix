@@ -27,7 +27,11 @@ in {
 
     ports = [ "${bindIp}:8096:8096" "${bindIp}:7359:7359/udp" ];
 
-    extraOptions = [ "--device=/dev/dri:/dev/dri" ];
+    extraOptions = [
+      "--device=/dev/dri/renderD128:/dev/dri/renderD128"
+      "--device=/dev/dri/card0:/dev/dri/card0"
+    ];
+
   };
 
   systemd.services.podman-jellyfin.unitConfig.RequiresMountsFor =
