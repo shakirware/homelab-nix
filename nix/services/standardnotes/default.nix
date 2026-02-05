@@ -10,6 +10,10 @@ let
   bindIp = "0.0.0.0";
 
   baseDomain = config.homelab.baseDomain;
+
+  apiHost = "notes-api.${baseDomain}";
+  apiUrl = "https://${apiHost}";
+
   filesHost = "notes-files.${baseDomain}";
 
   baseDir = "/srv/appdata/standardnotes";
@@ -125,6 +129,9 @@ in {
       AUTH_SERVER_ENCRYPTION_SERVER_KEY=$AUTH_SERVER_ENCRYPTION_SERVER_KEY
       VALET_TOKEN_SECRET=$VALET_TOKEN_SECRET
 
+      # Important: allow cookies across notes-api / notes / notes-files
+      COOKIE_DOMAIN=${baseDomain}
+
       PUBLIC_FILES_SERVER_URL=https://${filesHost}
       EOF
               chmod 0600 ${envFile}
@@ -207,7 +214,12 @@ in {
       image = webImage;
       autoStart = true;
 
-      environment = { TZ = tz; };
+      environment = {
+        TZ = tz;
+
+        # Key fix: stop the web app defaulting to api.standardnotes.com
+        DEFAULT_SYNC_SERVER = apiUrl;
+      };
 
       ports = [ "${bindIp}:${toString webPort}:80" ];
     };
@@ -264,5 +276,4 @@ in {
       }
     '';
   };
-
 }
