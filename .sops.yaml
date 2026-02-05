@@ -3,21 +3,25 @@ creation_rules:
     key_groups:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
 
   - path_regex: secrets/vm-apps\.yaml$
     key_groups:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
           - age1rd78r9e35lt9jz4gv8lzd6w68d8spdp2ezqsu8sv28udkzuvsfcs8afr76
 
   - path_regex: secrets/vm-gw\.yaml$
     key_groups:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
           - age17x3tpqlhj5zetv6xgaevn8c6lmwusrg60wqc9gpvxsxs8e20nfpq0ade2g
 
   - path_regex: secrets/vm-media\.yaml$
     key_groups:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
           - age1m44t8p50prjf4pyxjxz0lhyjjwg6d2a4jsxecj4svpuh89q84slq57prrd
