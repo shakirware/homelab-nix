@@ -248,3 +248,10 @@
         href: https://@ACTUAL_HOST@
         description: Budgeting
         siteMonitor: https://@ACTUAL_HOST@
+
+    - Standard Notes:
+        icon: mdi-note-text
+        href: https://@STANDARDNOTES_HOST@
+        description: Notes
+        siteMonitor: https://@STANDARDNOTES_HOST@
+

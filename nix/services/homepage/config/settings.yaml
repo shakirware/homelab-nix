@@ -13,26 +13,26 @@ language: en-GB
 
 layout:
   Media:
-    icon: mdi-movie-open
+    tab: Home
     style: column
     columns: 4
 
   Automation:
-    icon: mdi-robot
+    tab: Home
     style: column
     columns: 4
 
   Downloading:
-    icon: mdi-download
+    tab: Home
     style: column
     columns: 3
 
   Monitoring:
-    icon: mdi-monitor-dashboard
+    tab: Home
     style: column
     columns: 3
 
   Personal:
-    icon: mdi-account
-    style: column
+    tab: Personal
+    style: row
     columns: 3

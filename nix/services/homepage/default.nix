@@ -38,15 +38,12 @@ let
   mediaHost = "media.${baseDomain}";
   obsidianSyncHost = "obsidian-sync.${baseDomain}";
   actualHost = "actual.${baseDomain}";
+  standardnotesHost = "notes.${baseDomain}";
 
-  # settings.yaml: copied as-is (no placeholders)
   settingsYaml = ./config/settings.yaml;
-
-  # Templates: MUST use @VARS@ placeholders
   widgetsTpl = ./config/widgets.yaml.in;
   servicesTpl = ./config/services.yaml.in;
 
-  # Single source of truth for substitutions (safe if template doesn’t use all keys)
   vars = {
     GW_IP = gwIp;
     MEDIA_IP = mediaIp;
@@ -77,7 +74,9 @@ let
     MEDIA_HOST = mediaHost;
 
     OBSIDIAN_SYNC_HOST = obsidianSyncHost;
+
     ACTUAL_HOST = actualHost;
+    STANDARDNOTES_HOST = standardnotesHost;
   };
 
   keys = builtins.attrNames vars;
