@@ -26,6 +26,9 @@ in {
     "qbittorrent.${base}" = ips.gw;
     "iptv.${base}" = ips.gw;
     "obsidian-sync.${base}" = ips.gw;
+    "notes.${base}" = ips.gw;
+    "notes-api.${base}" = ips.gw;
+    "notes-files.${base}" = ips.gw;
   };
 
   config.homelab.webHosts = lib.mkDefault [
@@ -85,6 +88,20 @@ in {
     {
       host = "obsidian-sync.${base}";
       upstream = "${ips.apps}:5984";
+    }
+    {
+      host = "notes.${base}";
+      upstream = "${ips.sensitive}:3002";
+    }
+    {
+      host = "notes-api.${base}";
+      upstream = "${ips.sensitive}:3000";
+      corsAllowOrigin = "https://notes.${base}";
+    }
+    {
+      host = "notes-files.${base}";
+      upstream = "${ips.sensitive}:3125";
+      corsAllowOrigin = "https://notes.${base}";
     }
   ];
 }
