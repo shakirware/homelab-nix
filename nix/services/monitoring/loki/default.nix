@@ -10,6 +10,12 @@ let
     server:
       http_listen_port: ${toString port}
 
+    frontend:
+      scheduler_address: ""
+
+    frontend_worker:
+      scheduler_address: ""
+
     common:
       path_prefix: /loki
       storage:
@@ -64,5 +70,4 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
-
 }
