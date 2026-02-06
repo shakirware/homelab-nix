@@ -1,4 +1,6 @@
-.PHONY: init plan apply deploy-storage deploy-media deploy-gw deploy-sensitive
+.PHONY: init plan apply \
+	deploy-storage deploy-media deploy-apps deploy-monitoring deploy-sensitive deploy-gw \
+	deploy-all
 
 init:
 	tofu -chdir=infra init
@@ -26,3 +28,5 @@ deploy-apps:
 
 deploy-monitoring:
 	nix run .#colmena -- apply --on vm-monitoring
+
+deploy-all: deploy-storage deploy-media deploy-apps deploy-monitoring deploy-sensitive deploy-gw

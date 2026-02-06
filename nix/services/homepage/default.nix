@@ -18,6 +18,7 @@ let
   appsIp = ips.apps;
   proxmoxIp = ips.proxmox;
   routerIp = ips.router;
+  monitoringIp = ips.monitoring;
 
   homepageHost = "homepage.${baseDomain}";
   adguardHost = "adguard.${baseDomain}";
@@ -39,6 +40,8 @@ let
   obsidianSyncHost = "obsidian-sync.${baseDomain}";
   actualHost = "actual.${baseDomain}";
   standardnotesHost = "notes.${baseDomain}";
+  grafanaHost = "grafana.${baseDomain}";
+  prometheusHost = "prometheus.${baseDomain}";
 
   settingsYaml = ./config/settings.yaml;
   widgetsTpl = ./config/widgets.yaml.in;
@@ -50,6 +53,7 @@ let
     APPS_IP = appsIp;
     PROXMOX_IP = proxmoxIp;
     ROUTER_IP = routerIp;
+    MONITORING_IP = monitoringIp;
 
     BASE_DOMAIN = baseDomain;
 
@@ -77,6 +81,8 @@ let
 
     ACTUAL_HOST = actualHost;
     STANDARDNOTES_HOST = standardnotesHost;
+    GRAFANA_HOST = grafanaHost;
+    PROMETHEUS_HOST = prometheusHost;
   };
 
   keys = builtins.attrNames vars;

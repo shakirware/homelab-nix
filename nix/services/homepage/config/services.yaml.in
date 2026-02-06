@@ -242,6 +242,29 @@
         description: Gateway admin
         siteMonitor: http://@ROUTER_IP@
 
+    - Grafana:
+        icon: mdi-chart-box
+        href: https://@GRAFANA_HOST@
+        description: Dashboards (Prometheus + Loki)
+        siteMonitor: https://@GRAFANA_HOST@
+        widget:
+          type: grafana
+          version: 2
+          url: http://@MONITORING_IP@:3000
+          username: {{HOMEPAGE_VAR_GRAFANA_USER}}
+          password: {{HOMEPAGE_VAR_GRAFANA_PASS}}
+          fields: ["dashboards", "datasources", "totalalerts", "alertstriggered"]
+
+    - Prometheus:
+        icon: mdi-fire
+        href: https://@PROMETHEUS_HOST@
+        description: Targets up/down
+        siteMonitor: https://@PROMETHEUS_HOST@
+        widget:
+          type: prometheus
+          url: http://@MONITORING_IP@:9090
+          fields: ["targets_up", "targets_down", "targets_total"]
+
 - Personal:
     - Actual Budget:
         icon: mdi-cash-multiple
@@ -254,4 +277,3 @@
         href: https://@STANDARDNOTES_HOST@
         description: Notes
         siteMonitor: https://@STANDARDNOTES_HOST@
-
