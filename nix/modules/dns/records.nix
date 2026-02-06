@@ -29,6 +29,10 @@ in {
     "notes.${base}" = ips.gw;
     "notes-api.${base}" = ips.gw;
     "notes-files.${base}" = ips.gw;
+    "grafana.${base}" = ips.gw;
+    "prometheus.${base}" = ips.gw;
+    "alertmanager.${base}" = ips.gw;
+    "loki.${base}" = ips.gw;
   };
 
   config.homelab.webHosts = lib.mkDefault [
@@ -102,6 +106,22 @@ in {
       host = "notes-files.${base}";
       upstream = "${ips.sensitive}:3125";
       corsAllowOrigin = "https://notes.${base}";
+    }
+    {
+      host = "grafana.${base}";
+      upstream = "${ips.monitoring}:3000";
+    }
+    {
+      host = "prometheus.${base}";
+      upstream = "${ips.monitoring}:9090";
+    }
+    {
+      host = "alertmanager.${base}";
+      upstream = "${ips.monitoring}:9093";
+    }
+    {
+      host = "loki.${base}";
+      upstream = "${ips.monitoring}:3100";
     }
   ];
 }

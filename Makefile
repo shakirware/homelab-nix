@@ -23,3 +23,6 @@ deploy-sensitive:
 
 deploy-apps:
 	nix run .#colmena -- apply --on vm-apps
+
+deploy-monitoring:
+	nix run .#colmena -- apply --on vm-monitoring

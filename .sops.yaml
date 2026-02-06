@@ -25,3 +25,10 @@ creation_rules:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
           - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
           - age1m44t8p50prjf4pyxjxz0lhyjjwg6d2a4jsxecj4svpuh89q84slq57prrd
+
+  - path_regex: secrets/vm-monitoring\.yaml$
+    key_groups:
+      - age:
+          - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
+          - age1g2h3dvr6670ukz7a3su24sy2zreegpkuq9n7066p962gfpc3eg7qmghhn6
