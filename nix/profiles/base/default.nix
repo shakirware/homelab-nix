@@ -20,6 +20,9 @@
     ../../modules/secrets/sops-base.nix
     ../../modules/secrets/host-secrets.nix
     ../../modules/secrets/templates.nix
+
+    ../../services/monitoring/node-exporter
+    ../../services/monitoring/promtail
   ];
 
   services.qemuGuest.enable = true;
