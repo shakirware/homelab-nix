@@ -2,12 +2,16 @@
 
 let
   ips = config.homelab.ips;
+  baseDomain = config.homelab.baseDomain;
 
   port = 9090;
   dataDir = "/srv/appdata/prometheus";
 
   nodePort = 9100;
   pveExporterPort = 9221;
+
+  publicHost = "prometheus.${baseDomain}";
+  publicUrl = "https://${publicHost}";
 
   prometheusYaml = pkgs.writeText "prometheus.yml" ''
     global:
@@ -30,11 +34,11 @@ let
       - job_name: "node"
         static_configs:
           - targets:
-              - "${ips.gw}:${toString nodePort}"
-              - "${ips.media}:${toString nodePort}"
-              - "${ips.storage}:${toString nodePort}"
-              - "${ips.apps}:${toString nodePort}"
-              - "${ips.sensitive}:${toString nodePort}"
+              - "gw.${baseDomain}:${toString nodePort}"
+              - "media.${baseDomain}:${toString nodePort}"
+              - "storage.${baseDomain}:${toString nodePort}"
+              - "apps.${baseDomain}:${toString nodePort}"
+              - "sensitive.${baseDomain}:${toString nodePort}"
               - "${ips.monitoring}:${toString nodePort}"
 
       - job_name: "proxmox"
@@ -48,15 +52,14 @@ let
         relabel_configs:
           - source_labels: [__address__]
             target_label: __param_target
-          - source_labels: [__param_target]
-            target_label: instance
+          - target_label: instance
+            replacement: "proxmox"
           - target_label: __address__
             replacement: 127.0.0.1:${toString pveExporterPort}
   '';
 
   rulesDir = pkgs.runCommand "prometheus-rules" { } ''
     mkdir -p $out
-
     cat > $out/basics.yml <<'EOF'
     groups:
       - name: basics
@@ -315,6 +318,7 @@ in {
       "--storage.tsdb.path=/prometheus"
       "--storage.tsdb.retention.time=30d"
       "--web.enable-lifecycle"
+      "--web.external-url=${publicUrl}"
     ];
 
     volumes = [
@@ -324,7 +328,6 @@ in {
     ];
 
     ports = [ ];
-
     extraOptions = [ "--network=host" "--name=prometheus" ];
   };
 
