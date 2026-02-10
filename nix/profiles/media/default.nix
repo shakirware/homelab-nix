@@ -10,6 +10,7 @@
     ../../services/jellyfin
     ../../services/jellyseerr
     ../../services/jellystat
+    ../../services/tracearr
 
     ../../services/sonarr
     ../../services/radarr
