@@ -32,6 +32,7 @@ let
   iptvHost = "iptv.${baseDomain}";
   uptimeHost = "uptime.${baseDomain}";
   profilarrHost = "profilarr.${baseDomain}";
+  tracearrHost = "tracearr.${baseDomain}";
 
   proxmoxHost = "proxmox.${baseDomain}";
   routerHost = "router.${baseDomain}";
@@ -71,6 +72,7 @@ let
     QBITTORRENT_HOST = qbittorrentHost;
     IPTV_HOST = iptvHost;
     PROFILARR_HOST = profilarrHost;
+    TRACEARR_HOST = tracearrHost;
 
     PROXMOX_HOST = proxmoxHost;
     ROUTER_HOST = routerHost;

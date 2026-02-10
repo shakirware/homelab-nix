@@ -20,6 +20,6 @@
     ../../services/qbittorrent
 
     ../../services/profilarr
-    ../../services/iptv-proxy
+    ../../services/tuliprox
   ];
 }

@@ -58,6 +58,18 @@
           days: 30
           fields: ["movies", "episodes", "other"]
 
+    - Tracearr:
+        icon: mdi-chart-timeline-variant
+        href: https://@TRACEARR_HOST@
+        description: Media activity & tracing
+        siteMonitor: https://@TRACEARR_HOST@
+
+    - Tuliprox:
+        icon: mdi-television-play
+        href: https://@IPTV_HOST@
+        description: Tuliprox IPTV (Xtream)
+        siteMonitor: https://@IPTV_HOST@
+
 - Automation:
     - Sonarr:
         icon: mdi-television-classic
