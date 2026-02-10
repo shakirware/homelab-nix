@@ -33,6 +33,7 @@ in {
     "prometheus.${base}" = ips.gw;
     "alertmanager.${base}" = ips.gw;
     "loki.${base}" = ips.gw;
+    "tracearr.${base}" = ips.gw;
   };
 
   config.homelab.webHosts = lib.mkDefault [
@@ -122,6 +123,10 @@ in {
     {
       host = "loki.${base}";
       upstream = "${ips.monitoring}:3100";
+    }
+    {
+      host = "tracearr.${base}";
+      upstream = "${ips.media}:3003";
     }
   ];
 }
