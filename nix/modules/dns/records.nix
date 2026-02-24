@@ -16,6 +16,7 @@ in {
     "homepage.${base}" = ips.gw;
     "uptime.${base}" = ips.gw;
     "actual.${base}" = ips.gw;
+    "invoice.${base}" = ips.gw;
     "jellyfin.${base}" = ips.gw;
     "jellyseerr.${base}" = ips.gw;
     "jellystat.${base}" = ips.gw;
@@ -53,6 +54,10 @@ in {
     {
       host = "actual.${base}";
       upstream = "${ips.sensitive}:5006";
+    }
+    {
+      host = "invoice.${base}";
+      upstream = "${ips.sensitive}:8088";
     }
     {
       host = "jellyfin.${base}";

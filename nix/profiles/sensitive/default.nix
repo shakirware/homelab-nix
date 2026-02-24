@@ -8,6 +8,9 @@
 
   virtualisation.oci-containers.backend = "podman";
 
-  imports = [ ../../services/actual ../../services/standardnotes ];
+  imports = [
+    ../../services/actual
+    ../../services/standardnotes
+    ../../services/invoiceplane
+  ];
 }
-
