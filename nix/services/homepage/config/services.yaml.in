@@ -289,3 +289,9 @@
         href: https://@STANDARDNOTES_HOST@
         description: Notes
         siteMonitor: https://@STANDARDNOTES_HOST@
+
+    - InvoicePlane:
+        icon: mdi-file-document-edit
+        href: https://@INVOICE_HOST@
+        description: Invoicing
+        siteMonitor: https://@INVOICE_HOST@

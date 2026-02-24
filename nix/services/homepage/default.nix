@@ -40,6 +40,7 @@ let
   mediaHost = "media.${baseDomain}";
   obsidianSyncHost = "obsidian-sync.${baseDomain}";
   actualHost = "actual.${baseDomain}";
+  invoiceHost = "invoice.${baseDomain}";
   standardnotesHost = "notes.${baseDomain}";
   grafanaHost = "grafana.${baseDomain}";
   prometheusHost = "prometheus.${baseDomain}";
@@ -82,6 +83,7 @@ let
     OBSIDIAN_SYNC_HOST = obsidianSyncHost;
 
     ACTUAL_HOST = actualHost;
+    INVOICE_HOST = invoiceHost;
     STANDARDNOTES_HOST = standardnotesHost;
     GRAFANA_HOST = grafanaHost;
     PROMETHEUS_HOST = prometheusHost;
