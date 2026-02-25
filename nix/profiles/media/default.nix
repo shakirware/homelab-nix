@@ -8,7 +8,7 @@
     ../../services/nfs-client
 
     ../../services/jellyfin
-    ../../services/jellyseerr
+    ../../services/seerr
     ../../services/jellystat
     ../../services/tracearr
 
