@@ -220,7 +220,7 @@ let
               description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
 
           - alert: PodmanContainerUnitFailed
-            expr: node_systemd_unit_state{state="failed",name=~"podman-(gluetun|qbittorrent|prowlarr|sonarr|radarr|jellyfin|jellyseerr|jellystat|iptv-proxy|profilarr|homepage|couchdb|actual|server_self_hosted|standardnotes_web|db_self_hosted|cache_self_hosted|localstack_self_hosted|prometheus|grafana|loki|alertmanager|proxmox_exporter)\\.service"} == 1
+            expr: node_systemd_unit_state{state="failed",name=~"podman-(gluetun|qbittorrent|prowlarr|sonarr|radarr|jellyfin|seerr|jellystat|iptv-proxy|profilarr|homepage|couchdb|actual|server_self_hosted|standardnotes_web|db_self_hosted|cache_self_hosted|localstack_self_hosted|prometheus|grafana|loki|alertmanager|proxmox_exporter)\\.service"} == 1
             for: 2m
             labels:
               severity: critical

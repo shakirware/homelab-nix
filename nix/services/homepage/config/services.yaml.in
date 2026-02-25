@@ -12,15 +12,15 @@
           enableNowPlaying: true
           expandOneStreamToTwoRows: false
 
-    - Jellyseerr:
+    - Seerr:
         icon: mdi-movie-search
-        href: https://@JELLYSEERR_HOST@
+        href: https://@SEERR_HOST@
         description: Requests & approvals for Jellyfin
-        siteMonitor: https://@JELLYSEERR_HOST@
+        siteMonitor: https://@SEERR_HOST@
         widget:
           type: jellyseerr
           url: http://@MEDIA_IP@:5055
-          key: {{HOMEPAGE_VAR_JELLYSEERR_KEY}}
+          key: {{HOMEPAGE_VAR_SEERR_KEY}}
           fields: ["pending", "approved", "available", "issues"]
           highlight:
             pending:
