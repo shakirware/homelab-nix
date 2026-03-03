@@ -22,7 +22,7 @@
     let
       system = "x86_64-linux";
 
-      lab = { cidr = "192.168.1.0/24"; };
+      lab = { cidr = "192.168.20.0/24"; };
       home = { cidr = "192.168.1.0/24"; };
 
       sshKeyEnv = builtins.getEnv "COLMENA_SSH_KEY";

@@ -155,7 +155,8 @@ in {
       "${uploadsDir}:/var/www/html/uploads"
       "${cssDir}:/var/www/html/assets/core/css"
       "${viewsDir}:/var/www/html/application/views"
-      "/srv/appdata/invoiceplane/runtime:/var/www/html/runtime"
+      "${baseDir}/runtime:/var/www/html/runtime"
+      "${ipconfigPath}:/var/www/html/ipconfig.php"
     ];
 
     ports = [ "${bindIp}:${toString port}:80" ];

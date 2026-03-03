@@ -9,7 +9,7 @@ in {
     networkConfig = {
       DHCP = "no";
       Address = [ "${ips.monitoring}/24" ];
-      Gateway = ips.router;
+      Gateway = ips.router_vlan20;
       DNS = [ ips.gw ];
     };
   };

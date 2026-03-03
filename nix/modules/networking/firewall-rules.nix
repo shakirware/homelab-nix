@@ -1,6 +1,6 @@
 { lib, config, ... }:
 
-let homeCidr = (config.home or { cidr = "192.168.1.0/24"; }).cidr;
+let homeCidr = (config.home or { cidr = "192.168.20.0/24"; }).cidr;
 in {
   options.homelab.firewall.adminCidr = lib.mkOption {
     type = lib.types.str;
