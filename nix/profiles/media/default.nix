@@ -15,6 +15,7 @@
     ../../services/sonarr
     ../../services/radarr
     ../../services/prowlarr
+    ../../services/flaresolverr
 
     ../../services/gluetun
     ../../services/qbittorrent
