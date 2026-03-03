@@ -255,7 +255,7 @@ in {
   networking.firewall.filterForward = true;
 
   networking.firewall.extraInputRules = lib.mkAfter ''
-    ip saddr 192.168.1.0/24 tcp dport { ${toString apiPort}, ${
+    ip saddr 192.168.20.0/24 tcp dport { ${toString apiPort}, ${
       toString filesPort
     }, ${toString webPort} } accept
     tcp dport { ${toString apiPort}, ${toString filesPort}, ${

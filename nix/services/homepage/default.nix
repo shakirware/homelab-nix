@@ -17,7 +17,7 @@ let
   mediaIp = ips.media;
   appsIp = ips.apps;
   proxmoxIp = ips.proxmox;
-  routerIp = ips.router;
+  routerIp = ips.router_vlan1;
   monitoringIp = ips.monitoring;
 
   homepageHost = "homepage.${baseDomain}";
@@ -130,7 +130,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.homepage = {
-    image = "ghcr.io/gethomepage/homepage:v1.9.0";
+    image = "ghcr.io/gethomepage/homepage:v1.10.1";
     autoStart = true;
 
     extraOptions = [

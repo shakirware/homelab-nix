@@ -5,8 +5,8 @@ let
   ips = config.homelab.ips;
 in {
   config.homelab.domains = lib.mkDefault {
-    "router.${base}" = ips.router;
-    "proxmox.${base}" = ips.gw;
+    "router.${base}" = ips.router_vlan1;
+    "proxmox.${base}" = ips.proxmox;
     "gw.${base}" = ips.gw;
     "storage.${base}" = ips.storage;
     "media.${base}" = ips.media;

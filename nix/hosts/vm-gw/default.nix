@@ -10,7 +10,7 @@ in {
     networkConfig = {
       DHCP = "no";
       Address = [ "${ips.gw}/24" ];
-      Gateway = ips.router;
+      Gateway = ips.router_vlan20;
       DNS = [ ips.gw ];
     };
   };

@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 {
-  # Declare the secret (it exists in secrets/vm-gw.yaml)
   sops.secrets.TAILSCALE_AUTHKEY = { };
 
   services.tailscale = {
@@ -31,7 +30,7 @@
         --authkey "file:${config.sops.secrets.TAILSCALE_AUTHKEY.path}" \
         --ssh \
         --accept-dns=false \
-        --advertise-routes=192.168.1.0/24 \
+        --advertise-routes=192.168.20.0/24 \
         --advertise-exit-node
     '';
   };
