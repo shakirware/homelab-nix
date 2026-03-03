@@ -31,6 +31,7 @@ in {
       [ "--network=${vpnNet}" "--cap-add=NET_ADMIN" "--device=/dev/net/tun" ];
 
     ports = [
+      "${bindIp}:8191:8191" # flaresolverr
       "${bindIp}:8080:8080" # qbittorrent webui
       "${bindIp}:9696:9696" # prowlarr
       "${bindIp}:6881:6881" # torrent TCP
@@ -48,7 +49,7 @@ in {
 
       FIREWALL_OUTBOUND_SUBNETS = "192.168.0.0/16";
 
-      FIREWALL_INPUT_PORTS = "8080,9696,6881,8901";
+      FIREWALL_INPUT_PORTS = "8080,9696,6881,8901,8191";
     };
 
     volumes = [ "/srv/appdata/gluetun:/gluetun" ];
@@ -59,6 +60,7 @@ in {
     requires = [ "podman-network-${vpnNet}.service" "podman.service" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 8080 9696 6881 8901 ];
+  networking.firewall.allowedTCPPorts =
+    lib.mkAfter [ 8080 9696 6881 8901 8191 ];
   networking.firewall.allowedUDPPorts = lib.mkAfter [ 6881 ];
 }
