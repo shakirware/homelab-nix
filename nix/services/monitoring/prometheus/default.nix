@@ -41,6 +41,12 @@ let
               - "sensitive.${baseDomain}:${toString nodePort}"
               - "${ips.monitoring}:${toString nodePort}"
 
+      - job_name: "node-proxmox"
+        static_configs:
+          - targets: [ "${ips.proxmox}:${toString nodePort}" ]
+            labels:
+              host: "proxmox"
+
       - job_name: "proxmox"
         metrics_path: /pve
         params:
@@ -60,6 +66,7 @@ let
 
   rulesDir = pkgs.runCommand "prometheus-rules" { } ''
     mkdir -p $out
+
     cat > $out/basics.yml <<'EOF'
     groups:
       - name: basics
@@ -240,6 +247,44 @@ let
 
     cat > $out/proxmox.yml <<'EOF'
     groups:
+      - name: proxmox-hwmon
+        rules:
+          - alert: ProxmoxNvmeHot
+            expr: node_hwmon_temp_celsius{job="node-proxmox",chip="nvme_nvme0",sensor="temp1"} > 75
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Proxmox NVMe running hot"
+              description: "Proxmox NVMe composite temp is {{ $value }}°C for 10m."
+
+          - alert: ProxmoxNvmeCritical
+            expr: node_hwmon_temp_celsius{job="node-proxmox",chip="nvme_nvme0",sensor="temp1"} > 85
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Proxmox NVMe critically hot"
+              description: "Proxmox NVMe composite temp is {{ $value }}°C for 5m."
+
+          - alert: ProxmoxCpuPackageHot
+            expr: node_hwmon_temp_celsius{job="node-proxmox",chip="platform_coretemp_0",sensor="temp1"} > 80
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Proxmox CPU package hot"
+              description: "Proxmox CPU package temp is {{ $value }}°C for 10m."
+
+          - alert: ProxmoxCpuPackageCritical
+            expr: node_hwmon_temp_celsius{job="node-proxmox",chip="platform_coretemp_0",sensor="temp1"} > 90
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Proxmox CPU package critically hot"
+              description: "Proxmox CPU package temp is {{ $value }}°C for 5m."
+
       - name: proxmox
         rules:
           - alert: ProxmoxNodeOffline
