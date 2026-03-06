@@ -5,8 +5,8 @@ let
   ips = config.homelab.ips;
 in {
   config.homelab.domains = lib.mkDefault {
-    "router.${base}" = ips.router_vlan1;
-    "proxmox.${base}" = ips.proxmox;
+    "router.${base}" = ips.gw;
+    "proxmox.${base}" = ips.gw;
     "gw.${base}" = ips.gw;
     "storage.${base}" = ips.storage;
     "media.${base}" = ips.media;
@@ -132,6 +132,10 @@ in {
     {
       host = "tracearr.${base}";
       upstream = "${ips.media}:3003";
+    }
+    {
+      host = "router.${base}";
+      upstream = "http://${ips.router_vlan1}";
     }
   ];
 }

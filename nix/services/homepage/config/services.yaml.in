@@ -250,9 +250,9 @@
 
     - Router:
         icon: mdi-router-wireless
-        href: http://@ROUTER_IP@
+        href: https://@ROUTER_HOST@
         description: Gateway admin
-        siteMonitor: http://@ROUTER_IP@
+        siteMonitor: https://@ROUTER_HOST@
 
     - Grafana:
         icon: mdi-chart-box
