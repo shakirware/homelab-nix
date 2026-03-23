@@ -33,6 +33,7 @@ let
   uptimeHost = "uptime.${baseDomain}";
   profilarrHost = "profilarr.${baseDomain}";
   tracearrHost = "tracearr.${baseDomain}";
+  cleanuparrHost = "cleanuparr.${baseDomain}";
 
   proxmoxHost = "proxmox.${baseDomain}";
   routerHost = "router.${baseDomain}";
@@ -74,6 +75,7 @@ let
     IPTV_HOST = iptvHost;
     PROFILARR_HOST = profilarrHost;
     TRACEARR_HOST = tracearrHost;
+    CLEANUPARR_HOST = cleanuparrHost;
 
     PROXMOX_HOST = proxmoxHost;
     ROUTER_HOST = routerHost;

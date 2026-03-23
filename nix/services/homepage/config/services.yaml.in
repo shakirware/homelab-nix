@@ -175,6 +175,12 @@
         description: Profiles/quality automation for Arr apps
         siteMonitor: https://@PROFILARR_HOST@
 
+    - Cleanuparr:
+        icon: mdi-broom
+        href: https://@CLEANUPARR_HOST@
+        description: Arr queue cleanup automation
+        siteMonitor: https://@CLEANUPARR_HOST@
+
 - Downloading:
     - qBittorrent:
         icon: mdi-download-network
