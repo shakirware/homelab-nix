@@ -21,6 +21,8 @@
     ../../services/qbittorrent
 
     ../../services/profilarr
+    ../../services/cleanuparr
+
     ../../services/tuliprox
   ];
 }

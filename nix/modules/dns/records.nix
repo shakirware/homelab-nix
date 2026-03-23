@@ -35,6 +35,7 @@ in {
     "alertmanager.${base}" = ips.gw;
     "loki.${base}" = ips.gw;
     "tracearr.${base}" = ips.gw;
+    "cleanuparr.${base}" = ips.gw;
   };
 
   config.homelab.webHosts = lib.mkDefault [
@@ -136,6 +137,10 @@ in {
     {
       host = "router.${base}";
       upstream = "http://${ips.router_vlan1}";
+    }
+    {
+      host = "cleanuparr.${base}";
+      upstream = "${ips.media}:11011";
     }
   ];
 }
