@@ -65,7 +65,7 @@ Coverage includes:
 
 ## Planned next steps
 
-* Segment the network with VLANs so the homelab, IoT devices and general home devices are separated
+* ~~Segment the network with VLANs so the homelab, IoT devices and general home devices are separated~~
 * Add more disks and move bulk storage to mirrored storage before putting important data on it
 * Start using Immich for photo backup once storage redundancy is in place
 * Deploy Vaultwarden for self-hosted password management
