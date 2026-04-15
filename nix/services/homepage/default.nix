@@ -49,6 +49,7 @@ let
   settingsYaml = ./config/settings.yaml;
   widgetsTpl = ./config/widgets.yaml.in;
   servicesTpl = ./config/services.yaml.in;
+  customCss = ./config/custom.css;
 
   vars = {
     GW_IP = gwIp;
@@ -122,12 +123,10 @@ in {
 
       install -d -m 2775 -o ${config.homelab.ids.user} -g media ${cfgDir}
 
-      # settings.yaml has no placeholders
       install -m 0664 -o ${puid} -g ${pgid} ${settingsYaml} ${cfgDir}/settings.yaml
-
-      # rendered templates
       install -m 0664 -o ${puid} -g ${pgid} ${widgetsRendered}  ${cfgDir}/widgets.yaml
       install -m 0664 -o ${puid} -g ${pgid} ${servicesRendered} ${cfgDir}/services.yaml
+      install -m 0664 -o ${puid} -g ${pgid} ${customCss}       ${cfgDir}/custom.css
     '';
   };
 
