@@ -1,87 +1,326 @@
 :root {
-  --hl-card-radius: 18px;
-  --hl-card-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-  --hl-card-shadow-hover: 0 10px 28px rgba(0, 0, 0, 0.3);
-  --hl-card-border: 1px solid rgba(255, 255, 255, 0.06);
+  /* Core palette */
+  --hl-bg: #0b1220;
+  --hl-bg-2: #111827;
+  --hl-surface: rgba(15, 23, 42, 0.72);
+  --hl-surface-strong: rgba(15, 23, 42, 0.9);
+  --hl-surface-hover: rgba(30, 41, 59, 0.92);
+
+  --hl-text: #e5eefc;
+  --hl-text-soft: #a5b4cc;
+  --hl-text-muted: #7f8da3;
+
+  --hl-border: rgba(148, 163, 184, 0.14);
+  --hl-border-strong: rgba(125, 211, 252, 0.22);
+
+  --hl-accent: #7dd3fc;
+  --hl-accent-2: #a78bfa;
+  --hl-accent-3: #34d399;
+
+  --hl-good: #22c55e;
+  --hl-warn: #f59e0b;
+  --hl-danger: #ef4444;
+
+  /* Card system */
+  --hl-card-radius: 20px;
+  --hl-card-radius-sm: 14px;
+  --hl-card-border: 1px solid var(--hl-border);
+  --hl-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  --hl-card-shadow-hover: 0 16px 36px rgba(0, 0, 0, 0.38);
+
+  /* Controls */
+  --hl-input-bg: rgba(15, 23, 42, 0.84);
+  --hl-input-border: rgba(148, 163, 184, 0.18);
+  --hl-input-border-focus: rgba(125, 211, 252, 0.45);
+}
+
+/* Base */
+html,
+body {
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(125, 211, 252, 0.08),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(167, 139, 250, 0.08),
+      transparent 28%
+    ),
+    linear-gradient(180deg, var(--hl-bg) 0%, var(--hl-bg-2) 100%) !important;
+  color: var(--hl-text) !important;
 }
 
 body {
   letter-spacing: 0.2px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+/* Optional subtle page glow */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 15% 20%,
+      rgba(52, 211, 153, 0.05),
+      transparent 20%
+    ),
+    radial-gradient(
+      circle at 85% 10%,
+      rgba(125, 211, 252, 0.06),
+      transparent 22%
+    );
+  z-index: 0;
+}
+
+#app,
+.layout,
+main {
+  position: relative;
+  z-index: 1;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+.section-title,
+.group-title {
+  color: var(--hl-text) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.25px;
+}
+
+p,
+span,
+small,
+.description {
+  color: var(--hl-text-soft);
+}
+
+/* Cards / tiles / widgets */
 .card,
 .service-card,
 .widget,
 .tile {
   border-radius: var(--hl-card-radius) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 41, 59, 0.74) 0%,
+    rgba(15, 23, 42, 0.82) 100%
+  ) !important;
+  border: var(--hl-card-border) !important;
+  box-shadow: var(--hl-card-shadow) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .card,
 .service-card {
-  border: var(--hl-card-border) !important;
-  box-shadow: var(--hl-card-shadow) !important;
   transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    border-color 140ms ease;
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .card:hover,
 .service-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: var(--hl-card-shadow-hover) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--hl-border-strong) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 41, 59, 0.86) 0%,
+    rgba(15, 23, 42, 0.96) 100%
+  ) !important;
 }
 
+/* Service icons */
 .service-icon,
 .icon,
 .service-card img {
-  border-radius: 14px !important;
+  border-radius: var(--hl-card-radius-sm) !important;
 }
 
-.section-title,
+.service-icon,
+.icon {
+  background: linear-gradient(
+    135deg,
+    rgba(125, 211, 252, 0.14),
+    rgba(167, 139, 250, 0.14)
+  ) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.18);
+  padding: 8px;
+}
+
+/* Group blocks / headers */
+.group,
+.group-header,
+.header,
+header {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
 .group-title,
-h2 {
-  font-weight: 700 !important;
-  letter-spacing: 0.3px;
+.section-title {
+  margin-bottom: 0.7rem;
 }
 
-table,
-.table,
-.widget table {
-  border-collapse: collapse !important;
+/* Links */
+a {
+  color: var(--hl-accent) !important;
+  transition:
+    opacity 120ms ease,
+    color 120ms ease;
 }
 
-.widget table td,
-.widget table th,
-table td,
-table th {
-  padding: 8px 10px !important;
+a:hover {
+  color: #b6e7ff !important;
+  opacity: 1;
 }
 
-hr,
-.divider,
-table tr {
-  border-color: rgba(255, 255, 255, 0.06) !important;
-}
-
+/* Buttons / inputs */
 button,
 .btn,
 input,
 select,
 textarea {
   border-radius: 14px !important;
+  border: 1px solid var(--hl-input-border) !important;
+  background: var(--hl-input-bg) !important;
+  color: var(--hl-text) !important;
+  box-shadow: none !important;
 }
 
-a {
-  transition: opacity 120ms ease;
-}
-a:hover {
-  opacity: 0.92;
+button:hover,
+.btn:hover {
+  border-color: rgba(125, 211, 252, 0.35) !important;
+  background: rgba(30, 41, 59, 0.92) !important;
 }
 
+input:focus,
+select:focus,
+textarea:focus,
+button:focus,
+.btn:focus {
+  outline: none !important;
+  border-color: var(--hl-input-border-focus) !important;
+  box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.14) !important;
+}
+
+/* Tables */
+table,
+.table,
+.widget table {
+  border-collapse: collapse !important;
+  background: transparent !important;
+}
+
+.widget table td,
+.widget table th,
+table td,
+table th {
+  padding: 9px 10px !important;
+  border-color: rgba(148, 163, 184, 0.08) !important;
+}
+
+table th,
+.widget table th {
+  color: var(--hl-text) !important;
+  font-weight: 600 !important;
+}
+
+table tr:nth-child(even),
+.widget table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Dividers */
+hr,
+.divider,
+table tr {
+  border-color: rgba(148, 163, 184, 0.08) !important;
+}
+
+/* Status dots and health */
 .status,
 .status-dot,
 .status-indicator {
-  filter: saturate(1.05);
+  filter: saturate(1.15) brightness(1.05);
+}
+
+/* Optional nicer color pop for status badges if Homepage exposes them */
+[class*="good"],
+[class*="success"] {
+  color: #86efac !important;
+}
+
+[class*="warn"],
+[class*="warning"] {
+  color: #fcd34d !important;
+}
+
+[class*="danger"],
+[class*="error"] {
+  color: #fca5a5 !important;
+}
+
+/* Widget headers / stat labels */
+.widget .title,
+.widget .label,
+.card .title,
+.service-card .title {
+  color: var(--hl-text) !important;
+}
+
+.widget .description,
+.service-card .description,
+.card .description {
+  color: var(--hl-text-soft) !important;
+}
+
+/* Search / nav / small pills */
+.badge,
+.tag,
+.chip {
+  border-radius: 999px !important;
+  background: rgba(125, 211, 252, 0.12) !important;
+  border: 1px solid rgba(125, 211, 252, 0.18) !important;
+  color: #cdefff !important;
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 211, 252, 0.25) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(125, 211, 252, 0.18);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 211, 252, 0.28);
+  background-clip: padding-box;
 }
