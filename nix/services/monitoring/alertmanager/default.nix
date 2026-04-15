@@ -10,27 +10,27 @@ let
   publicUrl = "https://${publicHost}";
 
   templatesDir = pkgs.runCommand "alertmanager-templates" { } ''
-        mkdir -p $out
-        cat > $out/telegram.tmpl <<'EOF'
-    {{ define "telegram.message" }}
-    <b>{{ if eq .Status "firing" }}🔴 FIRING{{ else }}✅ RESOLVED{{ end }}</b> — <b>{{ .CommonLabels.alertname }}</b>{{ if .CommonLabels.severity }} (<code>{{ .CommonLabels.severity }}</code>){{ end }}
-    {{ if .CommonLabels.instance }}
-    Host: <code>{{ .CommonLabels.instance }}</code>
-    {{ end }}
-    {{ if .CommonAnnotations.summary }}
-    {{ .CommonAnnotations.summary }}
-    {{ end }}
-    {{ if .CommonAnnotations.description }}
-    {{ .CommonAnnotations.description }}
-    {{ end }}
-    {{ if gt (len .Alerts) 1 }}
+    mkdir -p $out
+    cat > $out/telegram.tmpl <<'EOF'
+      {{ define "telegram.message" }}
+      <b>{{ if eq .Status "firing" }}🔴 FIRING{{ else }}✅ RESOLVED{{ end }}</b> — <b>{{ .CommonLabels.alertname }}</b>{{ if .CommonLabels.severity }} (<code>{{ .CommonLabels.severity }}</code>){{ end }}
+      {{ if .CommonLabels.instance }}
+      Host: <code>{{ .CommonLabels.instance }}</code>
+      {{ end }}
+      {{ if .CommonAnnotations.summary }}
+      {{ .CommonAnnotations.summary }}
+      {{ end }}
+      {{ if .CommonAnnotations.description }}
+      {{ .CommonAnnotations.description }}
+      {{ end }}
+      {{ if gt (len .Alerts) 1 }}
 
-    Alerts ({{ len .Alerts }}):
-    {{ range .Alerts }}• <code>{{ .Labels.instance }}</code>{{ with .Annotations.summary }} — {{ . }}{{ end }}
-    {{ end }}{{ end }}
+      Alerts ({{ len .Alerts }}):
+      {{ range .Alerts }}• <code>{{ .Labels.instance }}</code>{{ with .Annotations.summary }} — {{ . }}{{ end }}
+      {{ end }}{{ end }}
 
-    <a href="{{ .ExternalURL }}">Alertmanager</a>{{ with (index .Alerts 0).GeneratorURL }} | <a href="{{ . }}">Source</a>{{ end }}
-    {{ end }}
+      <a href="{{ .ExternalURL }}">Alertmanager</a>{{ with (index .Alerts 0).GeneratorURL }} | <a href="{{ . }}">Source</a>{{ end }}
+      {{ end }}
     EOF
   '';
 in {
@@ -65,10 +65,8 @@ in {
 
         - name: telegram
           telegram_configs:
-            - bot_token: "${
-              config.sops.placeholder."alerting/telegram_bot_token"
-            }"
-              chat_id: "${config.sops.placeholder."alerting/telegram_chat_id"}"
+            - bot_token: "${config.sops.placeholder."alerting/telegram_bot_token"}"
+              chat_id: ${config.sops.placeholder."alerting/telegram_chat_id"}
               send_resolved: true
               parse_mode: "HTML"
               message: '{{ template "telegram.message" . }}'
@@ -78,11 +76,15 @@ in {
     mode = "0440";
   };
 
-  systemd.tmpfiles.rules = lib.mkAfter [ "d ${dataDir} 0750 65534 65534 - -" ];
+  systemd.tmpfiles.rules = lib.mkAfter [
+    "d ${dataDir} 0750 65534 65534 - -"
+  ];
 
   virtualisation.oci-containers.containers.alertmanager = {
     image = "prom/alertmanager:v0.27.0";
     autoStart = true;
+
+    user = "65534:65534";
 
     cmd = [
       "--config.file=/etc/alertmanager/alertmanager.yml"
@@ -93,16 +95,15 @@ in {
 
     volumes = [
       "${dataDir}:/alertmanager"
-      "${
-        config.sops.templates.${cfgName}.path
-      }:/etc/alertmanager/alertmanager.yml:ro"
+      "${config.sops.templates.${cfgName}.path}:/etc/alertmanager/alertmanager.yml:ro"
       "${templatesDir}:/etc/alertmanager/templates:ro"
     ];
 
     ports = [ ];
 
-    extraOptions =
-      [ "--network=host" "--user=65534:65534" "--name=alertmanager" ];
+    extraOptions = [
+      "--network=host"
+    ];
   };
 
   systemd.services.podman-alertmanager = {
