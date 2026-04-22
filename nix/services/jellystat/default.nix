@@ -27,7 +27,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.jellystat-db = {
-    image = "postgres:15.2";
+    image = "postgres:18.3";
     autoStart = true;
 
     environment = {
