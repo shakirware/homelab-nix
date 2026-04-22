@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/London",
+  "prConcurrentLimit": 5,
+
+  "nix": {
+    "enabled": true
+  },
+
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update container image tags declared in Nix modules",
+      "managerFilePatterns": ["/(^|/)nix\\/.*\\.nix$/"],
+      "matchStrings": [
+        "image\\s*=\\s*\"(?<depName>[^\"@:]+(?:\\/[^\"@:]+)*):(?<currentValue>[^\"\\s]+)\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
+
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "lscr.io/linuxserver/prowlarr",
+        "lscr.io/linuxserver/qbittorrent",
+        "lscr.io/linuxserver/radarr",
+        "lscr.io/linuxserver/sonarr"
+      ],
+      "extractVersion": "^version-(?<version>.*)$",
+      "versioning": "loose"
+    }
+  ]
+}
