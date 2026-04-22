@@ -355,7 +355,7 @@ in {
   systemd.tmpfiles.rules = lib.mkAfter [ "d ${dataDir} 0750 65534 65534 - -" ];
 
   virtualisation.oci-containers.containers.prometheus = {
-    image = "prom/prometheus:v2.52.0";
+    image = "prom/prometheus:v3.11.2";
     autoStart = true;
 
     cmd = [
