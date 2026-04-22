@@ -6,7 +6,7 @@ let
   pgid = "1001";
 in {
   virtualisation.oci-containers.containers.prowlarr = {
-    image = "lscr.io/linuxserver/prowlarr:version-2.3.0.5236";
+    image = "lscr.io/linuxserver/prowlarr:version-2.3.5.5327";
     autoStart = true;
 
     environment = {

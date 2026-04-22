@@ -14,7 +14,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.jellyfin = {
-    image = "lscr.io/linuxserver/jellyfin:version-10.11.5ubu2404";
+    image = "lscr.io/linuxserver/jellyfin:10.11.8";
     autoStart = true;
 
     environment = {

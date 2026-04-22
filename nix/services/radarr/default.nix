@@ -8,7 +8,7 @@ let
   bindIp = "0.0.0.0";
 in {
   virtualisation.oci-containers.containers.radarr = {
-    image = "lscr.io/linuxserver/radarr:version-6.0.4.10291";
+    image = "lscr.io/linuxserver/radarr:version-6.1.1.10360";
     autoStart = true;
 
     environment = {

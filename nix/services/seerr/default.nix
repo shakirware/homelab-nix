@@ -5,7 +5,7 @@ let
   bindIp = "0.0.0.0";
 in {
   virtualisation.oci-containers.containers.seerr = {
-    image = "ghcr.io/seerr-team/seerr:v3.1.0";
+    image = "ghcr.io/seerr-team/seerr:v3.2.0";
     autoStart = true;
 
     environment = {
