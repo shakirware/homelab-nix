@@ -45,7 +45,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.jellystat = {
-    image = "cyfershepard/jellystat:1.1.7";
+    image = "cyfershepard/jellystat:1.1.10";
     autoStart = true;
 
     environment = {
