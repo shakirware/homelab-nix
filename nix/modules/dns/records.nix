@@ -19,7 +19,6 @@ in {
     "invoice.${base}" = ips.gw;
     "jellyfin.${base}" = ips.gw;
     "seerr.${base}" = ips.gw;
-    "jellystat.${base}" = ips.gw;
     "profilarr.${base}" = ips.gw;
     "sonarr.${base}" = ips.gw;
     "radarr.${base}" = ips.gw;
@@ -67,10 +66,6 @@ in {
     {
       host = "seerr.${base}";
       upstream = "${ips.media}:5055";
-    }
-    {
-      host = "jellystat.${base}";
-      upstream = "${ips.media}:4001";
     }
     {
       host = "sonarr.${base}";
