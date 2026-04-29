@@ -81,7 +81,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.alertmanager = {
-    image = "prom/alertmanager:v0.27.0";
+    image = "prom/alertmanager:v0.32.0";
     autoStart = true;
 
     user = "65534:65534";
