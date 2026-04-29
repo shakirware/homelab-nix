@@ -24,7 +24,6 @@ let
   adguardHost = "adguard.${baseDomain}";
   jellyfinHost = "jellyfin.${baseDomain}";
   seerrHost = "seerr.${baseDomain}";
-  jellystatHost = "jellystat.${baseDomain}";
   sonarrHost = "sonarr.${baseDomain}";
   radarrHost = "radarr.${baseDomain}";
   prowlarrHost = "prowlarr.${baseDomain}";
@@ -67,7 +66,6 @@ let
 
     JELLYFIN_HOST = jellyfinHost;
     SEERR_HOST = seerrHost;
-    JELLYSTAT_HOST = jellystatHost;
 
     SONARR_HOST = sonarrHost;
     RADARR_HOST = radarrHost;

@@ -9,7 +9,6 @@
 
     ../../services/jellyfin
     ../../services/seerr
-    ../../services/jellystat
     ../../services/tracearr
 
     ../../services/sonarr
