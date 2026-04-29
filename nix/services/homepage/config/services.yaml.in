@@ -46,23 +46,17 @@
                   when: eq
                   value: 0
 
-    - Jellystat:
-        icon: mdi-chart-areaspline
-        href: https://@JELLYSTAT_HOST@
-        description: Playback stats & activity dashboard
-        siteMonitor: https://@JELLYSTAT_HOST@
-        widget:
-          type: jellystat
-          url: http://@MEDIA_IP@:4001
-          key: {{HOMEPAGE_VAR_JELLYSTAT_KEY}}
-          days: 30
-          fields: ["movies", "episodes", "other"]
-
     - Tracearr:
         icon: mdi-chart-timeline-variant
         href: https://@TRACEARR_HOST@
         description: Media activity & tracing
         siteMonitor: https://@TRACEARR_HOST@
+
+    - Pinchflat:
+        icon: mdi-youtube
+        href: https://@PINCHFLAT_HOST@
+        description: YouTube media archiver
+        siteMonitor: https://@PINCHFLAT_HOST@
 
     - Tuliprox:
         icon: mdi-television-play

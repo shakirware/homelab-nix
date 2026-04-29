@@ -33,6 +33,7 @@ let
   profilarrHost = "profilarr.${baseDomain}";
   tracearrHost = "tracearr.${baseDomain}";
   cleanuparrHost = "cleanuparr.${baseDomain}";
+  pinchflatHost = "pinchflat.${baseDomain}";
 
   proxmoxHost = "proxmox.${baseDomain}";
   routerHost = "router.${baseDomain}";
@@ -75,6 +76,7 @@ let
     PROFILARR_HOST = profilarrHost;
     TRACEARR_HOST = tracearrHost;
     CLEANUPARR_HOST = cleanuparrHost;
+    PINCHFLAT_HOST = pinchflatHost;
 
     PROXMOX_HOST = proxmoxHost;
     ROUTER_HOST = routerHost;
@@ -155,7 +157,7 @@ in {
   systemd.services.podman-homepage = {
     after =
       [ "homepage-config.service" "network-online.target" "srv-media.mount" ];
-    requires = [ "homepage-config.service" "srv-media.mount" ];
+    requires = [ "homepage-config.service" ];
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 }
