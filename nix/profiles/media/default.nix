@@ -23,5 +23,7 @@
     ../../services/cleanuparr
 
     ../../services/tuliprox
+
+    ../../services/pinchflat
   ];
 }

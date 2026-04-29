@@ -35,6 +35,7 @@ in {
     "loki.${base}" = ips.gw;
     "tracearr.${base}" = ips.gw;
     "cleanuparr.${base}" = ips.gw;
+    "pinchflat.${base}" = ips.gw;
   };
 
   config.homelab.webHosts = lib.mkDefault [
@@ -136,6 +137,10 @@ in {
     {
       host = "cleanuparr.${base}";
       upstream = "${ips.media}:11011";
+    }
+    {
+      host = "pinchflat.${base}";
+      upstream = "${ips.media}:8945";
     }
   ];
 }

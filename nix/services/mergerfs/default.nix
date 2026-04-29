@@ -26,6 +26,7 @@ in {
     "d /srv/diskA/data 0755 root root - -"
     "d /srv/diskB/data 0755 root root - -"
     "d /srv/media 2775 ${config.homelab.ids.user} media - -"
+    "d /srv/media/youtube 2775 ${config.homelab.ids.user} media - -"
   ];
 
   fileSystems."/srv/diskA" = {
