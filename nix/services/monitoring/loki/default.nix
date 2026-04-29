@@ -52,7 +52,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.loki = {
-    image = "grafana/loki:2.9.17";
+    image = "grafana/loki:3.7.1";
     autoStart = true;
 
     cmd = [ "-config.file=/etc/loki/loki.yaml" ];
