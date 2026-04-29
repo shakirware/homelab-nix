@@ -50,13 +50,13 @@ let
       - job_name: "proxmox"
         metrics_path: /pve
         params:
-          module: [default]
-          cluster: ['1']
-          node: ['1']
+          module: [ default ]
+          cluster: [ '1' ]
+          node: [ '1' ]
         static_configs:
           - targets: [ "${ips.proxmox}" ]
         relabel_configs:
-          - source_labels: [__address__]
+          - source_labels: [ __address__ ]
             target_label: __param_target
           - target_label: instance
             replacement: "proxmox"
@@ -218,7 +218,7 @@ let
       - name: systemd
         rules:
           - alert: SystemdUnitFailedCritical
-            expr: node_systemd_unit_state{state="failed",name=~"(sshd|systemd-networkd|systemd-resolved|tailscaled|unbound|adguardhome|caddy|nfs-server|promtail)\\.service"} == 1
+            expr: node_systemd_unit_state{state="failed",name=~"(sshd|systemd-networkd|tailscaled|unbound|adguardhome|caddy|nfs-server|promtail|prometheus-node-exporter|qemu-guest-agent)\\.service"} == 1
             for: 2m
             labels:
               severity: critical
@@ -227,7 +227,7 @@ let
               description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
 
           - alert: PodmanContainerUnitFailed
-            expr: node_systemd_unit_state{state="failed",name=~"podman-(gluetun|qbittorrent|prowlarr|flaresolverr|sonarr|radarr|jellyfin|seerr|jellystat|iptv-proxy|profilarr|homepage|couchdb|actual|server_self_hosted|standardnotes_web|db_self_hosted|cache_self_hosted|localstack_self_hosted|prometheus|grafana|loki|alertmanager|proxmox_exporter)\\.service"} == 1
+            expr: node_systemd_unit_state{state="failed",name=~"podman-(gluetun|qbittorrent|prowlarr|flaresolverr|sonarr|radarr|jellyfin|seerr|tracearr|tracearr-db|tracearr-redis|tuliprox|profilarr|cleanuparr|pinchflat|homepage|couchdb|actual|invoiceplane|invoiceplane-db|server_self_hosted|standardnotes_web|db_self_hosted|cache_self_hosted|localstack_self_hosted|prometheus|grafana|loki|alertmanager|proxmox_exporter)\\.service"} == 1
             for: 2m
             labels:
               severity: critical
@@ -236,13 +236,22 @@ let
               description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
 
           - alert: MediaMountDown
-            expr: node_systemd_unit_state{name="srv-media.mount",state="active"} == 0
+            expr: absent(node_filesystem_size_bytes{mountpoint="/srv/media"}) or node_systemd_unit_state{name="srv-media.mount",state="active"} == 0
             for: 5m
             labels:
               severity: critical
             annotations:
               summary: "/srv/media not mounted"
-              description: "{{ $labels.instance }} srv-media.mount is not active."
+              description: "{{ $labels.instance }} /srv/media is missing or srv-media.mount is not active."
+
+          - alert: NfsServerDown
+            expr: node_systemd_unit_state{name="nfs-server.service",state="active"} == 0
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "NFS server down"
+              description: "{{ $labels.instance }} nfs-server.service is not active."
     EOF
 
     cat > $out/proxmox.yml <<'EOF'
@@ -322,24 +331,6 @@ let
             annotations:
               summary: "Proxmox storage critically full"
               description: "{{ $labels.id }} >95% used for 5m."
-
-          - alert: ProxmoxGuestsNotBackedUp
-            expr: pve_not_backed_up_total{id=~"^cluster/"} > 0
-            for: 1h
-            labels:
-              severity: warning
-            annotations:
-              summary: "Guests missing backup coverage"
-              description: "{{ $value }} guests are not covered by any backup job."
-
-          - alert: ProxmoxGuestNotBackedUp
-            expr: (pve_not_backed_up_info == 1) * on(id) group_left(name,node) pve_guest_info
-            for: 1h
-            labels:
-              severity: warning
-            annotations:
-              summary: "Guest not covered by backups"
-              description: "Guest {{ $labels.name }} ({{ $labels.id }}) is not covered by any backup job."
 
           - alert: ProxmoxReplicationFailed
             expr: pve_replication_failed_syncs > 0
