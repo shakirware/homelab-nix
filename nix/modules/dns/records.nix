@@ -26,6 +26,7 @@ in {
     "qbittorrent.${base}" = ips.gw;
     "iptv.${base}" = ips.gw;
     "obsidian-sync.${base}" = ips.gw;
+    "homeassistant.${base}" = ips.gw;
     "notes.${base}" = ips.gw;
     "notes-api.${base}" = ips.gw;
     "notes-files.${base}" = ips.gw;
@@ -95,6 +96,10 @@ in {
     {
       host = "obsidian-sync.${base}";
       upstream = "${ips.apps}:5984";
+    }
+    {
+      host = "homeassistant.${base}";
+      upstream = "${ips.apps}:8123";
     }
     {
       host = "notes.${base}";
