@@ -1,0 +1,148 @@
+notify:
+  - platform: group
+    name: household_phones
+    services:
+      - service: mobile_app_shakirs_iphone
+      - service: mobile_app_monas_iphone
+
+automation:
+  - id: ring_front_door_ai_recording_snapshot_summary
+    alias: "Ring: Front Door AI recording snapshot summary"
+    mode: queued
+    max: 5
+
+    variables:
+      recording_camera: camera.front_door_last_recording
+      snapshot_1: /media/doorbell/front_door_recording_1.jpg
+      snapshot_url: /media/local/doorbell/front_door_recording_1.jpg
+      title: >-
+        {% if trigger.id == 'ding' %}
+          🔔 Front Door
+        {% else %}
+          🚶 Front Door Motion
+        {% endif %}
+
+    triggers:
+      - trigger: state
+        id: ding
+        entity_id: event.front_door_ding
+        from: null
+
+      - trigger: state
+        id: motion
+        entity_id: event.front_door_motion
+        from: null
+
+    actions:
+      - delay: "00:01:15"
+
+      - action: camera.snapshot
+        target:
+          entity_id: "{{ recording_camera }}"
+        data:
+          filename: "{{ snapshot_1 }}"
+
+      - action: ai_task.generate_data
+        data:
+          entity_id: ai_task.google_ai_task
+          task_name: front_door_recording_snapshot_summary
+          instructions: >-
+            This image is from the latest Ring front door recording after a
+            motion or doorbell event. Describe the useful visible activity in
+            under 30 words. Mention people, deliveries, parcels, vehicles,
+            animals, or unusual activity. If nothing useful is visible, say so
+            clearly.
+          attachments:
+            - media_content_id: media-source://media_source/local/doorbell/front_door_recording_1.jpg
+              media_content_type: image/jpeg
+        response_variable: ring_ai
+
+      - variables:
+          ai_summary: >-
+            {{ ring_ai.data | default('Front door recording detected, but AI did not return a summary.', true) | trim }}
+          notification_id: >-
+            front_door_recording_ai_{{ now().strftime('%Y%m%d_%H%M%S') }}
+
+      - action: persistent_notification.create
+        data:
+          title: "{{ title | trim }}"
+          message: >-
+            {{ now().strftime('%Y-%m-%d %H:%M:%S') }}
+
+            {{ ai_summary }}
+
+            Image: {{ snapshot_url }}
+          notification_id: "{{ notification_id }}"
+
+      - action: notify.household_phones
+        data:
+          title: "{{ title | trim }}"
+          message: "{{ ai_summary }}"
+          data:
+            image: "{{ snapshot_url }}"
+            clickAction: /lovelace
+
+  - id: ring_downstairs_ai_recording_snapshot_summary
+    alias: "Ring: Downstairs AI recording snapshot summary"
+    mode: queued
+    max: 5
+
+    variables:
+      recording_camera: camera.downstairs_last_recording
+      snapshot_1: /media/doorbell/downstairs_recording_1.jpg
+      snapshot_url: /media/local/doorbell/downstairs_recording_1.jpg
+      title: "🐇 Downstairs Motion"
+
+    triggers:
+      - trigger: state
+        entity_id: event.downstairs_motion
+        from: null
+
+    actions:
+      - delay: "00:01:15"
+
+      - action: camera.snapshot
+        target:
+          entity_id: "{{ recording_camera }}"
+        data:
+          filename: "{{ snapshot_1 }}"
+
+      - action: ai_task.generate_data
+        data:
+          entity_id: ai_task.google_ai_task
+          task_name: downstairs_recording_snapshot_summary
+          instructions: >-
+            This image is from the latest Ring downstairs recording after a
+            motion event. Describe the useful visible activity in under 30
+            words. Mention people, pets, rabbit activity, movement, objects
+            moved, or unusual activity. If nothing useful is visible, say so
+            clearly.
+          attachments:
+            - media_content_id: media-source://media_source/local/doorbell/downstairs_recording_1.jpg
+              media_content_type: image/jpeg
+        response_variable: ring_ai
+
+      - variables:
+          ai_summary: >-
+            {{ ring_ai.data | default('Downstairs recording detected, but AI did not return a summary.', true) | trim }}
+          notification_id: >-
+            downstairs_recording_ai_{{ now().strftime('%Y%m%d_%H%M%S') }}
+
+      - action: persistent_notification.create
+        data:
+          title: "{{ title }}"
+          message: >-
+            {{ now().strftime('%Y-%m-%d %H:%M:%S') }}
+
+            {{ ai_summary }}
+
+            Image: {{ snapshot_url }}
+          notification_id: "{{ notification_id }}"
+
+      - action: notify.household_phones
+        data:
+          title: "{{ title }}"
+          message: "{{ ai_summary }}"
+          data:
+            image: "{{ snapshot_url }}"
+            clickAction: /lovelace

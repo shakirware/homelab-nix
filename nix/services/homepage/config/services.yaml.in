@@ -242,6 +242,12 @@
           password: {{HOMEPAGE_VAR_PROXMOX_SECRET}}
           node: pve
 
+    - Home Assistant:
+        icon: mdi-home-assistant
+        href: https://@HOME_ASSISTANT_HOST@
+        description: Smart home and Ring AI summaries
+        siteMonitor: https://@HOME_ASSISTANT_HOST@
+
     - Obsidian Sync (CouchDB):
         icon: mdi-notebook
         href: https://@OBSIDIAN_SYNC_HOST@/_utils/

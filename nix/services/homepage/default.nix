@@ -40,6 +40,7 @@ let
   storageHost = "storage.${baseDomain}";
   mediaHost = "media.${baseDomain}";
   obsidianSyncHost = "obsidian-sync.${baseDomain}";
+  homeAssistantHost = "homeassistant.${baseDomain}";
   actualHost = "actual.${baseDomain}";
   invoiceHost = "invoice.${baseDomain}";
   standardnotesHost = "notes.${baseDomain}";
@@ -84,6 +85,7 @@ let
     MEDIA_HOST = mediaHost;
 
     OBSIDIAN_SYNC_HOST = obsidianSyncHost;
+    HOME_ASSISTANT_HOST = homeAssistantHost;
 
     ACTUAL_HOST = actualHost;
     INVOICE_HOST = invoiceHost;
