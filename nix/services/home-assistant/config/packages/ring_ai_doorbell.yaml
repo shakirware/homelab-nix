@@ -6,17 +6,16 @@ notify:
       - service: mobile_app_monas_iphone
 
 automation:
-  - id: ring_front_door_ai_recording_snapshot_summary
-    alias: "Ring: Front Door AI recording snapshot summary"
+  - id: ring_front_door_ai_recording_frames_summary
+    alias: "Ring: Front Door AI recording frames summary"
     mode: queued
     max: 5
 
     variables:
       recording_camera: camera.front_door_last_recording
-      snapshot_1: /media/doorbell/front_door_recording_1.jpg
-      snapshot_url: /media/local/doorbell/front_door_recording_1.jpg
+      preview_url: /media/local/doorbell/front_door_frame_02.jpg
       title: >-
-        {% if trigger.id == 'ding' %}
+        {% if trigger is defined and trigger.id == 'ding' %}
           🔔 Front Door
         {% else %}
           🚶 Front Door Motion
@@ -34,26 +33,49 @@ automation:
         from: null
 
     actions:
-      - delay: "00:01:15"
+      - variables:
+          previous_video_id: "{{ state_attr(recording_camera, 'last_video_id') }}"
 
-      - action: camera.snapshot
-        target:
-          entity_id: "{{ recording_camera }}"
+      - if:
+          - condition: template
+            value_template: "{{ trigger is defined }}"
+        then:
+          - wait_template: >-
+              {{ state_attr(recording_camera, 'last_video_id') != previous_video_id
+                 and state_attr(recording_camera, 'video_url') is string }}
+            timeout: "00:03:00"
+            continue_on_timeout: false
+
+      - delay: "00:00:05"
+
+      - variables:
+          video_url: "{{ state_attr(recording_camera, 'video_url') }}"
+
+      - condition: template
+        value_template: "{{ video_url is string and video_url | length > 0 }}"
+
+      - action: shell_command.extract_front_door_recording_frames
         data:
-          filename: "{{ snapshot_1 }}"
+          video_url: "{{ video_url }}"
 
       - action: ai_task.generate_data
         data:
           entity_id: ai_task.google_ai_task
-          task_name: front_door_recording_snapshot_summary
+          task_name: front_door_recording_frames_summary
           instructions: >-
-            This image is from the latest Ring front door recording after a
-            motion or doorbell event. Describe the useful visible activity in
-            under 30 words. Mention people, deliveries, parcels, vehicles,
-            animals, or unusual activity. If nothing useful is visible, say so
-            clearly.
+            These are four frames extracted from the latest Ring front door
+            recording after a motion or doorbell event. Treat them as a timeline.
+            Summarise the useful visible activity in under 30 words. Mention
+            people, deliveries, parcels, vehicles, animals, or unusual activity.
+            If nothing useful is visible, say so clearly.
           attachments:
-            - media_content_id: media-source://media_source/local/doorbell/front_door_recording_1.jpg
+            - media_content_id: media-source://media_source/local/doorbell/front_door_frame_01.jpg
+              media_content_type: image/jpeg
+            - media_content_id: media-source://media_source/local/doorbell/front_door_frame_02.jpg
+              media_content_type: image/jpeg
+            - media_content_id: media-source://media_source/local/doorbell/front_door_frame_03.jpg
+              media_content_type: image/jpeg
+            - media_content_id: media-source://media_source/local/doorbell/front_door_frame_04.jpg
               media_content_type: image/jpeg
         response_variable: ring_ai
 
@@ -71,7 +93,7 @@ automation:
 
             {{ ai_summary }}
 
-            Image: {{ snapshot_url }}
+            Image: {{ preview_url }}
           notification_id: "{{ notification_id }}"
 
       - action: notify.household_phones
@@ -79,18 +101,28 @@ automation:
           title: "{{ title | trim }}"
           message: "{{ ai_summary }}"
           data:
-            image: "{{ snapshot_url }}"
+            image: "{{ preview_url }}"
             clickAction: /lovelace
 
-  - id: ring_downstairs_ai_recording_snapshot_summary
-    alias: "Ring: Downstairs AI recording snapshot summary"
+      - action: telegram_bot.send_photo
+        data:
+          chat_id:
+            - -4936739997
+          file: /media/doorbell/front_door_frame_02.jpg
+          caption: |-
+            {{ title | trim }}
+
+            {{ ai_summary }}
+          parse_mode: plain_text
+
+  - id: ring_downstairs_ai_recording_frames_summary
+    alias: "Ring: Downstairs AI recording frames summary"
     mode: queued
     max: 5
 
     variables:
       recording_camera: camera.downstairs_last_recording
-      snapshot_1: /media/doorbell/downstairs_recording_1.jpg
-      snapshot_url: /media/local/doorbell/downstairs_recording_1.jpg
+      preview_url: /media/local/doorbell/downstairs_frame_02.jpg
       title: "🐇 Downstairs Motion"
 
     triggers:
@@ -99,26 +131,49 @@ automation:
         from: null
 
     actions:
-      - delay: "00:01:15"
+      - variables:
+          previous_video_id: "{{ state_attr(recording_camera, 'last_video_id') }}"
 
-      - action: camera.snapshot
-        target:
-          entity_id: "{{ recording_camera }}"
+      - if:
+          - condition: template
+            value_template: "{{ trigger is defined }}"
+        then:
+          - wait_template: >-
+              {{ state_attr(recording_camera, 'last_video_id') != previous_video_id
+                 and state_attr(recording_camera, 'video_url') is string }}
+            timeout: "00:03:00"
+            continue_on_timeout: false
+
+      - delay: "00:00:05"
+
+      - variables:
+          video_url: "{{ state_attr(recording_camera, 'video_url') }}"
+
+      - condition: template
+        value_template: "{{ video_url is string and video_url | length > 0 }}"
+
+      - action: shell_command.extract_downstairs_recording_frames
         data:
-          filename: "{{ snapshot_1 }}"
+          video_url: "{{ video_url }}"
 
       - action: ai_task.generate_data
         data:
           entity_id: ai_task.google_ai_task
-          task_name: downstairs_recording_snapshot_summary
+          task_name: downstairs_recording_frames_summary
           instructions: >-
-            This image is from the latest Ring downstairs recording after a
-            motion event. Describe the useful visible activity in under 30
-            words. Mention people, pets, rabbit activity, movement, objects
-            moved, or unusual activity. If nothing useful is visible, say so
-            clearly.
+            These are four frames extracted from the latest Ring downstairs
+            recording after a motion event. Treat them as a timeline. Summarise
+            the useful visible activity in under 30 words. Mention people, pets,
+            rabbit activity, movement, objects moved, or unusual activity. If
+            nothing useful is visible, say so clearly.
           attachments:
-            - media_content_id: media-source://media_source/local/doorbell/downstairs_recording_1.jpg
+            - media_content_id: media-source://media_source/local/doorbell/downstairs_frame_01.jpg
+              media_content_type: image/jpeg
+            - media_content_id: media-source://media_source/local/doorbell/downstairs_frame_02.jpg
+              media_content_type: image/jpeg
+            - media_content_id: media-source://media_source/local/doorbell/downstairs_frame_03.jpg
+              media_content_type: image/jpeg
+            - media_content_id: media-source://media_source/local/doorbell/downstairs_frame_04.jpg
               media_content_type: image/jpeg
         response_variable: ring_ai
 
@@ -136,7 +191,7 @@ automation:
 
             {{ ai_summary }}
 
-            Image: {{ snapshot_url }}
+            Image: {{ preview_url }}
           notification_id: "{{ notification_id }}"
 
       - action: notify.household_phones
@@ -144,5 +199,16 @@ automation:
           title: "{{ title }}"
           message: "{{ ai_summary }}"
           data:
-            image: "{{ snapshot_url }}"
+            image: "{{ preview_url }}"
             clickAction: /lovelace
+
+      - action: telegram_bot.send_photo
+        data:
+          chat_id:
+            - -4936739997
+          file: /media/doorbell/downstairs_frame_02.jpg
+          caption: |-
+            {{ title | trim }}
+
+            {{ ai_summary }}
+          parse_mode: plain_text

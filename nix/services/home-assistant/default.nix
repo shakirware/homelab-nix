@@ -31,11 +31,44 @@ let
       external_url: "https://${homeAssistantHost}"
       internal_url: "https://${homeAssistantHost}"
       packages: !include_dir_named packages
+      allowlist_external_dirs:
+        - /media
 
     http:
       use_x_forwarded_for: true
       trusted_proxies:
         - ${gwIp}
+
+    shell_command:
+      extract_front_door_recording_frames: >-
+        sh -c 'set -eu;
+        rm -f /media/doorbell/front_door_frame_*.jpg;
+        ffmpeg -hide_banner -loglevel error -y
+        -i "$1"
+        -vf "fps=1/5,scale=1280:-1"
+        -frames:v 4
+        -q:v 2
+        /media/doorbell/front_door_frame_%02d.jpg;
+        test -s /media/doorbell/front_door_frame_01.jpg;
+        for n in 02 03 04; do
+          test -s /media/doorbell/front_door_frame_$n.jpg || cp /media/doorbell/front_door_frame_01.jpg /media/doorbell/front_door_frame_$n.jpg;
+        done'
+        _ "{{ video_url }}"
+
+      extract_downstairs_recording_frames: >-
+        sh -c 'set -eu;
+        rm -f /media/doorbell/downstairs_frame_*.jpg;
+        ffmpeg -hide_banner -loglevel error -y
+        -i "$1"
+        -vf "fps=1/5,scale=1280:-1"
+        -frames:v 4
+        -q:v 2
+        /media/doorbell/downstairs_frame_%02d.jpg;
+        test -s /media/doorbell/downstairs_frame_01.jpg;
+        for n in 02 03 04; do
+          test -s /media/doorbell/downstairs_frame_$n.jpg || cp /media/doorbell/downstairs_frame_01.jpg /media/doorbell/downstairs_frame_$n.jpg;
+        done'
+        _ "{{ video_url }}"
   '';
 in {
   systemd.tmpfiles.rules = lib.mkAfter [
