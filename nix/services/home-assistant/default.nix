@@ -109,6 +109,9 @@ in {
 
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${./config/packages/ring_ai_doorbell.yaml} ${packageDir}/ring_ai_doorbell.yaml
+
+      install -m 0664 -o ${config.homelab.ids.user} -g media \
+        ${./config/packages/home_comfort_alerts.yaml} ${packageDir}/home_comfort_alerts.yaml
     '';
   };
 

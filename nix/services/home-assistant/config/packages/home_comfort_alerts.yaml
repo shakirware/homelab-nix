@@ -1,0 +1,217 @@
+input_number:
+  meacocool_start_temperature:
+    name: MeacoCool start temperature
+    min: 0
+    max: 50
+    step: 0.1
+    mode: box
+    unit_of_measurement: "°C"
+
+input_datetime:
+  meacocool_started_at:
+    name: MeacoCool started at
+    has_date: true
+    has_time: true
+
+automation:
+  - id: comfort_hot_room_alert
+    alias: "Comfort: Hot room Telegram alert"
+    mode: single
+
+    triggers:
+      - trigger: numeric_state
+        entity_id: climate.meacocool_mc_series_9000_pro
+        attribute: current_temperature
+        above: 28
+        for: "00:15:00"
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            🥵 Room is hot
+
+            Current room temperature is {{ state_attr('climate.meacocool_mc_series_9000_pro', 'current_temperature') }}°C.
+
+            AC is currently {{ states('climate.meacocool_mc_series_9000_pro') }}.
+            Target temperature is {{ state_attr('climate.meacocool_mc_series_9000_pro', 'temperature') }}°C.
+          parse_mode: plain_text
+
+  - id: comfort_bad_air_quality_alert
+    alias: "Comfort: Bad air quality Telegram alert"
+    mode: single
+
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.core_300s_series_pm2_5
+        above: 35
+        for: "00:10:00"
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            🌫️ Air quality is bad
+
+            PM2.5 is currently {{ states('sensor.core_300s_series_pm2_5') }} µg/m³.
+
+            Air purifier is currently {{ states('fan.core_300s_series') }}.
+          parse_mode: plain_text
+
+  - id: comfort_daily_telegram_digest
+    alias: "Comfort: Morning and evening Telegram digest"
+    mode: single
+
+    triggers:
+      - trigger: time
+        id: morning
+        at: "08:00:00"
+
+      - trigger: time
+        id: evening
+        at: "20:00:00"
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            {% if trigger is defined and trigger.id == 'morning' %}
+            🌅 Morning home comfort update
+            {% else %}
+            🏠 Evening home comfort update
+            {% endif %}
+
+            Weather: {{ states('weather.forecast_home') }}{% if state_attr('weather.forecast_home', 'temperature') is not none %}, {{ state_attr('weather.forecast_home', 'temperature') }}°C outside{% endif %}
+
+            Room temperature: {{ state_attr('climate.meacocool_mc_series_9000_pro', 'current_temperature') }}°C
+            AC: {{ states('climate.meacocool_mc_series_9000_pro') }}
+            AC target: {{ state_attr('climate.meacocool_mc_series_9000_pro', 'temperature') }}°C
+
+            PM2.5: {{ states('sensor.core_300s_series_pm2_5') }} µg/m³
+            Air purifier: {{ states('fan.core_300s_series') }}
+            Purifier filter: {{ states('sensor.core_300s_series_filter_lifetime') }}%
+
+            Front door battery: {{ states('sensor.front_door_battery') }}%
+          parse_mode: plain_text
+
+  - id: comfort_capture_meacocool_start_temperature
+    alias: "Comfort: Capture MeacoCool start temperature"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: climate.meacocool_mc_series_9000_pro
+        from: "off"
+
+      - trigger: homeassistant
+        event: start
+
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ states('climate.meacocool_mc_series_9000_pro') not in ['off', 'unavailable', 'unknown'] }}
+
+      - condition: template
+        value_template: >-
+          {{ state_attr('climate.meacocool_mc_series_9000_pro', 'current_temperature') is number }}
+
+    actions:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.meacocool_start_temperature
+        data:
+          value: "{{ state_attr('climate.meacocool_mc_series_9000_pro', 'current_temperature') }}"
+
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.meacocool_started_at
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+  - id: comfort_meacocool_running_temperature_update
+    alias: "Comfort: MeacoCool running temperature update"
+    mode: single
+
+    triggers:
+      - trigger: time_pattern
+        minutes: "/30"
+
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ states('climate.meacocool_mc_series_9000_pro') not in ['off', 'unavailable', 'unknown'] }}
+
+      - condition: template
+        value_template: >-
+          {{ state_attr('climate.meacocool_mc_series_9000_pro', 'current_temperature') is number }}
+
+      - condition: template
+        value_template: >-
+          {{ states('input_number.meacocool_start_temperature') | float(0) > 0 }}
+
+      - condition: template
+        value_template: >-
+          {{ as_timestamp(now()) - as_timestamp(states('input_datetime.meacocool_started_at'), 0) >= 20 * 60 }}
+
+    variables:
+      start_temp: "{{ states('input_number.meacocool_start_temperature') | float(0) }}"
+      current_temp: "{{ state_attr('climate.meacocool_mc_series_9000_pro', 'current_temperature') | float(0) }}"
+      cooled_by: "{{ (states('input_number.meacocool_start_temperature') | float(0) - state_attr('climate.meacocool_mc_series_9000_pro', 'current_temperature') | float(0)) | round(1) }}"
+      runtime_minutes: "{{ ((as_timestamp(now()) - as_timestamp(states('input_datetime.meacocool_started_at'), 0)) / 60) | round(0) | int }}"
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            ❄️ AC temperature update
+
+            MeacoCool has been on for about {{ runtime_minutes }} minutes.
+
+            Started at: {{ start_temp }}°C
+            Current room temp: {{ current_temp }}°C
+            Target: {{ state_attr('climate.meacocool_mc_series_9000_pro', 'temperature') }}°C
+
+            {% if cooled_by | float > 0 %}
+            The room is cooler by {{ cooled_by }}°C.
+            {% elif cooled_by | float < 0 %}
+            The room is warmer by {{ (cooled_by | float * -1) | round(1) }}°C since the AC started.
+            {% else %}
+            No temperature change yet.
+            {% endif %}
+
+            PM2.5: {{ states('sensor.core_300s_series_pm2_5') }} µg/m³
+          parse_mode: plain_text
+
+  - id: comfort_front_door_battery_daily_warning
+    alias: "Comfort: Front Door battery daily Telegram warning"
+    mode: single
+
+    triggers:
+      - trigger: time
+        at: "09:00:00"
+
+    conditions:
+      - condition: numeric_state
+        entity_id: sensor.front_door_battery
+        below: 25
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            🔋 Front Door battery low
+
+            Doorbell battery is currently {{ states('sensor.front_door_battery') }}%.
+
+            Charge it when you get a chance.
+          parse_mode: plain_text
