@@ -112,6 +112,12 @@ in {
 
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${./config/packages/home_comfort_alerts.yaml} ${packageDir}/home_comfort_alerts.yaml
+
+      install -m 0664 -o ${config.homelab.ids.user} -g media \
+        ${./config/packages/d10_robot_vacuum.yaml} ${packageDir}/d10_robot_vacuum.yaml
+
+      install -m 0664 -o ${config.homelab.ids.user} -g media \
+        ${./config/packages/bin_collection_alerts.yaml} ${packageDir}/bin_collection_alerts.yaml
     '';
   };
 

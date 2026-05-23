@@ -1,0 +1,84 @@
+automation:
+  - id: bins_evening_before_collection_telegram_alert
+    alias: "Bins: Evening before collection Telegram alert"
+    mode: single
+
+    triggers:
+      - trigger: time
+        at: "20:00:00"
+
+    variables:
+      due_bins: >-
+        {% set target = (now().date() + timedelta(days=1)).isoformat() %}
+        {% set bins = [
+          ['Domestic Waste', 'sensor.waste_collection_schedule_domestic_waste'],
+          ['Food Waste', 'sensor.waste_collection_schedule_food_waste'],
+          ['Garden Waste', 'sensor.waste_collection_schedule_garden_waste'],
+          ['Recycling', 'sensor.waste_collection_schedule_recycling']
+        ] %}
+        {% for name, entity in bins %}
+        {% set d = as_datetime(states(entity), none) %}
+        {% if d is not none and d.date().isoformat() == target %}
+        • {{ name }}
+        {% endif %}
+        {% endfor %}
+
+    conditions:
+      - condition: template
+        value_template: "{{ due_bins | trim | length > 0 }}"
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            🗑️ Put bins out tonight
+
+            Collection tomorrow:
+            {{ due_bins | trim }}
+
+            Don’t forget to put them out before bed.
+          parse_mode: plain_text
+
+  - id: bins_morning_of_collection_telegram_alert
+    alias: "Bins: Morning of collection Telegram alert"
+    mode: single
+
+    triggers:
+      - trigger: time
+        at: "07:00:00"
+
+    variables:
+      due_bins: >-
+        {% set target = now().date().isoformat() %}
+        {% set bins = [
+          ['Domestic Waste', 'sensor.waste_collection_schedule_domestic_waste'],
+          ['Food Waste', 'sensor.waste_collection_schedule_food_waste'],
+          ['Garden Waste', 'sensor.waste_collection_schedule_garden_waste'],
+          ['Recycling', 'sensor.waste_collection_schedule_recycling']
+        ] %}
+        {% for name, entity in bins %}
+        {% set d = as_datetime(states(entity), none) %}
+        {% if d is not none and d.date().isoformat() == target %}
+        • {{ name }}
+        {% endif %}
+        {% endfor %}
+
+    conditions:
+      - condition: template
+        value_template: "{{ due_bins | trim | length > 0 }}"
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            🚛 Bin collection today
+
+            Collection today:
+            {{ due_bins | trim }}
+
+            Quick check: are the bins out?
+          parse_mode: plain_text
