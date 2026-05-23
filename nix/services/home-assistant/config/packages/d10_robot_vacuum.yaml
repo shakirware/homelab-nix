@@ -1,0 +1,149 @@
+automation:
+  - id: d10_vacuum_error_telegram_alert
+    alias: "D10: Vacuum stuck/error Telegram alert"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: vacuum.d10
+        to: "error"
+        for: "00:01:00"
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            🤖 D10 needs help
+
+            The robot vacuum is reporting an error/stuck state.
+
+            Status: {{ states('vacuum.d10') }}
+            Battery: {{ states('sensor.d10_battery') }}%
+          parse_mode: plain_text
+
+  - id: d10_vacuum_low_battery_not_docked_telegram_alert
+    alias: "D10: Low battery while not docked Telegram alert"
+    mode: single
+
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.d10_battery
+        below: 20
+        for: "00:05:00"
+
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ states('vacuum.d10') not in ['docked', 'returning', 'unavailable', 'unknown'] }}
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            🔋 D10 battery is low
+
+            Battery is currently {{ states('sensor.d10_battery') }}%.
+
+            The vacuum does not appear to be docked.
+            Current status: {{ states('vacuum.d10') }}
+          parse_mode: plain_text
+
+  - id: d10_vacuum_cleaning_finished_telegram_summary
+    alias: "D10: Cleaning finished Telegram summary"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: vacuum.d10
+        to: "docked"
+        for: "00:00:30"
+
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.from_state is not none
+             and trigger.from_state.state in ['cleaning', 'returning', 'paused'] }}
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            ✅ D10 finished cleaning
+
+            Area: {{ states('sensor.d10_cleaning_area') }} {{ state_attr('sensor.d10_cleaning_area', 'unit_of_measurement') or 'm²' }}
+            Time: {{ states('sensor.d10_cleaning_time') }} {{ state_attr('sensor.d10_cleaning_time', 'unit_of_measurement') or 'min' }}
+            Battery: {{ states('sensor.d10_battery') }}%
+
+            Status: {{ states('vacuum.d10') }}
+          parse_mode: plain_text
+
+  - id: d10_vacuum_unavailable_telegram_alert
+    alias: "D10: Vacuum unavailable/offline Telegram alert"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: vacuum.d10
+        to: "unavailable"
+        for: "00:10:00"
+
+      - trigger: state
+        entity_id: vacuum.d10
+        to: "unknown"
+        for: "00:10:00"
+
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            ⚠️ D10 appears to be offline
+
+            Home Assistant has not had a valid state for the robot vacuum for 10 minutes.
+
+            Current status: {{ states('vacuum.d10') }}
+            Battery: {{ states('sensor.d10_battery') }}%
+          parse_mode: plain_text
+
+  - id: d10_vacuum_daily_clean_0630
+    alias: "D10: Daily clean at 06:30"
+    mode: single
+
+    triggers:
+      - trigger: time
+        at: "06:30:00"
+
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ states('vacuum.d10') not in ['cleaning', 'returning', 'error', 'unavailable', 'unknown'] }}
+
+      - condition: numeric_state
+        entity_id: sensor.d10_battery
+        above: 30
+
+    actions:
+      - action: vacuum.start
+        target:
+          entity_id: vacuum.d10
+
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          message: |-
+            🧹 D10 daily clean started
+
+            Scheduled clean started at 06:30.
+
+            Battery: {{ states('sensor.d10_battery') }}%
+            Mode: {{ states('select.d10_mode') }}
+            Water tank: {{ states('select.d10_water_tank_adjustment') }}
+          parse_mode: plain_text
