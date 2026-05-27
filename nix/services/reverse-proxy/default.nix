@@ -83,7 +83,7 @@ in {
 
     package = pkgs.caddy.withPlugins {
       plugins = [ "github.com/caddy-dns/cloudflare@v0.2.2" ];
-      hash = "sha256-zlBCmHJeeZsRR1OFyoayE/v1WH9n5SPy2JBJkgeHqdc=";
+      hash = "sha256-o1ZMHrcQXM6oyd8thy7KEnK0WMTwELPsNwgdx9iozEA=";
     };
 
     environmentFile = config.sops.templates."caddy-cloudflare".path;
