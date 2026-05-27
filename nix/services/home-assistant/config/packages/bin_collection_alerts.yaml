@@ -9,19 +9,19 @@ automation:
 
     variables:
       due_bins: >-
-        {% set target = (now().date() + timedelta(days=1)).isoformat() %}
-        {% set bins = [
+        {%- set target = now().date() + timedelta(days=1) -%}
+        {%- set bins = [
           ['Domestic Waste', 'sensor.waste_collection_schedule_domestic_waste'],
           ['Food Waste', 'sensor.waste_collection_schedule_food_waste'],
-          ['Garden Waste', 'sensor.waste_collection_schedule_garden_waste'],
           ['Recycling', 'sensor.waste_collection_schedule_recycling']
-        ] %}
-        {% for name, entity in bins %}
-        {% set d = as_datetime(states(entity), none) %}
-        {% if d is not none and d.date().isoformat() == target %}
+        ] -%}
+        {%- for name, entity in bins -%}
+          {%- set s = states(entity) -%}
+          {%- set d = strptime(s[-10:], '%d.%m.%Y', none) if s | length >= 10 else none -%}
+          {%- if d is not none and d.date() == target %}
         • {{ name }}
-        {% endif %}
-        {% endfor %}
+          {%- endif -%}
+        {%- endfor -%}
 
     conditions:
       - condition: template
@@ -51,19 +51,19 @@ automation:
 
     variables:
       due_bins: >-
-        {% set target = now().date().isoformat() %}
-        {% set bins = [
+        {%- set target = now().date() -%}
+        {%- set bins = [
           ['Domestic Waste', 'sensor.waste_collection_schedule_domestic_waste'],
           ['Food Waste', 'sensor.waste_collection_schedule_food_waste'],
-          ['Garden Waste', 'sensor.waste_collection_schedule_garden_waste'],
           ['Recycling', 'sensor.waste_collection_schedule_recycling']
-        ] %}
-        {% for name, entity in bins %}
-        {% set d = as_datetime(states(entity), none) %}
-        {% if d is not none and d.date().isoformat() == target %}
+        ] -%}
+        {%- for name, entity in bins -%}
+          {%- set s = states(entity) -%}
+          {%- set d = strptime(s[-10:], '%d.%m.%Y', none) if s | length >= 10 else none -%}
+          {%- if d is not none and d.date() == target %}
         • {{ name }}
-        {% endif %}
-        {% endfor %}
+          {%- endif -%}
+        {%- endfor -%}
 
     conditions:
       - condition: template
