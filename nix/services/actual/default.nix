@@ -17,7 +17,7 @@ in {
     lib.mkAfter [ "d ${appdataDir} 2775 ${config.homelab.ids.user} media - -" ];
 
   virtualisation.oci-containers.containers.actual = {
-    image = "ghcr.io/actualbudget/actual:26.4.0";
+    image = "ghcr.io/actualbudget/actual:26.5.2";
     autoStart = true;
 
     environment = { TZ = tz; };
