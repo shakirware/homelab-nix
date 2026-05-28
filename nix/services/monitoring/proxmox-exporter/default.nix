@@ -22,7 +22,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.proxmox_exporter = {
-    image = "prompve/prometheus-pve-exporter:3.8.3";
+    image = "prompve/prometheus-pve-exporter:3.9.0";
     autoStart = true;
 
     volumes = [
