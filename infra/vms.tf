@@ -80,7 +80,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
 
   lifecycle {
-    ignore_changes = [clone]
+    ignore_changes = [clone, disk, scsi_hardware]
   }
 }
 

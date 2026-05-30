@@ -117,6 +117,7 @@ in {
       TZ = tz;
       MARIADB_DATABASE = "invoiceplane";
       MARIADB_USER = "invoiceplane";
+      MARIADB_AUTO_UPGRADE = "1";
     };
 
     environmentFiles = [ dbEnvFile ];
