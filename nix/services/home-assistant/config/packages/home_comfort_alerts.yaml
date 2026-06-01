@@ -140,7 +140,8 @@ automation:
 
     triggers:
       - trigger: time_pattern
-        minutes: "/30"
+        minutes: "0"
+        seconds: "0"
 
     conditions:
       - condition: template
