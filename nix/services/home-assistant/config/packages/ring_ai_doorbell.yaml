@@ -1,10 +1,3 @@
-notify:
-  - platform: group
-    name: household_phones
-    services:
-      - service: mobile_app_shakirs_iphone
-      - service: mobile_app_monas_iphone
-
 automation:
   - id: ring_front_door_ai_recording_frames_summary
     alias: "Ring: Front Door AI recording frames summary"
@@ -13,7 +6,6 @@ automation:
 
     variables:
       recording_camera: camera.front_door_last_recording
-      preview_url: /media/local/doorbell/front_door_frame_02.jpg
       title: >-
         {% if trigger is defined and trigger.id == 'ding' %}
           🔔 Front Door
@@ -82,27 +74,6 @@ automation:
       - variables:
           ai_summary: >-
             {{ ring_ai.data | default('Front door recording detected, but AI did not return a summary.', true) | trim }}
-          notification_id: >-
-            front_door_recording_ai_{{ now().strftime('%Y%m%d_%H%M%S') }}
-
-      - action: persistent_notification.create
-        data:
-          title: "{{ title | trim }}"
-          message: >-
-            {{ now().strftime('%Y-%m-%d %H:%M:%S') }}
-
-            {{ ai_summary }}
-
-            Image: {{ preview_url }}
-          notification_id: "{{ notification_id }}"
-
-      - action: notify.household_phones
-        data:
-          title: "{{ title | trim }}"
-          message: "{{ ai_summary }}"
-          data:
-            image: "{{ preview_url }}"
-            clickAction: /lovelace
 
       - action: telegram_bot.send_photo
         data:
