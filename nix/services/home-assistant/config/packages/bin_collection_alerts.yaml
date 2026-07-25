@@ -1,84 +1,319 @@
+input_boolean:
+  bins_are_out:
+    name: Bins are out
+    icon: mdi:delete-empty
+
+input_text:
+  bins_active_collection_date:
+    name: Active bin collection date
+    icon: mdi:calendar
+    max: 10
+
+
 automation:
-  - id: bins_evening_before_collection_telegram_alert
-    alias: "Bins: Evening before collection Telegram alert"
+  # Sends:
+  # - 17:00: full reminder for tomorrow
+  # - 20:30: follow-up if not confirmed
+  # - 07:00: collection-day warning if not confirmed
+  - id: bins_collection_telegram_reminders
+    alias: "Bins: Collection Telegram reminders"
     mode: single
 
     triggers:
       - trigger: time
         at: "17:00:00"
+        id: evening
 
-    variables:
-      due_bins: >-
-        {%- set target = now().date() + timedelta(days=1) -%}
-        {%- set bins = [
-          ['Domestic Waste', 'sensor.waste_collection_schedule_domestic_waste'],
-          ['Food Waste', 'sensor.waste_collection_schedule_food_waste'],
-          ['Recycling', 'sensor.waste_collection_schedule_recycling']
-        ] -%}
-        {%- for name, entity in bins -%}
-          {%- set s = states(entity) -%}
-          {%- set d = strptime(s[-10:], '%d.%m.%Y', none) if s | length >= 10 else none -%}
-          {%- if d is not none and d.date() == target %}
-        • {{ name }}
-          {%- endif -%}
-        {%- endfor -%}
+      - trigger: time
+        at: "20:30:00"
+        id: follow_up
 
-    conditions:
+      - trigger: time
+        at: "07:00:00"
+        id: morning
+
+    actions:
+      # Evening reminders look at tomorrow; the morning reminder looks at today.
+      - variables:
+          reminder_type: >-
+            {{ trigger.get('id', 'evening') if trigger is defined else 'evening' }}
+
+      - variables:
+          target_offset: "{{ 0 if reminder_type == 'morning' else 1 }}"
+
+      - variables:
+          target_date_iso: >-
+            {{ (now().date() + timedelta(days=target_offset | int)).isoformat() }}
+          collection_date: >-
+            {{ (now() + timedelta(days=target_offset | int)).strftime('%A, %d %B')
+               | replace(' 0', ' ') }}
+          range_start: >-
+            {{ (today_at('00:00') + timedelta(days=target_offset | int)).isoformat() }}
+          range_end: >-
+            {{ (today_at('00:00') + timedelta(days=(target_offset | int) + 1)).isoformat() }}
+
+      # Follow-up and morning messages are unnecessary after confirmation.
+      - condition: template
+        value_template: >-
+          {{ reminder_type == 'evening'
+             or not (
+               is_state('input_boolean.bins_are_out', 'on')
+               and states('input_text.bins_active_collection_date') == target_date_iso
+             ) }}
+
+      - action: calendar.get_events
+        target:
+          entity_id: calendar.waste_collection_schedule_london_borough_of_hillingdon
+        data:
+          start_date_time: "{{ range_start }}"
+          end_date_time: "{{ range_end }}"
+        response_variable: bin_agenda
+
+      - variables:
+          due_bins: >-
+            {%- set calendar_entity =
+              'calendar.waste_collection_schedule_london_borough_of_hillingdon' -%}
+            {%- set events = bin_agenda.get(calendar_entity, {}).get('events', []) -%}
+            {%- set ns = namespace(names=[], lines=[]) -%}
+            {%- for event in events -%}
+              {%- set event_start = event.start | string -%}
+              {%- set name = event.summary | default('Waste collection', true) -%}
+              {%- set lower_name = name | lower -%}
+              {%- if event_start[:10] == target_date_iso and name not in ns.names -%}
+                {%- if 'food' in lower_name -%}
+                  {%- set icon = '🍎' -%}
+                {%- elif 'garden' in lower_name -%}
+                  {%- set icon = '🌿' -%}
+                {%- elif 'recycl' in lower_name -%}
+                  {%- set icon = '♻️' -%}
+                {%- else -%}
+                  {%- set icon = '🗑️' -%}
+                {%- endif -%}
+                {%- set ns.names = ns.names + [name] -%}
+                {%- set ns.lines = ns.lines + [icon ~ ' ' ~ name] -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.lines | join('\n') }}
+
+      # Stop on days without a collection.
       - condition: template
         value_template: "{{ due_bins | trim | length > 0 }}"
 
+      # Re-check after the calendar call in case the button was just pressed.
+      - condition: template
+        value_template: >-
+          {{ reminder_type == 'evening'
+             or not (
+               is_state('input_boolean.bins_are_out', 'on')
+               and states('input_text.bins_active_collection_date') == target_date_iso
+             ) }}
+
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ reminder_type == 'evening' }}"
+            sequence:
+              # Start a fresh confirmation cycle for tomorrow's collection.
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.bins_are_out
+
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.bins_active_collection_date
+                data:
+                  value: "{{ target_date_iso }}"
+
+              - action: telegram_bot.send_message
+                data:
+                  chat_id:
+                    - -4936739997
+                  parse_mode: plain_text
+                  message: |-
+                    🗑️ Bin collection tomorrow
+
+                    📅 {{ collection_date }}
+
+                    Put out tonight:
+                    {{ due_bins | trim }}
+
+                    Please put them out before bed, then tap the button below.
+                  inline_keyboard:
+                    - "✅ Bins are out:/bins_out_{{ target_date_iso }}"
+
+          - conditions:
+              - condition: template
+                value_template: "{{ reminder_type == 'follow_up' }}"
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.bins_are_out
+
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.bins_active_collection_date
+                data:
+                  value: "{{ target_date_iso }}"
+
+              - action: telegram_bot.send_message
+                data:
+                  chat_id:
+                    - -4936739997
+                  parse_mode: plain_text
+                  message: |-
+                    ⏰ Bins are not marked as out yet
+
+                    📅 Collection: {{ collection_date }}
+
+                    Put out tonight:
+                    {{ due_bins | trim }}
+
+                    Please put them out before bed, then tap the button below.
+                  inline_keyboard:
+                    - "✅ Bins are out:/bins_out_{{ target_date_iso }}"
+
+          - conditions:
+              - condition: template
+                value_template: "{{ reminder_type == 'morning' }}"
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.bins_are_out
+
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.bins_active_collection_date
+                data:
+                  value: "{{ target_date_iso }}"
+
+              - action: telegram_bot.send_message
+                data:
+                  chat_id:
+                    - -4936739997
+                  parse_mode: plain_text
+                  message: |-
+                    🚛 Bin collection today
+
+                    📅 {{ collection_date }}
+
+                    Due today:
+                    {{ due_bins | trim }}
+
+                    ⚠️ The bins were not marked as out last night. Please check them now.
+                  inline_keyboard:
+                    - "✅ Bins are out:/bins_out_{{ target_date_iso }}"
+
+  # Handles the Telegram inline button and edits the reminder after confirmation.
+  - id: bins_telegram_mark_as_out
+    alias: "Bins: Telegram mark as out"
+    mode: parallel
+    max: 5
+
+    triggers:
+      - trigger: event
+        event_type: telegram_callback
+
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.event.data.chat_id | int == -4936739997 }}
+
+      - condition: template
+        value_template: >-
+          {{ (trigger.event.data.data | default('', true)).startswith('/bins_out_') }}
+
     actions:
-      - action: telegram_bot.send_message
-        data:
-          chat_id:
-            - -4936739997
-          message: |-
-            🗑️ Put bins out tonight
+      - variables:
+          callback_date: >-
+            {{ (trigger.event.data.data | default('', true))[-10:] }}
+          confirmer: >-
+            {{ (trigger.event.data.from_first | default('Someone', true))
+               ~ ((' ' ~ trigger.event.data.from_last)
+                  if trigger.event.data.from_last | default('', true) else '') }}
+          original_message: >-
+            {{ trigger.event.data.message.text
+               | default('🗑️ Bin collection reminder', true) }}
 
-            Collection tomorrow:
-            {{ due_bins | trim }}
+      - choose:
+          # Accept only the currently active collection date. Old Telegram
+          # messages therefore cannot confirm a later collection by mistake.
+          - conditions:
+              - condition: template
+                value_template: >-
+                  {{ callback_date | length == 10
+                     and callback_date == states('input_text.bins_active_collection_date') }}
+              - condition: state
+                entity_id: input_boolean.bins_are_out
+                state: "off"
+            sequence:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.bins_are_out
 
-            Don’t forget to put them out before bed.
-          parse_mode: plain_text
+              - action: telegram_bot.answer_callback_query
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  callback_query_id: "{{ trigger.event.data.id }}"
+                  message: "Bins marked as out ✅"
+                  show_alert: false
 
-  - id: bins_morning_of_collection_telegram_alert
-    alias: "Bins: Morning of collection Telegram alert"
+              - action: telegram_bot.edit_message
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  chat_id: "{{ trigger.event.data.chat_id }}"
+                  message_id: >-
+                    {{ trigger.event.data.message.message_id }}
+                  parse_mode: plain_text
+                  message: |-
+                    {{ original_message }}
+
+                    ✅ Bins marked as out by {{ confirmer }} at {{ now().strftime('%H:%M') }}.
+                  inline_keyboard: []
+
+          - conditions:
+              - condition: template
+                value_template: >-
+                  {{ callback_date | length == 10
+                     and callback_date == states('input_text.bins_active_collection_date') }}
+              - condition: state
+                entity_id: input_boolean.bins_are_out
+                state: "on"
+            sequence:
+              - action: telegram_bot.answer_callback_query
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  callback_query_id: "{{ trigger.event.data.id }}"
+                  message: "Already marked as out ✅"
+                  show_alert: false
+
+        default:
+          - action: telegram_bot.answer_callback_query
+            data:
+              config_entry_id: >-
+                {{ trigger.event.data.bot.config_entry_id }}
+              callback_query_id: "{{ trigger.event.data.id }}"
+              message: "That bin reminder is no longer active."
+              show_alert: false
+
+  # Clear the helpers at noon after collection, ready for the next cycle.
+  - id: bins_reset_confirmation_after_collection
+    alias: "Bins: Reset confirmation after collection"
     mode: single
 
     triggers:
       - trigger: time
-        at: "07:00:00"
-
-    variables:
-      due_bins: >-
-        {%- set target = now().date() -%}
-        {%- set bins = [
-          ['Domestic Waste', 'sensor.waste_collection_schedule_domestic_waste'],
-          ['Food Waste', 'sensor.waste_collection_schedule_food_waste'],
-          ['Recycling', 'sensor.waste_collection_schedule_recycling']
-        ] -%}
-        {%- for name, entity in bins -%}
-          {%- set s = states(entity) -%}
-          {%- set d = strptime(s[-10:], '%d.%m.%Y', none) if s | length >= 10 else none -%}
-          {%- if d is not none and d.date() == target %}
-        • {{ name }}
-          {%- endif -%}
-        {%- endfor -%}
-
-    conditions:
-      - condition: template
-        value_template: "{{ due_bins | trim | length > 0 }}"
+        at: "12:00:00"
 
     actions:
-      - action: telegram_bot.send_message
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.bins_are_out
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.bins_active_collection_date
         data:
-          chat_id:
-            - -4936739997
-          message: |-
-            🚛 Bin collection today
-
-            Collection today:
-            {{ due_bins | trim }}
-
-            Quick check: are the bins out?
-          parse_mode: plain_text
+          value: ""
