@@ -110,7 +110,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.invoiceplane-db = {
-    image = "mariadb:12.2";
+    image = "mariadb:12.3";
     autoStart = true;
 
     environment = {
