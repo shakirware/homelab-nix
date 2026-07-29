@@ -44,7 +44,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.grafana = {
-    image = "grafana/grafana:13.0.1";
+    image = "grafana/grafana:13.1.1";
     autoStart = true;
 
     environment = {
