@@ -133,7 +133,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.homepage = {
-    image = "ghcr.io/gethomepage/homepage:v1.13.1";
+    image = "ghcr.io/gethomepage/homepage:v1.13.2";
     autoStart = true;
 
     extraOptions = [
