@@ -122,7 +122,7 @@ in {
   };
 
   virtualisation.oci-containers.containers."home-assistant" = {
-    image = "ghcr.io/home-assistant/home-assistant:2026.7.3";
+    image = "ghcr.io/home-assistant/home-assistant:2026.7.4";
     autoStart = true;
 
     environment = {
