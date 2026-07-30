@@ -1,7 +1,6 @@
 { lib, config, pkgs, ... }:
 
 let
-  # Adjust labels if you change your disks
   diskA = "/dev/disk/by-label/diskA";
   diskB = "/dev/disk/by-label/diskB";
 
@@ -39,6 +38,30 @@ in {
     device = diskB;
     fsType = "ext4";
     options = [ "nofail" "noatime" "x-systemd.device-timeout=30" ];
+  };
+
+  systemd.services.media-library-dirs = {
+    description = "Create media library directories on mergerfs";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "srv-media.mount" ];
+    requires = [ "srv-media.mount" ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+
+    path = [ pkgs.coreutils ];
+
+    script = ''
+      set -euo pipefail
+      install -d -m 2775 -o ${config.homelab.ids.user} -g media \
+        /srv/media/youtube \
+        /srv/media/books \
+        /srv/media/books/library \
+        /srv/media/books/bookdrop \
+        /srv/media/audiobooks
+    '';
   };
 
   systemd.mounts = [{

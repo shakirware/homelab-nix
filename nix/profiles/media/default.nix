@@ -16,6 +16,11 @@
     ../../services/prowlarr
     ../../services/flaresolverr
 
+    ../../services/shelfmark
+    ../../services/readmeabook
+    ../../services/grimmory
+    ../../services/audiobookshelf
+
     ../../services/gluetun
     ../../services/qbittorrent
 

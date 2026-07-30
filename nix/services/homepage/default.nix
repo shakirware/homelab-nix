@@ -24,6 +24,10 @@ let
   adguardHost = "adguard.${baseDomain}";
   jellyfinHost = "jellyfin.${baseDomain}";
   seerrHost = "seerr.${baseDomain}";
+  shelfmarkHost = "shelfmark.${baseDomain}";
+  readmeabookHost = "readmeabook.${baseDomain}";
+  grimmoryHost = "grimmory.${baseDomain}";
+  audiobookshelfHost = "audiobookshelf.${baseDomain}";
   sonarrHost = "sonarr.${baseDomain}";
   radarrHost = "radarr.${baseDomain}";
   prowlarrHost = "prowlarr.${baseDomain}";
@@ -68,6 +72,10 @@ let
 
     JELLYFIN_HOST = jellyfinHost;
     SEERR_HOST = seerrHost;
+    SHELFMARK_HOST = shelfmarkHost;
+    READMEABOOK_HOST = readmeabookHost;
+    GRIMMORY_HOST = grimmoryHost;
+    AUDIOBOOKSHELF_HOST = audiobookshelfHost;
 
     SONARR_HOST = sonarrHost;
     RADARR_HOST = radarrHost;
