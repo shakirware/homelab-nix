@@ -19,6 +19,10 @@ in {
     "invoice.${base}" = ips.gw;
     "jellyfin.${base}" = ips.gw;
     "seerr.${base}" = ips.gw;
+    "shelfmark.${base}" = ips.gw;
+    "readmeabook.${base}" = ips.gw;
+    "grimmory.${base}" = ips.gw;
+    "audiobookshelf.${base}" = ips.gw;
     "profilarr.${base}" = ips.gw;
     "sonarr.${base}" = ips.gw;
     "radarr.${base}" = ips.gw;
@@ -68,6 +72,22 @@ in {
     {
       host = "seerr.${base}";
       upstream = "${ips.media}:5055";
+    }
+    {
+      host = "shelfmark.${base}";
+      upstream = "${ips.media}:8084";
+    }
+    {
+      host = "readmeabook.${base}";
+      upstream = "${ips.media}:3030";
+    }
+    {
+      host = "grimmory.${base}";
+      upstream = "${ips.media}:6060";
+    }
+    {
+      host = "audiobookshelf.${base}";
+      upstream = "${ips.media}:13378";
     }
     {
       host = "sonarr.${base}";
