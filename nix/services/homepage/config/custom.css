@@ -1,312 +1,429 @@
+/* ==========================================================================
+   HOMEPAGE — NAVY / PERIWINKLE THEME
+   ========================================================================== */
+
 :root {
-  /* Core palette */
-  --hl-bg: #0b1220;
-  --hl-bg-2: #111827;
-  --hl-surface: rgba(15, 23, 42, 0.72);
-  --hl-surface-strong: rgba(15, 23, 42, 0.9);
-  --hl-surface-hover: rgba(30, 41, 59, 0.92);
+  /* Exact requested page colour */
+  --background-color: hsl(229, 19%, 23%);
+  --background-deep: hsl(229, 22%, 18%);
 
-  --hl-text: #e5eefc;
-  --hl-text-soft: #a5b4cc;
-  --hl-text-muted: #7f8da3;
+  /* Requested accent colours */
+  --primary-color: hsl(222, 74%, 74%);
+  --primary-hover: hsl(222, 74%, 82%);
+  --primary-muted: hsla(222, 74%, 74%, 0.14);
 
-  --hl-border: rgba(148, 163, 184, 0.14);
-  --hl-border-strong: rgba(125, 211, 252, 0.22);
+  --positive-color: hsl(96, 44%, 68%);
+  --warning-color: hsl(39, 78%, 70%);
+  --negative-color: hsl(359, 68%, 71%);
 
-  --hl-accent: #7dd3fc;
-  --hl-accent-2: #a78bfa;
-  --hl-accent-3: #34d399;
+  /* Text */
+  --text-color: hsl(220, 28%, 94%);
+  --text-soft: hsl(225, 16%, 72%);
+  --text-muted: hsl(225, 12%, 58%);
 
-  --hl-good: #22c55e;
-  --hl-warn: #f59e0b;
-  --hl-danger: #ef4444;
+  /* Borders */
+  --border-color: hsla(222, 32%, 82%, 0.12);
+  --border-hover: hsla(222, 74%, 74%, 0.36);
 
-  /* Card system */
-  --hl-card-radius: 20px;
-  --hl-card-radius-sm: 14px;
-  --hl-card-border: 1px solid var(--hl-border);
-  --hl-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-  --hl-card-shadow-hover: 0 16px 36px rgba(0, 0, 0, 0.38);
+  /* Shape */
+  --card-radius: 10px;
+  --control-radius: 8px;
 
-  /* Controls */
-  --hl-input-bg: rgba(15, 23, 42, 0.84);
-  --hl-input-border: rgba(148, 163, 184, 0.18);
-  --hl-input-border-focus: rgba(125, 211, 252, 0.45);
+  --contrast-multiplier: 1.2;
 }
 
-/* Base */
+/* ==========================================================================
+   HOMEPAGE AMBER PALETTE OVERRIDE
+   ========================================================================== */
+
+.theme-amber {
+  --color-50: 248, 250, 255 !important;
+  --color-100: 238, 242, 255 !important;
+  --color-200: 219, 228, 252 !important;
+  --color-300: 184, 202, 247 !important;
+  --color-400: 160, 184, 243 !important;
+
+  /* hsl(222, 74%, 74%) */
+  --color-500: 140, 169, 238 !important;
+
+  --color-600: 108, 139, 213 !important;
+  --color-700: 78, 104, 172 !important;
+
+  /* Related navy surfaces */
+  --color-800: 56, 61, 81 !important;
+
+  /* hsl(229, 19%, 23%) */
+  --color-900: 48, 52, 70 !important;
+
+  --color-950: 34, 37, 52 !important;
+
+  --color-logo-start: 160, 184, 243 !important;
+  --color-logo-stop: 108, 139, 213 !important;
+}
+
+/* ==========================================================================
+   PAGE
+   ========================================================================== */
+
 html,
 body {
-  background:
-    radial-gradient(
-      circle at top left,
-      rgba(125, 211, 252, 0.08),
-      transparent 32%
-    ),
-    radial-gradient(
-      circle at top right,
-      rgba(167, 139, 250, 0.08),
-      transparent 28%
-    ),
-    linear-gradient(180deg, var(--hl-bg) 0%, var(--hl-bg-2) 100%) !important;
-  color: var(--hl-text) !important;
-}
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
 
-body {
-  letter-spacing: 0.2px;
-  -webkit-font-smoothing: antialiased;
+  background-color: var(--background-color) !important;
+  background-image: none !important;
+
+  color: var(--text-color) !important;
+
+  font-family:
+    "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace !important;
+
+  font-size: 14px;
+  line-height: 1.45;
+
   text-rendering: optimizeLegibility;
-}
-
-/* Optional subtle page glow */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      circle at 15% 20%,
-      rgba(52, 211, 153, 0.05),
-      transparent 20%
-    ),
-    radial-gradient(
-      circle at 85% 10%,
-      rgba(125, 211, 252, 0.06),
-      transparent 22%
-    );
-  z-index: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
 #app,
-.layout,
-main {
-  position: relative;
-  z-index: 1;
+#page_container,
+main,
+.layout {
+  background: transparent !important;
 }
 
-/* Typography */
+/* ==========================================================================
+   TYPOGRAPHY
+   ========================================================================== */
+
 h1,
 h2,
 h3,
-.section-title,
-.group-title {
-  color: var(--hl-text) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.25px;
+h4 {
+  color: var(--text-color) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0;
 }
 
-p,
-span,
-small,
-.description {
-  color: var(--hl-text-soft);
-}
-
-/* Cards / tiles / widgets */
-.card,
-.service-card,
-.widget,
-.tile {
-  border-radius: var(--hl-card-radius) !important;
-  background: linear-gradient(
-    180deg,
-    rgba(30, 41, 59, 0.74) 0%,
-    rgba(15, 23, 42, 0.82) 100%
-  ) !important;
-  border: var(--hl-card-border) !important;
-  box-shadow: var(--hl-card-shadow) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.card,
-.service-card {
-  transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease;
-}
-
-.card:hover,
-.service-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--hl-card-shadow-hover) !important;
-  border-color: var(--hl-border-strong) !important;
-  background: linear-gradient(
-    180deg,
-    rgba(30, 41, 59, 0.86) 0%,
-    rgba(15, 23, 42, 0.96) 100%
-  ) !important;
-}
-
-/* Service icons */
-.service-icon,
-.icon,
-.service-card img {
-  border-radius: var(--hl-card-radius-sm) !important;
-}
-
-.service-icon,
-.icon {
-  background: linear-gradient(
-    135deg,
-    rgba(125, 211, 252, 0.14),
-    rgba(167, 139, 250, 0.14)
-  ) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 4px 12px rgba(0, 0, 0, 0.18);
-  padding: 8px;
-}
-
-/* Group blocks / headers */
-.group,
-.group-header,
-.header,
-header {
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
+.services-group h2,
+.bookmarks-group h2,
 .group-title,
 .section-title {
-  margin-bottom: 0.7rem;
+  color: var(--text-soft) !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.015em;
 }
 
-/* Links */
-a {
-  color: var(--hl-accent) !important;
-  transition:
-    opacity 120ms ease,
-    color 120ms ease;
-}
+/* ==========================================================================
+   GROUP HEADERS
+   ========================================================================== */
 
-a:hover {
-  color: #b6e7ff !important;
-  opacity: 1;
-}
+/*
+ * Homepage may render collapsible group headings as buttons.
+ * Keep them transparent instead of giving them a bright primary background.
+ */
 
-/* Buttons / inputs */
-button,
-.btn,
-input,
-select,
-textarea {
-  border-radius: 14px !important;
-  border: 1px solid var(--hl-input-border) !important;
-  background: var(--hl-input-bg) !important;
-  color: var(--hl-text) !important;
+.services-group > button,
+.bookmarks-group > button {
+  width: 100%;
+
+  padding: 0.15rem 0.35rem 0.55rem !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  color: var(--text-soft) !important;
+
   box-shadow: none !important;
 }
 
-button:hover,
-.btn:hover {
-  border-color: rgba(125, 211, 252, 0.35) !important;
-  background: rgba(30, 41, 59, 0.92) !important;
+.services-group > button:hover,
+.bookmarks-group > button:hover {
+  background: transparent !important;
+  color: var(--text-color) !important;
+}
+
+/* ==========================================================================
+   SERVICE CARDS
+   ========================================================================== */
+
+.service-card {
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--card-radius) !important;
+
+  background: var(--surface-color) !important;
+
+  box-shadow:
+    0 1px 2px rgba(8, 10, 20, 0.18),
+    0 5px 14px rgba(8, 10, 20, 0.12) !important;
+
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.service-card:hover {
+  transform: translateY(-1px);
+
+  background: var(--surface-hover) !important;
+  border-color: var(--border-hover) !important;
+
+  box-shadow:
+    0 2px 4px rgba(8, 10, 20, 0.2),
+    0 8px 20px rgba(8, 10, 20, 0.18) !important;
+}
+
+/*
+ * Do not target .icon, .service-icon, SVG or IMG globally.
+ * Homepage uses CSS masks and background colours to render MDI icons.
+ */
+
+.service-card img {
+  box-shadow: none !important;
+}
+
+/* Titles and descriptions */
+
+.service-card a {
+  color: var(--primary-color) !important;
+  text-decoration: none !important;
+}
+
+.service-card a:hover {
+  color: var(--primary-hover) !important;
+  text-decoration: none !important;
+}
+
+.service-card .description {
+  color: var(--text-soft) !important;
+}
+
+/* ==========================================================================
+   INNER WIDGET STAT BOXES
+   ========================================================================== */
+
+.service-card table,
+.service-card table tr,
+.service-card table td,
+.service-card table th {
+  border-color: transparent !important;
+}
+
+.service-card table td,
+.service-card table th {
+  background: var(--surface-inset) !important;
+}
+
+/* ==========================================================================
+   INFORMATION WIDGETS / HEADER
+   ========================================================================== */
+
+#information-widgets {
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--card-radius) !important;
+
+  background: var(--surface-color) !important;
+
+  box-shadow:
+    0 1px 2px rgba(8, 10, 20, 0.18),
+    0 5px 14px rgba(8, 10, 20, 0.12) !important;
+}
+
+#information-widgets h1,
+#information-widgets h2,
+#information-widgets h3 {
+  color: var(--text-color) !important;
+}
+
+#information-widgets p,
+#information-widgets span {
+  color: var(--text-soft) !important;
+}
+
+/* ==========================================================================
+   HOME / PERSONAL TABS
+   ========================================================================== */
+
+#tabs ul {
+  padding: 3px !important;
+
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--card-radius) !important;
+
+  background: var(--surface-inset) !important;
+
+  box-shadow: none !important;
+}
+
+#tabs button,
+#tabs a {
+  padding: 0.45rem 0.75rem !important;
+
+  border: 0 !important;
+  border-radius: 7px !important;
+
+  background: transparent !important;
+  color: var(--text-soft) !important;
+
+  box-shadow: none !important;
+}
+
+#tabs button:hover,
+#tabs a:hover {
+  background: var(--primary-muted) !important;
+  color: var(--text-color) !important;
+}
+
+/* Common selected-tab attributes */
+
+#tabs button[aria-selected="true"],
+#tabs a[aria-current="page"] {
+  background: var(--primary-muted) !important;
+  color: var(--primary-color) !important;
+}
+
+/* ==========================================================================
+   LINKS
+   ========================================================================== */
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-hover);
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   INPUTS
+   ========================================================================== */
+
+input,
+select,
+textarea {
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--control-radius) !important;
+
+  background: var(--surface-inset) !important;
+  color: var(--text-color) !important;
+
+  padding: 7px 10px;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+
+  box-shadow: none !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted) !important;
 }
 
 input:focus,
 select:focus,
-textarea:focus,
-button:focus,
-.btn:focus {
+textarea:focus {
   outline: none !important;
-  border-color: var(--hl-input-border-focus) !important;
-  box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.14) !important;
+
+  border-color: var(--primary-color) !important;
+
+  box-shadow: 0 0 0 3px hsla(222, 74%, 74%, 0.14) !important;
 }
 
-/* Tables */
-table,
-.table,
-.widget table {
-  border-collapse: collapse !important;
-  background: transparent !important;
+/*
+ * Do not apply a filled background, padding or width to every button.
+ * Homepage uses buttons internally for groups, tabs and controls.
+ */
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit !important;
+  font-size: 14px !important;
 }
 
-.widget table td,
-.widget table th,
-table td,
-table th {
-  padding: 9px 10px !important;
-  border-color: rgba(148, 163, 184, 0.08) !important;
-}
+/* ==========================================================================
+   STATUS COLOURS
+   ========================================================================== */
 
-table th,
-.widget table th {
-  color: var(--hl-text) !important;
-  font-weight: 600 !important;
-}
-
-table tr:nth-child(even),
-.widget table tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02) !important;
-}
-
-/* Dividers */
-hr,
-.divider,
-table tr {
-  border-color: rgba(148, 163, 184, 0.08) !important;
-}
-
-/* Status dots and health */
-.status,
-.status-dot,
-.status-indicator {
-  filter: saturate(1.15) brightness(1.05);
-}
-
-/* Optional nicer color pop for status badges if Homepage exposes them */
 [class*="good"],
-[class*="success"] {
-  color: #86efac !important;
+[class*="success"],
+.success {
+  color: var(--positive-color) !important;
 }
 
 [class*="warn"],
-[class*="warning"] {
-  color: #fcd34d !important;
+[class*="warning"],
+.warning {
+  color: var(--warning-color) !important;
 }
 
 [class*="danger"],
-[class*="error"] {
-  color: #fca5a5 !important;
+[class*="error"],
+.error {
+  color: var(--negative-color) !important;
 }
 
-/* Widget headers / stat labels */
-.widget .title,
-.widget .label,
-.card .title,
-.service-card .title {
-  color: var(--hl-text) !important;
+.status,
+.status-dot,
+.status-indicator {
+  filter: saturate(1.05) brightness(1.05);
 }
 
-.widget .description,
-.service-card .description,
-.card .description {
-  color: var(--hl-text-soft) !important;
+/* ==========================================================================
+   HOMEPAGE DARK THEME OVERRIDES
+   ========================================================================== */
+
+.dark\:text-theme-200:is(.dark *) {
+  color: var(--text-color) !important;
 }
 
-/* Search / nav / small pills */
-.badge,
-.tag,
-.chip {
-  border-radius: 999px !important;
-  background: rgba(125, 211, 252, 0.12) !important;
-  border: 1px solid rgba(125, 211, 252, 0.18) !important;
-  color: #cdefff !important;
+.dark\:text-theme-300:is(.dark *) {
+  color: var(--text-soft) !important;
 }
 
-/* Scrollbars */
+.dark\:text-theme-400:is(.dark *) {
+  color: var(--text-muted) !important;
+}
+
+.dark\:bg-theme-700:is(.dark *) {
+  background-color: var(--surface-hover) !important;
+}
+
+.dark\:bg-theme-800:is(.dark *) {
+  background-color: var(--surface-color) !important;
+}
+
+.dark\:bg-theme-900:is(.dark *) {
+  background-color: var(--surface-inset) !important;
+}
+
+.dark\:border-theme-700:is(.dark *),
+.dark\:border-theme-800:is(.dark *) {
+  border-color: var(--border-color) !important;
+}
+
+/* ==========================================================================
+   SCROLLBARS
+   ========================================================================== */
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(125, 211, 252, 0.25) transparent;
+  scrollbar-color: hsla(222, 74%, 74%, 0.24) transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 *::-webkit-scrollbar-track {
@@ -314,13 +431,44 @@ table tr {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(125, 211, 252, 0.18);
-  border-radius: 999px;
   border: 2px solid transparent;
+  border-radius: 999px;
+
+  background: hsla(222, 74%, 74%, 0.2);
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(125, 211, 252, 0.28);
+  background: hsla(222, 74%, 74%, 0.32);
   background-clip: padding-box;
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  html,
+  body {
+    font-size: 13px;
+  }
+
+  .service-card {
+    border-radius: 8px !important;
+  }
+
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  html,
+  body {
+    font-size: 12px;
+  }
 }

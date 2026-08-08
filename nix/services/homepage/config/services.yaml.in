@@ -11,7 +11,28 @@
           showEpisodeNumber: true
           enableNowPlaying: true
           expandOneStreamToTwoRows: false
+    - Grimmory:
+        icon: mdi-bookshelf
+        href: https://@GRIMMORY_HOST@
+        description: Ebook library and reader
+        siteMonitor: https://@GRIMMORY_HOST@
+    - Audiobookshelf:
+        icon: mdi-book-music
+        href: https://@AUDIOBOOKSHELF_HOST@
+        description: Audiobook library and player
+        siteMonitor: https://@AUDIOBOOKSHELF_HOST@
+    - Pinchflat:
+        icon: mdi-youtube
+        href: https://@PINCHFLAT_HOST@
+        description: YouTube media archiver
+        siteMonitor: https://@PINCHFLAT_HOST@
+    - Tuliprox:
+        icon: mdi-television-play
+        href: https://@IPTV_HOST@
+        description: Tuliprox IPTV (Xtream)
+        siteMonitor: https://@IPTV_HOST@
 
+- Requests:
     - Seerr:
         icon: mdi-movie-search
         href: https://@SEERR_HOST@
@@ -45,50 +66,18 @@
                 - level: good
                   when: eq
                   value: 0
-
-    - Grimmory:
-        icon: mdi-bookshelf
-        href: https://@GRIMMORY_HOST@
-        description: Ebook library and reader
-        siteMonitor: https://@GRIMMORY_HOST@
-
-    - Audiobookshelf:
-        icon: mdi-book-music
-        href: https://@AUDIOBOOKSHELF_HOST@
-        description: Audiobook library and player
-        siteMonitor: https://@AUDIOBOOKSHELF_HOST@
-
-    - Tracearr:
-        icon: mdi-chart-timeline-variant
-        href: https://@TRACEARR_HOST@
-        description: Media activity & tracing
-        siteMonitor: https://@TRACEARR_HOST@
-
-    - Pinchflat:
-        icon: mdi-youtube
-        href: https://@PINCHFLAT_HOST@
-        description: YouTube media archiver
-        siteMonitor: https://@PINCHFLAT_HOST@
-
-    - Tuliprox:
-        icon: mdi-television-play
-        href: https://@IPTV_HOST@
-        description: Tuliprox IPTV (Xtream)
-        siteMonitor: https://@IPTV_HOST@
-
-- Automation:
     - Shelfmark:
         icon: mdi-book-search
         href: https://@SHELFMARK_HOST@
         description: Ebook search and request automation
         siteMonitor: https://@SHELFMARK_HOST@
-
     - ReadMeABook:
         icon: mdi-headphones
         href: https://@READMEABOOK_HOST@
         description: Audiobook requests and automation
         siteMonitor: https://@READMEABOOK_HOST@
 
+- Automation:
     - Sonarr:
         icon: mdi-television-classic
         href: https://@SONARR_HOST@
@@ -120,7 +109,6 @@
                 - level: good
                   when: lt
                   value: 10
-
     - Radarr:
         icon: mdi-movie-open
         href: https://@RADARR_HOST@
@@ -152,7 +140,6 @@
                 - level: good
                   when: lt
                   value: 10
-
     - Prowlarr:
         icon: mdi-magnify-scan
         href: https://@PROWLARR_HOST@
@@ -186,20 +173,6 @@
                 - level: good
                   when: lt
                   value: 5
-
-    - Profilarr:
-        icon: mdi-format-list-bulleted
-        href: https://@PROFILARR_HOST@
-        description: Profiles/quality automation for Arr apps
-        siteMonitor: https://@PROFILARR_HOST@
-
-    - Cleanuparr:
-        icon: mdi-broom
-        href: https://@CLEANUPARR_HOST@
-        description: Arr queue cleanup automation
-        siteMonitor: https://@CLEANUPARR_HOST@
-
-- Downloading:
     - qBittorrent:
         icon: mdi-download-network
         href: https://@QBITTORRENT_HOST@
@@ -222,14 +195,29 @@
                 - level: good
                   when: lt
                   value: 5
+    - Profilarr:
+        icon: mdi-format-list-bulleted
+        href: https://@PROFILARR_HOST@
+        description: Profiles/quality automation for Arr apps
+        siteMonitor: https://@PROFILARR_HOST@
+    - Cleanuparr:
+        icon: mdi-broom
+        href: https://@CLEANUPARR_HOST@
+        description: Arr queue cleanup automation
+        siteMonitor: https://@CLEANUPARR_HOST@
 
-- Monitoring:
-    - Homepage:
-        icon: mdi-view-dashboard
-        href: https://@HOMEPAGE_HOST@
-        description: This dashboard
-        siteMonitor: https://@HOMEPAGE_HOST@
-
+- Infrastructure:
+    - Proxmox:
+        icon: mdi-server
+        href: https://@PROXMOX_HOST@
+        description: Hypervisor UI
+        siteMonitor: https://@PROXMOX_HOST@
+        widget:
+          type: proxmox
+          url: https://@PROXMOX_IP@:8006
+          username: {{HOMEPAGE_VAR_PROXMOX_TOKEN}}
+          password: {{HOMEPAGE_VAR_PROXMOX_SECRET}}
+          node: pve
     - AdGuard:
         icon: mdi-shield-check
         href: https://@ADGUARD_HOST@
@@ -253,37 +241,23 @@
                 - level: good
                   when: lt
                   value: 100
-
-    - Proxmox:
-        icon: mdi-server
-        href: https://@PROXMOX_HOST@
-        description: Hypervisor UI
-        siteMonitor: https://@PROXMOX_HOST@
-        widget:
-          type: proxmox
-          url: https://@PROXMOX_IP@:8006
-          username: {{HOMEPAGE_VAR_PROXMOX_TOKEN}}
-          password: {{HOMEPAGE_VAR_PROXMOX_SECRET}}
-          node: pve
-
+    - Router:
+        icon: mdi-router-wireless
+        href: https://@ROUTER_HOST@
+        description: Gateway admin
+        siteMonitor: https://@ROUTER_HOST@
     - Home Assistant:
         icon: mdi-home-assistant
         href: https://@HOME_ASSISTANT_HOST@
         description: Smart home and Ring AI summaries
         siteMonitor: https://@HOME_ASSISTANT_HOST@
-
     - Obsidian Sync (CouchDB):
         icon: mdi-notebook
         href: https://@OBSIDIAN_SYNC_HOST@/_utils/
         description: CouchDB UI
         siteMonitor: https://@OBSIDIAN_SYNC_HOST@
 
-    - Router:
-        icon: mdi-router-wireless
-        href: https://@ROUTER_HOST@
-        description: Gateway admin
-        siteMonitor: https://@ROUTER_HOST@
-
+- Monitoring:
     - Grafana:
         icon: mdi-chart-box
         href: https://@GRAFANA_HOST@
@@ -296,7 +270,6 @@
           username: {{HOMEPAGE_VAR_GRAFANA_USER}}
           password: {{HOMEPAGE_VAR_GRAFANA_PASS}}
           fields: ["dashboards", "datasources", "totalalerts", "alertstriggered"]
-
     - Prometheus:
         icon: mdi-fire
         href: https://@PROMETHEUS_HOST@
@@ -306,6 +279,11 @@
           type: prometheus
           url: http://@MONITORING_IP@:9090
           fields: ["targets_up", "targets_down", "targets_total"]
+    - Tracearr:
+        icon: mdi-chart-timeline-variant
+        href: https://@TRACEARR_HOST@
+        description: Media activity & tracing
+        siteMonitor: https://@TRACEARR_HOST@
 
 - Personal:
     - Actual Budget:
@@ -313,13 +291,11 @@
         href: https://@ACTUAL_HOST@
         description: Budgeting
         siteMonitor: https://@ACTUAL_HOST@
-
     - Standard Notes:
         icon: mdi-note-text
         href: https://@STANDARDNOTES_HOST@
         description: Notes
         siteMonitor: https://@STANDARDNOTES_HOST@
-
     - InvoicePlane:
         icon: mdi-file-document-edit
         href: https://@INVOICE_HOST@
