@@ -45,6 +45,7 @@ let
   mediaHost = "media.${baseDomain}";
   obsidianSyncHost = "obsidian-sync.${baseDomain}";
   homeAssistantHost = "homeassistant.${baseDomain}";
+  yamtrackHost = "yamtrack.${baseDomain}";
   actualHost = "actual.${baseDomain}";
   invoiceHost = "invoice.${baseDomain}";
   standardnotesHost = "notes.${baseDomain}";
@@ -94,6 +95,7 @@ let
 
     OBSIDIAN_SYNC_HOST = obsidianSyncHost;
     HOME_ASSISTANT_HOST = homeAssistantHost;
+    YAMTRACK_HOST = yamtrackHost;
 
     ACTUAL_HOST = actualHost;
     INVOICE_HOST = invoiceHost;

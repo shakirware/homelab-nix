@@ -286,6 +286,12 @@
         siteMonitor: https://@TRACEARR_HOST@
 
 - Personal:
+    - Yamtrack:
+        icon: mdi-format-list-checks
+        href: https://@YAMTRACK_HOST@
+        description: Books, movies and media tracking
+        siteMonitor: https://@YAMTRACK_HOST@
+
     - Actual Budget:
         icon: mdi-cash-multiple
         href: https://@ACTUAL_HOST@

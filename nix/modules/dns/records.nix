@@ -31,6 +31,7 @@ in {
     "iptv.${base}" = ips.gw;
     "obsidian-sync.${base}" = ips.gw;
     "homeassistant.${base}" = ips.gw;
+    "yamtrack.${base}" = ips.gw;
     "notes.${base}" = ips.gw;
     "notes-api.${base}" = ips.gw;
     "notes-files.${base}" = ips.gw;
@@ -120,6 +121,10 @@ in {
     {
       host = "homeassistant.${base}";
       upstream = "${ips.apps}:8123";
+    }
+    {
+      host = "yamtrack.${base}";
+      upstream = "${ips.apps}:8000";
     }
     {
       host = "notes.${base}";
