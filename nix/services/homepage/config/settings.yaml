@@ -1,7 +1,9 @@
 title: Homelab
 description: Media & automation
 theme: dark
-color: slate
+
+fullWidth: true
+maxGroupColumns: 5
 
 target: _blank
 
@@ -15,22 +17,22 @@ layout:
   Media:
     tab: Home
     style: column
-    columns: 4
+
+  Requests:
+    tab: Home
+    style: column
 
   Automation:
     tab: Home
     style: column
-    columns: 4
 
-  Downloading:
+  Infrastructure:
     tab: Home
     style: column
-    columns: 3
 
   Monitoring:
     tab: Home
     style: column
-    columns: 3
 
   Personal:
     tab: Personal
