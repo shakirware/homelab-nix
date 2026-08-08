@@ -5,5 +5,6 @@
   imports = [
     ../../services/obsidian-livesync
     ../../services/home-assistant
+    ../../services/yamtrack
   ];
 }
