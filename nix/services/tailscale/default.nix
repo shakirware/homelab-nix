@@ -1,10 +1,11 @@
-{ config, lib, ... }:
+{ config, lib, unstablePkgs, ... }:
 
 {
   sops.secrets.TAILSCALE_AUTHKEY = { };
 
   services.tailscale = {
     enable = true;
+    package = unstablePkgs.tailscale;
     authKeyFile = config.sops.secrets.TAILSCALE_AUTHKEY.path;
     useRoutingFeatures = "server";
   };
