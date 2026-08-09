@@ -2,6 +2,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
 
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -18,9 +20,13 @@
 
   description = "Homelab NixOS VMs on Proxmox";
 
-  outputs = { self, nixpkgs, sops-nix, nixos-generators, colmena, ... }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, sops-nix, nixos-generators, colmena, ... }:
     let
       system = "x86_64-linux";
+
+      unstablePkgs = import nixpkgs-unstable {
+        inherit system;
+      };
 
       lab = { cidr = "192.168.20.0/24"; };
       home = { cidr = "192.168.1.0/24"; };
@@ -36,7 +42,7 @@
         nixpkgs.lib.nixosSystem {
           inherit system;
 
-          specialArgs = { inherit lab home; };
+          specialArgs = { inherit lab home unstablePkgs; };
 
           modules = [
             sops-nix.nixosModules.sops
@@ -75,7 +81,7 @@
         defaults = { ... }: {
           imports = [
             sops-nix.nixosModules.sops
-            ({ ... }: { _module.args = { inherit lab home; }; })
+            ({ ... }: { _module.args = { inherit lab home unstablePkgs; }; })
           ];
 
           deployment.targetUser = targetUser;
