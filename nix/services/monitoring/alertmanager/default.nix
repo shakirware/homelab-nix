@@ -9,6 +9,30 @@ let
   publicHost = "alertmanager.${baseDomain}";
   publicUrl = "https://${publicHost}";
 
+  telegramFailureNotifier = service: unit:
+    pkgs.writeShellScript "telegram-${service}-failed" ''
+      set -euo pipefail
+
+      # Avoid alerts for transient failures during deploy/restart.
+      ${pkgs.coreutils}/bin/sleep 60
+
+      if ${pkgs.systemd}/bin/systemctl is-active --quiet ${unit}; then
+        exit 0
+      fi
+
+      token="$(<${config.sops.secrets."alerting/telegram_bot_token".path})"
+      chat_id="$(<${config.sops.secrets."alerting/telegram_chat_id".path})"
+
+      ${pkgs.curl}/bin/curl \
+        -fsS \
+        --retry 3 \
+        --max-time 15 \
+        --data-urlencode "chat_id=$chat_id" \
+        --data-urlencode "text=🔴 CRITICAL — ${service} failed on vm-monitoring" \
+        "https://api.telegram.org/bot$token/sendMessage" \
+        >/dev/null
+    '';
+
   templatesDir = pkgs.runCommand "alertmanager-templates" { } ''
     mkdir -p $out
     cat > $out/telegram.tmpl <<'EOF'
@@ -106,8 +130,38 @@ in {
     ];
   };
 
+  systemd.services.monitoring-telegram-prometheus-failed = {
+    description = "Send Telegram alert when Prometheus fails";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart =
+        telegramFailureNotifier "Prometheus" "podman-prometheus.service";
+    };
+  };
+
+  systemd.services.monitoring-telegram-alertmanager-failed = {
+    description = "Send Telegram alert when Alertmanager fails";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart =
+        telegramFailureNotifier "Alertmanager" "podman-alertmanager.service";
+    };
+  };
+
+  systemd.services.podman-prometheus.unitConfig.OnFailure =
+    "monitoring-telegram-prometheus-failed.service";
+
   systemd.services.podman-alertmanager = {
     after = [ "podman.service" ];
     requires = [ "podman.service" ];
+
+    unitConfig.OnFailure =
+      "monitoring-telegram-alertmanager-failed.service";
   };
 }

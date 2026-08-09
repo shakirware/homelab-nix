@@ -31,6 +31,14 @@ let
         static_configs:
           - targets: [ "127.0.0.1:${toString port}" ]
 
+      - job_name: "alertmanager"
+        static_configs:
+          - targets: [ "127.0.0.1:9093" ]
+
+      - job_name: "loki"
+        static_configs:
+          - targets: [ "127.0.0.1:3100" ]
+
       - job_name: "node"
         static_configs:
           - targets:
@@ -133,7 +141,7 @@ let
               description: "{{ $labels.instance }} load5 per core > 2 for 15m."
 
           - alert: HostMemoryLowWarning
-            expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.10
+            expr: ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.10) and ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) >= 0.05)
             for: 10m
             labels:
               severity: warning
@@ -177,7 +185,7 @@ let
               description: "{{ $labels.instance }} {{ $labels.mountpoint }} is read-only."
 
           - alert: HostDiskNearlyFull
-            expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.10
+            expr: ((node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.10) and ((node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) >= 0.05)
             for: 10m
             labels:
               severity: warning
@@ -218,7 +226,7 @@ let
       - name: systemd
         rules:
           - alert: SystemdUnitFailedCritical
-            expr: node_systemd_unit_state{state="failed",name=~"(sshd|systemd-networkd|tailscaled|unbound|adguardhome|caddy|nfs-server|promtail|prometheus-node-exporter|qemu-guest-agent)\\.service"} == 1
+            expr: node_systemd_unit_state{state="failed",name=~"(sshd|systemd-networkd|tailscaled|unbound|adguardhome|caddy|promtail|prometheus-node-exporter|qemu-guest-agent|gluetun-vpn-check)\\.service"} == 1
             for: 2m
             labels:
               severity: critical
@@ -227,7 +235,7 @@ let
               description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
 
           - alert: PodmanContainerUnitFailed
-            expr: node_systemd_unit_state{state="failed",name=~"podman-(gluetun|qbittorrent|prowlarr|flaresolverr|sonarr|radarr|jellyfin|seerr|tracearr|tracearr-db|tracearr-redis|tuliprox|profilarr|cleanuparr|pinchflat|homepage|couchdb|actual|invoiceplane|invoiceplane-db|server_self_hosted|standardnotes_web|db_self_hosted|cache_self_hosted|localstack_self_hosted|prometheus|grafana|loki|alertmanager|proxmox_exporter)\\.service"} == 1
+            expr: node_systemd_unit_state{state="failed",name=~"podman-.*\\.service",name!~"podman-(prometheus|alertmanager|loki)\\.service"} == 1
             for: 2m
             labels:
               severity: critical
@@ -236,22 +244,66 @@ let
               description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
 
           - alert: MediaMountDown
-            expr: absent(node_filesystem_size_bytes{mountpoint="/srv/media"}) or node_systemd_unit_state{name="srv-media.mount",state="active"} == 0
+            expr: |
+              node_systemd_unit_state{
+                job="node",
+                instance=~"(gw|media|storage)\\.${baseDomain}:${toString nodePort}",
+                name="srv-media.mount",
+                state="active"
+              } == 0
             for: 5m
             labels:
               severity: critical
             annotations:
               summary: "/srv/media not mounted"
-              description: "{{ $labels.instance }} /srv/media is missing or srv-media.mount is not active."
+              description: "{{ $labels.instance }} srv-media.mount is not active."
 
           - alert: NfsServerDown
-            expr: node_systemd_unit_state{name="nfs-server.service",state="active"} == 0
+            expr: |
+              node_systemd_unit_state{
+                job="node",
+                instance="storage.${baseDomain}:${toString nodePort}",
+                name="nfs-server.service",
+                state="active"
+              } == 0
             for: 5m
             labels:
               severity: critical
             annotations:
               summary: "NFS server down"
-              description: "{{ $labels.instance }} nfs-server.service is not active."
+              description: "storage.${baseDomain} nfs-server.service is not active."
+    EOF
+
+    cat > $out/monitoring.yml <<'EOF'
+    groups:
+      - name: monitoring
+        rules:
+          - alert: PrometheusConfigReloadFailed
+            expr: prometheus_config_last_reload_successful{job="prometheus"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Prometheus config reload failed"
+              description: "The last Prometheus configuration reload failed."
+
+          - alert: PrometheusRuleEvaluationFailures
+            expr: sum(increase(prometheus_rule_evaluation_failures_total{job="prometheus"}[5m])) > 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Prometheus rule evaluation failures"
+              description: "Prometheus failed to evaluate one or more rules in the last 5m."
+
+          - alert: AlertmanagerNotificationFailures
+            expr: sum(increase(alertmanager_notifications_failed_total{job="alertmanager"}[5m])) > 0
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Alertmanager notification failures"
+              description: "Alertmanager failed to deliver one or more notifications in the last 5m."
     EOF
 
     cat > $out/proxmox.yml <<'EOF'
@@ -259,7 +311,7 @@ let
       - name: proxmox-hwmon
         rules:
           - alert: ProxmoxNvmeHot
-            expr: node_hwmon_temp_celsius{job="node-proxmox",chip="nvme_nvme0",sensor="temp1"} > 75
+            expr: (node_hwmon_temp_celsius{job="node-proxmox",chip="nvme_nvme0",sensor="temp1"} > 75) and (node_hwmon_temp_celsius{job="node-proxmox",chip="nvme_nvme0",sensor="temp1"} <= 85)
             for: 10m
             labels:
               severity: warning
@@ -277,7 +329,7 @@ let
               description: "Proxmox NVMe composite temp is {{ $value }}°C for 5m."
 
           - alert: ProxmoxCpuPackageHot
-            expr: node_hwmon_temp_celsius{job="node-proxmox",chip="platform_coretemp_0",sensor="temp1"} > 80
+            expr: (node_hwmon_temp_celsius{job="node-proxmox",chip="platform_coretemp_0",sensor="temp1"} > 80) and (node_hwmon_temp_celsius{job="node-proxmox",chip="platform_coretemp_0",sensor="temp1"} <= 90)
             for: 10m
             labels:
               severity: warning
@@ -315,7 +367,7 @@ let
               description: "Guest {{ $labels.name }} ({{ $labels.id }}) on {{ $labels.node }} is down but onboot=1."
 
           - alert: ProxmoxStorageNearlyFull
-            expr: (pve_disk_usage_bytes{id=~"^storage/"} / pve_disk_size_bytes{id=~"^storage/"}) > 0.90
+            expr: ((pve_disk_usage_bytes{id=~"^storage/"} / pve_disk_size_bytes{id=~"^storage/"}) > 0.90) and ((pve_disk_usage_bytes{id=~"^storage/"} / pve_disk_size_bytes{id=~"^storage/"}) <= 0.95)
             for: 10m
             labels:
               severity: warning
