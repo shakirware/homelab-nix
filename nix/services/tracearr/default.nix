@@ -20,6 +20,27 @@ let
   podman = "${pkgs.podman}/bin/podman";
   bash = "${pkgs.bash}/bin/bash";
 
+  seq = "${pkgs.coreutils}/bin/seq";
+  sleep = "${pkgs.coreutils}/bin/sleep";
+
+  waitDb = pkgs.writeShellScript "tracearr-wait-db" ''
+    set -euo pipefail
+
+    echo "tracearr: waiting for PostgreSQL..."
+
+    for i in $(${seq} 1 30); do
+      if ${podman} exec tracearr-db \
+        pg_isready -U tracearr -d tracearr -t 1 >/dev/null 2>&1; then
+        exit 0
+      fi
+
+      ${sleep} 1
+    done
+
+    echo "tracearr: PostgreSQL did not become ready" >&2
+    exit 1
+  '';
+
   gwIp = config.homelab.ips.gw;
 
   envName = "tracearr.env";
@@ -157,9 +178,7 @@ in {
       "podman.service"
     ];
 
-    serviceConfig.ExecStartPre = lib.mkAfter [''
-      ${bash} -lc "${podman} exec tracearr-db pg_isready -U tracearr -t 5 || true"
-    ''];
+    serviceConfig.ExecStartPre = lib.mkAfter [ waitDb ];
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ hostPort ];

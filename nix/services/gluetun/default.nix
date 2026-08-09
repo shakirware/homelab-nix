@@ -5,6 +5,33 @@ let
   bindIp = "0.0.0.0";
 
   vpnNet = "vpn-net";
+
+  podmanBin = "${pkgs.podman}/bin/podman";
+  curlBin = "${pkgs.curl}/bin/curl";
+
+  vpnCheck = pkgs.writeShellScript "gluetun-vpn-check" ''
+    set -euo pipefail
+
+    # Gluetun itself must consider the VPN healthy.
+    ${podmanBin} exec gluetun \
+      /gluetun-entrypoint healthcheck >/dev/null
+
+    # Compare the VPN exit IP with vm-media's normal WAN IP.
+    vpn_ip="$(${podmanBin} exec gluetun cat /tmp/gluetun/ip)"
+    host_ip="$(${curlBin} -4fsS --max-time 10 https://api.ipify.org)"
+
+    if [ -z "$vpn_ip" ] || [ -z "$host_ip" ]; then
+      echo "gluetun: could not determine public IPs" >&2
+      exit 1
+    fi
+
+    if [ "$vpn_ip" = "$host_ip" ]; then
+      echo "gluetun: VPN public IP matches host WAN IP ($vpn_ip)" >&2
+      exit 1
+    fi
+
+    echo "gluetun: healthy; VPN IP $vpn_ip differs from host IP $host_ip"
+  '';
 in {
   environment.systemPackages = with pkgs; [ podman ];
 
@@ -58,6 +85,40 @@ in {
   systemd.services.podman-gluetun = {
     after = [ "podman-network-${vpnNet}.service" "podman.service" ];
     requires = [ "podman-network-${vpnNet}.service" "podman.service" ];
+  };
+
+  systemd.services.gluetun-vpn-check = {
+    description = "Verify Gluetun VPN connectivity and public IP";
+
+    after = [
+      "podman-gluetun.service"
+      "network-online.target"
+    ];
+
+    requires = [
+      "podman-gluetun.service"
+    ];
+
+    wants = [
+      "network-online.target"
+    ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = vpnCheck;
+      TimeoutStartSec = "30s";
+    };
+  };
+
+  systemd.timers.gluetun-vpn-check = {
+    description = "Periodically verify Gluetun VPN connectivity";
+    wantedBy = [ "timers.target" ];
+
+    timerConfig = {
+      OnBootSec = "2m";
+      OnUnitActiveSec = "1m";
+      Unit = "gluetun-vpn-check.service";
+    };
   };
 
   networking.firewall.allowedTCPPorts =
