@@ -33,7 +33,6 @@ let
   prowlarrHost = "prowlarr.${baseDomain}";
   qbittorrentHost = "qbittorrent.${baseDomain}";
   iptvHost = "iptv.${baseDomain}";
-  uptimeHost = "uptime.${baseDomain}";
   profilarrHost = "profilarr.${baseDomain}";
   tracearrHost = "tracearr.${baseDomain}";
   cleanuparrHost = "cleanuparr.${baseDomain}";
@@ -69,7 +68,6 @@ let
 
     HOMEPAGE_HOST = homepageHost;
     ADGUARD_HOST = adguardHost;
-    UPTIME_HOST = uptimeHost;
 
     JELLYFIN_HOST = jellyfinHost;
     SEERR_HOST = seerrHost;
@@ -171,5 +169,7 @@ in {
       [ "homepage-config.service" "network-online.target" "srv-media.mount" ];
     requires = [ "homepage-config.service" ];
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
+    restartTriggers =
+      [ settingsYaml widgetsRendered servicesRendered customCss ];
   };
 }

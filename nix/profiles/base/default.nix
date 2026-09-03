@@ -15,7 +15,6 @@
 
     ../../modules/dns/domains.nix
     ../../modules/dns/records.nix
-    ../../modules/dns/adguard-rewrites.nix
 
     ../../modules/secrets/sops-base.nix
     ../../modules/secrets/host-secrets.nix

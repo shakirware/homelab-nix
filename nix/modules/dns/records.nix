@@ -14,7 +14,6 @@ in {
     "sensitive.${base}" = ips.sensitive;
     "adguard.${base}" = ips.gw;
     "homepage.${base}" = ips.gw;
-    "uptime.${base}" = ips.gw;
     "actual.${base}" = ips.gw;
     "invoice.${base}" = ips.gw;
     "jellyfin.${base}" = ips.gw;
