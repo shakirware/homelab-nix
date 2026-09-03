@@ -11,7 +11,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.audiobookshelf = {
-    image = "ghcr.io/advplyr/audiobookshelf:2.36.0";
+    image = "ghcr.io/advplyr/audiobookshelf:2.36.0@sha256:180acad33d69c99ed208676465d8edcb268fa46967735579a7810859885b1a8e";
     autoStart = true;
 
     volumes = [

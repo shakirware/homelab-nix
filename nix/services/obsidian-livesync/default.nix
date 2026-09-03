@@ -74,7 +74,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.couchdb = {
-    image = "couchdb:3";
+    image = "couchdb:3@sha256:807777b6959fc62a2c9aacb106801958aeb5cd1ad6702ea088b097fc9254c812";
     autoStart = true;
 
     autoRemoveOnStop = lib.mkForce false;

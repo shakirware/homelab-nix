@@ -13,7 +13,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.shelfmark = {
-    image = "ghcr.io/calibrain/shelfmark:v1.3.4";
+    image = "ghcr.io/calibrain/shelfmark:v1.3.4@sha256:056f02e28d446b128d91fa10451c7cc376392f7383bbb841deec49838a419d53";
     autoStart = true;
 
     environment = {

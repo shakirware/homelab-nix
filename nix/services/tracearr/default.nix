@@ -105,7 +105,7 @@ in {
 
   virtualisation.oci-containers.containers = {
     tracearr-db = {
-      image = "timescale/timescaledb:latest-pg16";
+      image = "timescale/timescaledb:latest-pg16@sha256:9e9f50161784dc57d3f547b89ded4af73553f9acb4677345ed05f45af7c7f664";
       autoStart = true;
 
       cmd = [
@@ -135,7 +135,7 @@ in {
     };
 
     tracearr-redis = {
-      image = "redis:8-alpine";
+      image = "redis:8-alpine@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d";
       autoStart = true;
 
       cmd = [ "redis-server" "--appendonly" "yes" ];
@@ -147,7 +147,7 @@ in {
     };
 
     tracearr = {
-      image = "ghcr.io/connorgallopo/tracearr:latest";
+      image = "ghcr.io/connorgallopo/tracearr:latest@sha256:586569ea2970530be861fb7d7f842d42efd9151d91c0c528b008b381030705dd";
       autoStart = true;
 
       environmentFiles = [ config.sops.templates.${envName}.path ];
