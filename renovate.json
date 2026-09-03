@@ -15,10 +15,10 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Update container image tags declared in Nix modules",
+      "description": "Update digest-pinned container images declared in Nix modules",
       "managerFilePatterns": ["/(^|/)nix\\/.*\\.nix$/"],
       "matchStrings": [
-        "image\\s*=\\s*\"(?<depName>[^\"@:]+(?:\\/[^\"@:]+)*):(?<currentValue>[^\"\\s]+)\""
+        "image\\s*=\\s*\"(?<depName>[^\"@]+):(?<currentValue>[^\"\\s@]+)@(?<currentDigest>sha256:[a-f0-9]{64})\""
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
