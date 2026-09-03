@@ -6,18 +6,20 @@ locals {
 resource "proxmox_virtual_environment_vm" "vm" {
   for_each = local.vms_regular
 
-  name      = each.key
-  node_name = local.node_name
-  vm_id     = each.value.vmid
-  pool_id   = local.pool_id
-
-  machine = "q35"
+  name            = each.key
+  node_name       = local.node_name
+  vm_id           = each.value.vmid
+  pool_id         = local.pool_id
+  machine         = each.value.machine
+  keyboard_layout = each.value.keyboard_layout
+  description     = each.value.description
+  scsi_hardware   = each.value.scsi_hardware
 
   started         = true
   on_boot         = true
   stop_on_destroy = true
 
-  boot_order = ["virtio0", "net0"]
+  boot_order = each.value.boot_order
 
   clone {
     vm_id = local.template_vmid
@@ -27,13 +29,20 @@ resource "proxmox_virtual_environment_vm" "vm" {
   agent {
     enabled = true
     type    = "virtio"
-    timeout = "30s"
+    timeout = "15m"
   }
 
   initialization {
     datastore_id = local.datastore_id
     interface    = "ide2"
-    upgrade      = false
+    upgrade      = true
+
+    dynamic "user_account" {
+      for_each = each.value.cloud_init_user == null ? [] : [each.value.cloud_init_user]
+      content {
+        username = user_account.value
+      }
+    }
   }
 
   operating_system { type = "l26" }
@@ -47,9 +56,18 @@ resource "proxmox_virtual_environment_vm" "vm" {
     dedicated = each.value.memory
   }
 
-  # Keep a virtual display so the Proxmox Console tab works
-  vga {
-    memory = 16
+  dynamic "disk" {
+    for_each = each.value.extra_disks
+    content {
+      # A host block device has no Proxmox storage backend.  An explicit empty
+      # value prevents the provider defaulting this to local-lvm.
+      datastore_id      = ""
+      interface         = disk.value.interface
+      path_in_datastore = disk.value.path_in_datastore
+      backup            = disk.value.backup
+      discard           = disk.value.discard
+      ssd               = disk.value.ssd
+    }
   }
 
   disk {
@@ -57,7 +75,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
     interface    = "virtio0"
     size         = each.value.disk_size_gb
     file_format  = "raw"
-    discard      = "on"
+    discard      = each.value.root_discard
   }
 
   dynamic "network_device" {
@@ -66,6 +84,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
       bridge      = network_device.value.bridge
       model       = "virtio"
       mac_address = network_device.value.mac
+      vlan_id     = network_device.value.vlan_id
     }
   }
 
@@ -75,28 +94,40 @@ resource "proxmox_virtual_environment_vm" "vm" {
       device  = "hostpci0"
       mapping = proxmox_virtual_environment_hardware_mapping_pci.igpu.name
       pcie    = true
+      rombar  = false
+      xvga    = false
     }
   }
 
+  dynamic "serial_device" {
+    for_each = each.value.serial_console ? [1] : []
+    content {
+      device = "socket"
+    }
+  }
 
   lifecycle {
-    ignore_changes = [clone, disk, scsi_hardware]
+    ignore_changes = [clone]
   }
 }
 
 resource "proxmox_virtual_environment_vm" "vm_storage" {
   for_each = local.vms_storage
 
-  name      = each.key
-  node_name = local.node_name
-  vm_id     = each.value.vmid
-  pool_id   = local.pool_id
+  name            = each.key
+  node_name       = local.node_name
+  vm_id           = each.value.vmid
+  pool_id         = local.pool_id
+  machine         = each.value.machine
+  keyboard_layout = each.value.keyboard_layout
+  description     = each.value.description
+  scsi_hardware   = each.value.scsi_hardware
 
   started         = true
   on_boot         = true
   stop_on_destroy = true
 
-  boot_order = ["virtio0", "net0"]
+  boot_order = each.value.boot_order
 
   clone {
     vm_id = local.template_vmid
@@ -106,13 +137,13 @@ resource "proxmox_virtual_environment_vm" "vm_storage" {
   agent {
     enabled = true
     type    = "virtio"
-    timeout = "30s"
+    timeout = "15m"
   }
 
   initialization {
     datastore_id = local.datastore_id
     interface    = "ide2"
-    upgrade      = false
+    upgrade      = true
   }
 
   operating_system { type = "l26" }
@@ -126,8 +157,18 @@ resource "proxmox_virtual_environment_vm" "vm_storage" {
     dedicated = each.value.memory
   }
 
-  vga {
-    memory = 16
+  dynamic "disk" {
+    for_each = each.value.extra_disks
+    content {
+      # A host block device has no Proxmox storage backend.  An explicit empty
+      # value prevents the provider defaulting this to local-lvm.
+      datastore_id      = ""
+      interface         = disk.value.interface
+      path_in_datastore = disk.value.path_in_datastore
+      backup            = disk.value.backup
+      discard           = disk.value.discard
+      ssd               = disk.value.ssd
+    }
   }
 
   disk {
@@ -135,7 +176,7 @@ resource "proxmox_virtual_environment_vm" "vm_storage" {
     interface    = "virtio0"
     size         = each.value.disk_size_gb
     file_format  = "raw"
-    discard      = "on"
+    discard      = each.value.root_discard
   }
 
   dynamic "network_device" {
@@ -144,10 +185,11 @@ resource "proxmox_virtual_environment_vm" "vm_storage" {
       bridge      = network_device.value.bridge
       model       = "virtio"
       mac_address = network_device.value.mac
+      vlan_id     = network_device.value.vlan_id
     }
   }
 
   lifecycle {
-    ignore_changes = [clone, disk]
+    ignore_changes = [clone]
   }
 }
