@@ -1,12 +1,28 @@
 variable "vms" {
   type = map(object({
-    vmid         = number
-    cores        = number
-    memory       = number
-    disk_size_gb = number
+    vmid            = number
+    cores           = number
+    memory          = number
+    disk_size_gb    = number
+    machine         = string
+    boot_order      = list(string)
+    description     = optional(string)
+    keyboard_layout = optional(string)
+    scsi_hardware   = string
+    serial_console  = bool
+    cloud_init_user = optional(string)
+    root_discard    = string
     nics = list(object({
-      bridge = string
-      mac    = string
+      bridge  = string
+      mac     = string
+      vlan_id = number
+    }))
+    extra_disks = list(object({
+      interface         = string
+      path_in_datastore = string
+      backup            = bool
+      discard           = string
+      ssd               = bool
     }))
   }))
 
@@ -28,6 +44,11 @@ variable "vms" {
   validation {
     condition     = alltrue([for v in values(var.vms) : (length(v.nics) > 0)])
     error_message = "Each VM must define at least one NIC in vms[*].nics."
+  }
+
+  validation {
+    condition     = alltrue(flatten([for v in values(var.vms) : [for nic in v.nics : nic.vlan_id >= 0 && nic.vlan_id <= 4094]]))
+    error_message = "All NIC VLAN IDs must be in range [0, 4094]."
   }
 
   validation {
