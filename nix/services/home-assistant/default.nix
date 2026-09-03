@@ -119,6 +119,9 @@ in {
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${./config/packages/bin_collection_alerts.yaml} ${packageDir}/bin_collection_alerts.yaml
 
+      install -m 0664 -o ${config.homelab.ids.user} -g media \
+        ${./config/packages/washing_guard.yaml} ${packageDir}/washing_guard.yaml
+
       # During a switch, validate the newly installed files with the currently
       # running Home Assistant before its container is recreated.  Cold boots
       # skip this because there is no prior container available as a validator.
@@ -158,6 +161,7 @@ in {
       ./config/packages/home_comfort_alerts.yaml
       ./config/packages/d10_robot_vacuum.yaml
       ./config/packages/bin_collection_alerts.yaml
+      ./config/packages/washing_guard.yaml
     ];
   };
 
