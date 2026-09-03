@@ -17,13 +17,14 @@ let
   viewsDir = "${baseDir}/custom-views";
   ipconfigPath = "${baseDir}/ipconfig.php";
 
-  dbEnvFile = "${baseDir}/db.env";
-  appEnvFile = "${baseDir}/app.env";
+  dbEnvName = "invoiceplane-db.env";
+  appEnvName = "invoiceplane-app.env";
+  dbEnvFile = config.sops.templates.${dbEnvName}.path;
+  appEnvFile = config.sops.templates.${appEnvName}.path;
 
   gwIp = config.homelab.ips.gw;
 
   podman = "${pkgs.podman}/bin/podman";
-  openssl = "${pkgs.openssl}/bin/openssl";
   grep = "${pkgs.gnugrep}/bin/grep";
   cut = "${pkgs.coreutils}/bin/cut";
   seq = "${pkgs.coreutils}/bin/seq";
@@ -54,6 +55,32 @@ let
     ${podman} exec invoiceplane-db mariadb-admin ping -uroot "-p$ROOT_PASS" --silent >/dev/null
   '';
 in {
+  sops.secrets."invoiceplane/root_password" = { };
+  sops.secrets."invoiceplane/db_password" = { };
+
+  # Changing either database password requires coordinated MariaDB grants and
+  # application configuration.  Never restart automatically on secret change.
+  sops.templates.${dbEnvName} = {
+    content = ''
+      MARIADB_ROOT_PASSWORD=${config.sops.placeholder."invoiceplane/root_password"}
+      MARIADB_PASSWORD=${config.sops.placeholder."invoiceplane/db_password"}
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ ];
+  };
+
+  sops.templates.${appEnvName} = {
+    content = ''
+      MYSQL_PASSWORD=${config.sops.placeholder."invoiceplane/db_password"}
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ ];
+  };
+
   systemd.tmpfiles.rules = lib.mkAfter [
     "d ${baseDir}    2775 ${config.homelab.ids.user} media - -"
     "d ${dbDataDir}  2775 ${config.homelab.ids.user} media - -"
@@ -63,7 +90,7 @@ in {
   ];
 
   systemd.services.invoiceplane-prepare = {
-    description = "Prepare InvoicePlane directories and generated secrets";
+    description = "Prepare InvoicePlane directories and runtime configuration";
     wantedBy = [ "multi-user.target" ];
     before = [ "podman-invoiceplane-db.service" "podman-invoiceplane.service" ];
 
@@ -72,33 +99,13 @@ in {
       RemainAfterExit = true;
     };
 
-    path = [ pkgs.coreutils pkgs.bash pkgs.openssl pkgs.gnugrep ];
+    path = [ pkgs.coreutils pkgs.bash ];
 
     script = ''
             set -euo pipefail
 
             install -d -m 2775 -o ${config.homelab.ids.user} -g media \
               ${baseDir} ${dbDataDir} ${uploadsDir} ${cssDir} ${viewsDir}
-
-            # Generate DB secrets once and persist on disk
-            if [ ! -f ${dbEnvFile} ]; then
-              DB_PASS="$(${openssl} rand -hex 18)"
-              ROOT_PASS="$(${openssl} rand -hex 18)"
-              cat > ${dbEnvFile} <<EOF
-      MARIADB_ROOT_PASSWORD=$ROOT_PASS
-      MARIADB_PASSWORD=$DB_PASS
-      EOF
-              chmod 0600 ${dbEnvFile}
-            fi
-
-            # App only needs MYSQL_PASSWORD
-            if [ ! -f ${appEnvFile} ]; then
-              DB_PASS="$(${grep} '^MARIADB_PASSWORD=' ${dbEnvFile} | cut -d= -f2-)"
-              cat > ${appEnvFile} <<EOF
-      MYSQL_PASSWORD=$DB_PASS
-      EOF
-              chmod 0600 ${appEnvFile}
-            fi
 
             # Persist InvoicePlane runtime config (contains encryption key after setup)
             if [ ! -e ${ipconfigPath} ]; then

@@ -9,7 +9,8 @@ let
   appdataDir = "/srv/appdata/yamtrack";
   dbDir = "${appdataDir}/db";
   redisDir = "${appdataDir}/redis";
-  secretFile = "${appdataDir}/secrets.env";
+  secretName = "yamtrack.env";
+  secretFile = config.sops.templates.${secretName}.path;
 
   net = "yamtrack-net";
 
@@ -21,6 +22,18 @@ let
 
   gwIp = config.homelab.ips.gw;
 in {
+  sops.secrets."yamtrack/secret" = { };
+
+  sops.templates.${secretName} = {
+    content = ''
+      SECRET=${config.sops.placeholder."yamtrack/secret"}
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ "podman-yamtrack.service" ];
+  };
+
   systemd.tmpfiles.rules = lib.mkAfter [
     "d ${appdataDir} 2775 ${config.homelab.ids.user} media - -"
     "d ${dbDir} 2775 ${config.homelab.ids.user} media - -"
@@ -43,35 +56,6 @@ in {
         ${bash} -lc "${podman} network inspect ${net} >/dev/null 2>&1 || ${podman} network create ${net}"
       '';
     };
-  };
-
-  # Generate Yamtrack's Django SECRET once and keep it persistent.
-  systemd.services.yamtrack-secrets = {
-    description = "Create persistent Yamtrack secret";
-    after = [ "systemd-tmpfiles-setup.service" ];
-    before = [ "podman-yamtrack.service" ];
-
-    path = [
-      pkgs.coreutils
-      pkgs.openssl
-    ];
-
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-
-    script = ''
-      set -euo pipefail
-      umask 077
-
-      if [ ! -s ${secretFile} ]; then
-        printf 'SECRET=%s\n' "$(openssl rand -hex 64)" > ${secretFile}
-      fi
-
-      chown root:root ${secretFile}
-      chmod 0600 ${secretFile}
-    '';
   };
 
   virtualisation.oci-containers.containers.yamtrack-redis = {
@@ -145,14 +129,12 @@ in {
   systemd.services.podman-yamtrack = {
     after = [
       "podman-network-${net}.service"
-      "yamtrack-secrets.service"
       "podman-yamtrack-redis.service"
       "network-online.target"
     ];
 
     requires = [
       "podman-network-${net}.service"
-      "yamtrack-secrets.service"
       "podman-yamtrack-redis.service"
     ];
 

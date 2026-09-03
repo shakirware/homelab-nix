@@ -4,12 +4,14 @@ creation_rules:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
           - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
+          - age1gar7gp50kdg2wr3hdk74k39y4lf4eza5h96hh5vazz26nnxd6auqud4hjn
 
   - path_regex: secrets/vm-apps\.yaml$
     key_groups:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
           - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
+          - age1gar7gp50kdg2wr3hdk74k39y4lf4eza5h96hh5vazz26nnxd6auqud4hjn
           - age1rd78r9e35lt9jz4gv8lzd6w68d8spdp2ezqsu8sv28udkzuvsfcs8afr76
 
   - path_regex: secrets/vm-gw\.yaml$
@@ -17,6 +19,7 @@ creation_rules:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
           - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
+          - age1gar7gp50kdg2wr3hdk74k39y4lf4eza5h96hh5vazz26nnxd6auqud4hjn
           - age17x3tpqlhj5zetv6xgaevn8c6lmwusrg60wqc9gpvxsxs8e20nfpq0ade2g
 
   - path_regex: secrets/vm-media\.yaml$
@@ -24,6 +27,7 @@ creation_rules:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
           - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
+          - age1gar7gp50kdg2wr3hdk74k39y4lf4eza5h96hh5vazz26nnxd6auqud4hjn
           - age1m44t8p50prjf4pyxjxz0lhyjjwg6d2a4jsxecj4svpuh89q84slq57prrd
 
   - path_regex: secrets/vm-monitoring\.yaml$
@@ -31,4 +35,13 @@ creation_rules:
       - age:
           - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
           - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
+          - age1gar7gp50kdg2wr3hdk74k39y4lf4eza5h96hh5vazz26nnxd6auqud4hjn
           - age1g2h3dvr6670ukz7a3su24sy2zreegpkuq9n7066p962gfpc3eg7qmghhn6
+
+  - path_regex: secrets/vm-sensitive\.yaml$
+    key_groups:
+      - age:
+          - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
+          - age1gar7gp50kdg2wr3hdk74k39y4lf4eza5h96hh5vazz26nnxd6auqud4hjn
+          - age1efeddea7jvhjeyyyxaggp934kd3f9fskf9atwh44x2ndqlyvvsxstavyw8

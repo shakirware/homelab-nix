@@ -49,8 +49,4 @@ in {
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
   };
-
-  homelab.secrets.envTemplates."iptv-proxy" = {
-    env = { M3U_URL_1 = "iptv/m3u_url_1"; };
-  };
 }

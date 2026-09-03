@@ -11,8 +11,25 @@ let
   net = "books-net";
   podman = "${pkgs.podman}/bin/podman";
   bash = "${pkgs.bash}/bin/bash";
-  secretFile = "/srv/appdata/grimmory/secrets.env";
+  secretName = "grimmory.env";
+  secretFile = config.sops.templates.${secretName}.path;
 in {
+  sops.secrets."grimmory/db_password" = { };
+  sops.secrets."grimmory/root_password" = { };
+
+  # Database credential changes require coordinated MariaDB account migration.
+  sops.templates.${secretName} = {
+    content = ''
+      DATABASE_PASSWORD=${config.sops.placeholder."grimmory/db_password"}
+      MYSQL_PASSWORD=${config.sops.placeholder."grimmory/db_password"}
+      MYSQL_ROOT_PASSWORD=${config.sops.placeholder."grimmory/root_password"}
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ ];
+  };
+
   systemd.tmpfiles.rules = lib.mkAfter [
     "d /srv/appdata/grimmory 2775 ${config.homelab.ids.user} media - -"
     "d /srv/appdata/grimmory/data 2775 ${config.homelab.ids.user} media - -"
@@ -33,38 +50,6 @@ in {
         ${bash} -lc "${podman} network inspect ${net} >/dev/null 2>&1 || ${podman} network create ${net}"
       '';
     };
-  };
-
-  systemd.services.grimmory-secrets = {
-    description = "Create persistent Grimmory database credentials";
-    after = [ "systemd-tmpfiles-setup.service" ];
-    before = [ "podman-grimmory-db.service" "podman-grimmory.service" ];
-
-    path = [ pkgs.coreutils pkgs.openssl ];
-
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-
-    script = ''
-      set -euo pipefail
-      umask 077
-
-      if [ ! -s ${secretFile} ]; then
-        db_password="$(openssl rand -hex 32)"
-        root_password="$(openssl rand -hex 32)"
-
-        cat > ${secretFile} <<ENV
-DATABASE_PASSWORD=$db_password
-MYSQL_PASSWORD=$db_password
-MYSQL_ROOT_PASSWORD=$root_password
-ENV
-      fi
-
-      chown root:root ${secretFile}
-      chmod 0600 ${secretFile}
-    '';
   };
 
   virtualisation.oci-containers.containers.grimmory-db = {
@@ -89,8 +74,8 @@ ENV
 
   systemd.services.podman-grimmory-db = {
     wants = [ "network-online.target" ];
-    after = [ "podman-network-${net}.service" "grimmory-secrets.service" ];
-    requires = [ "podman-network-${net}.service" "grimmory-secrets.service" ];
+    after = [ "podman-network-${net}.service" ];
+    requires = [ "podman-network-${net}.service" ];
   };
 
   systemd.services.grimmory-db-ready = {
@@ -153,14 +138,12 @@ ENV
     wants = [ "network-online.target" ];
     after = [
       "podman-network-${net}.service"
-      "grimmory-secrets.service"
       "grimmory-db-ready.service"
       "network-online.target"
       "srv-media.mount"
     ];
     requires = [
       "podman-network-${net}.service"
-      "grimmory-secrets.service"
       "grimmory-db-ready.service"
     ];
     unitConfig.RequiresMountsFor = [ "/srv/media" ];

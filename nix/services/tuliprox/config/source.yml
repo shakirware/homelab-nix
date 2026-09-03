@@ -1,0 +1,50 @@
+templates:
+  - name: |-
+      ${env:TULIPROX_TEMPLATE_NAME}
+    value: |-
+      ${env:TULIPROX_TEMPLATE_VALUE}
+
+sources:
+  - inputs:
+      - enabled: true
+        name: |-
+          ${env:TULIPROX_INPUT_NAME}
+        type: |-
+          ${env:TULIPROX_INPUT_TYPE}
+        url: |-
+          ${env:TULIPROX_SOURCE_URL}
+        username: |-
+          ${env:TULIPROX_SOURCE_USERNAME}
+        password: |-
+          ${env:TULIPROX_SOURCE_PASSWORD}
+        persist: |-
+          ${env:TULIPROX_PERSIST}
+        headers:
+          User-Agent: |-
+            ${env:TULIPROX_USER_AGENT}
+        epg:
+          sources:
+            - url: |-
+                ${env:TULIPROX_EPG_URL}
+              priority: 0
+              logo_override: true
+          smart_match:
+            enabled: true
+            fuzzy_matching: true
+            match_threshold: 80
+            best_match_threshold: 99
+
+    targets:
+      - name: |-
+          ${env:TULIPROX_TARGET_NAME}
+        enabled: true
+        output:
+          - type: |-
+              ${env:TULIPROX_OUTPUT_TYPE}
+            skip_live_direct_source: true
+            skip_video_direct_source: true
+            skip_series_direct_source: true
+        filter: |-
+          ${env:TULIPROX_FILTER}
+        options:
+          ignore_logo: true

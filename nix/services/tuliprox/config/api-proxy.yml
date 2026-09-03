@@ -1,0 +1,26 @@
+server:
+  - name: |-
+      ${env:TULIPROX_SERVER_NAME}
+    protocol: |-
+      ${env:TULIPROX_SERVER_PROTOCOL}
+    host: |-
+      ${env:TULIPROX_SERVER_HOST}
+    port: |-
+      ${env:TULIPROX_SERVER_PORT}
+    timezone: |-
+      ${env:TULIPROX_SERVER_TIMEZONE}
+    message: |-
+      ${env:TULIPROX_SERVER_MESSAGE}
+
+user:
+  - target: |-
+      ${env:TULIPROX_TARGET}
+    credentials:
+      - username: |-
+          ${env:TULIPROX_OUTPUT_USERNAME}
+        password: |-
+          ${env:TULIPROX_OUTPUT_PASSWORD}
+        proxy: |-
+          ${env:TULIPROX_PROXY_MODE}
+        server: |-
+          ${env:TULIPROX_SERVER_REF}
