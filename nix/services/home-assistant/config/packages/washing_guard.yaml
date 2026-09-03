@@ -1,0 +1,616 @@
+# Washing Guard
+#
+# Warns over Telegram when laundry is drying outside and rain is approaching,
+# escalating as the forecast onset closes in.
+#
+# The configured met and open_meteo weather entities only expose hourly
+# forecasts, which cannot honestly support a sub-hourly warning.  Open-Meteo's
+# minutely_15 endpoint provides genuine 15-minute precipitation resolution, so
+# it is polled directly through the built-in rest integration.  All timings are
+# therefore treated as 15-minute buckets and are never reported to the minute.
+# weather.forecast_home is used only as supporting context in messages.
+
+input_boolean:
+  washing_outside:
+    name: Washing outside
+    icon: mdi:tshirt-crew
+
+input_text:
+  # Identity of the rain event currently being alerted on.  Set once when an
+  # event is first established and deliberately never recomputed while rain
+  # remains in the horizon, so an onset drifting between adjacent 15-minute
+  # buckets cannot re-arm the alert stages.  Empty means no active event.
+  washing_rain_event_id:
+    name: Washing active rain event
+    icon: mdi:weather-rainy
+    min: 0
+    max: 16
+
+input_number:
+  # Highest stage already sent for the active event.  Escalation compares
+  # against this, which is what makes each stage fire at most once.
+  washing_alert_stage:
+    name: Washing highest alert stage sent
+    icon: mdi:stairs-up
+    min: 0
+    max: 4
+    step: 1
+    mode: box
+
+input_datetime:
+  washing_snooze_until:
+    name: Washing snooze until
+    has_date: true
+    has_time: true
+
+  washing_put_out_at:
+    name: Washing put out at
+    has_date: true
+    has_time: true
+
+rest:
+  # past_minutely_15=1 guarantees a bucket covering the present moment, which
+  # the forecast-only response does not include.  Coordinates are read from the
+  # Home zone at render time so they never enter this repository.
+  - resource_template: >-
+      https://api.open-meteo.com/v1/forecast?latitude={{ state_attr('zone.home', 'latitude') | round(4) }}&longitude={{ state_attr('zone.home', 'longitude') | round(4) }}&current=precipitation&minutely_15=precipitation,precipitation_probability&past_minutely_15=1&forecast_minutely_15=8&timeformat=unixtime
+    scan_interval: 300
+    timeout: 30
+    sensor:
+      - name: Washing Guard rain source
+        unique_id: washing_guard_rain_source
+        value_template: "{{ value_json.minutely_15.time | count }}"
+        unit_of_measurement: buckets
+        json_attributes:
+          - current
+          - minutely_15
+
+template:
+  # A trigger-based block so the bucket analysis runs once and is shared by
+  # every derived entity through a block-level variable, rather than being
+  # repeated in each template.
+  - trigger:
+      - trigger: state
+        entity_id: sensor.washing_guard_rain_source
+
+      - trigger: time_pattern
+        minutes: "/5"
+
+      - trigger: homeassistant
+        event: start
+
+    variables:
+      analysis: >-
+        {% set src = 'sensor.washing_guard_rain_source' %}
+        {% set m = state_attr(src, 'minutely_15') %}
+        {% set cur = state_attr(src, 'current') %}
+        {% set rain_mm = 0.1 %}
+        {% set rain_prob = 60 %}
+        {% set horizon = 45 %}
+        {% if m is not mapping or m.time is not defined %}
+          {{ none }}
+        {% else %}
+          {% set now_ts = as_timestamp(now()) %}
+          {% set times = m.time %}
+          {% set precip = m.precipitation %}
+          {% set probs = m.precipitation_probability %}
+          {% set ns = namespace(onset = none, cur_p = none, cur_prob = none) %}
+          {% for i in range(times | count) %}
+            {% set t = times[i] | int(0) %}
+            {% set p = precip[i] | float(0) %}
+            {% set pr = probs[i] | float(0) %}
+            {% if t <= now_ts and now_ts < t + 900 %}
+              {% set ns.cur_p = p %}
+              {% set ns.cur_prob = pr %}
+            {% endif %}
+            {% if ns.onset is none and (t + 900) > now_ts
+                  and (p >= rain_mm or pr >= rain_prob) %}
+              {% set ns.onset = t %}
+            {% endif %}
+          {% endfor %}
+          {% set cur_precip = (cur.precipitation | float(0))
+             if (cur is mapping and cur.precipitation is defined)
+             else (ns.cur_p | float(0)) %}
+          {% set raining = cur_precip >= rain_mm %}
+          {% set mins = [((ns.onset - now_ts) / 60) | round(0) | int, 0] | max
+             if ns.onset is not none else none %}
+          {% set stage = 4 if raining
+             else (0 if mins is none
+             else (3 if mins <= 15
+             else (2 if mins <= 30
+             else (1 if mins <= horizon else 0)))) %}
+          {{ {
+               'stage': stage,
+               'raining_now': raining,
+               'precipitation_now': cur_precip | round(2),
+               'probability_now': (ns.cur_prob | int(0)) if ns.cur_prob is not none else none,
+               'onset_ts': ns.onset,
+               'minutes_to_rain': mins,
+               'rain_in_horizon': stage > 0,
+               'horizon_minutes': horizon
+             } }}
+        {% endif %}
+
+    sensor:
+      - name: Washing Guard rain stage
+        unique_id: washing_guard_rain_stage
+        icon: mdi:weather-pouring
+        availability: "{{ analysis is mapping }}"
+        state: "{{ analysis.stage }}"
+        attributes:
+          raining_now: "{{ analysis.raining_now }}"
+          onset_ts: "{{ analysis.onset_ts }}"
+          minutes_to_rain: "{{ analysis.minutes_to_rain }}"
+          horizon_minutes: "{{ analysis.horizon_minutes }}"
+
+      - name: Washing Guard precipitation now
+        unique_id: washing_guard_precipitation_now
+        icon: mdi:water
+        availability: "{{ analysis is mapping }}"
+        state: "{{ analysis.precipitation_now }}"
+        unit_of_measurement: mm
+        state_class: measurement
+
+      - name: Washing Guard precipitation probability now
+        unique_id: washing_guard_precipitation_probability_now
+        icon: mdi:water-percent
+        availability: >-
+          {{ analysis is mapping and analysis.probability_now is not none }}
+        state: "{{ analysis.probability_now }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+
+      - name: Washing Guard rain onset
+        unique_id: washing_guard_rain_onset
+        device_class: timestamp
+        availability: >-
+          {{ analysis is mapping and analysis.onset_ts is not none }}
+        state: "{{ (analysis.onset_ts | as_datetime | as_local).isoformat() }}"
+
+      - name: Washing Guard minutes to rain
+        unique_id: washing_guard_minutes_to_rain
+        icon: mdi:clock-alert-outline
+        availability: >-
+          {{ analysis is mapping and analysis.minutes_to_rain is not none }}
+        state: "{{ analysis.minutes_to_rain }}"
+        unit_of_measurement: min
+
+    binary_sensor:
+      # Drives the genuine-clear rule: the reset automation waits for this to
+      # stay off continuously, using a plain state trigger with `for`.
+      - name: Washing Guard rain in horizon
+        unique_id: washing_guard_rain_in_horizon
+        icon: mdi:weather-rainy
+        availability: "{{ analysis is mapping }}"
+        state: "{{ analysis.rain_in_horizon }}"
+
+automation:
+  # Escalating warnings while the washing is out.  Stage is recomputed from the
+  # forecast; the input_number records the highest stage already sent so each
+  # stage fires at most once per event, escalation upward is allowed, and a
+  # falling stage never notifies.
+  - id: washing_guard_rain_watch
+    alias: "Washing: Rain watch and escalation"
+    mode: single
+    max_exceeded: silent
+
+    triggers:
+      - trigger: state
+        entity_id: sensor.washing_guard_rain_stage
+
+      # Keeps the countdown and any expiring snooze moving between polls.
+      - trigger: time_pattern
+        minutes: "/5"
+
+    conditions:
+      - condition: state
+        entity_id: input_boolean.washing_outside
+        state: "on"
+
+      - condition: template
+        value_template: >-
+          {{ states('sensor.washing_guard_rain_stage') | int(0) > 0 }}
+
+    actions:
+      - variables:
+          candidate: "{{ states('sensor.washing_guard_rain_stage') | int(0) }}"
+          snoozed: >-
+            {{ as_timestamp(states('input_datetime.washing_snooze_until'), 0)
+               > as_timestamp(now()) }}
+
+      # Establish an event only when none is active.  While an event is active
+      # this is skipped entirely, which is what keeps the identity stable as
+      # the predicted onset jitters between buckets.
+      - if:
+          - condition: template
+            value_template: >-
+              {{ (states('input_text.washing_rain_event_id') | trim)
+                 in ['', 'unknown', 'unavailable'] }}
+        then:
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.washing_rain_event_id
+            data:
+              value: "{{ now().timestamp() | int }}"
+
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.washing_alert_stage
+            data:
+              value: 0
+
+      # Read the stage back live rather than through a variable, so the reset
+      # above is always observed.
+      - condition: template
+        value_template: >-
+          {{ candidate > (states('input_number.washing_alert_stage') | int(0)) }}
+
+      # A snooze defers the advisory stages only.  Stages 3 and 4 always send.
+      - condition: template
+        value_template: "{{ not (snoozed and candidate <= 2) }}"
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.washing_alert_stage
+        data:
+          value: "{{ candidate }}"
+
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          parse_mode: plain_text
+          message: >-
+            {% set onset = states('sensor.washing_guard_rain_onset') %}
+            {% set at = (onset | as_datetime | as_local).strftime('%H:%M')
+               if onset not in ['unknown', 'unavailable', 'none', ''] else none %}
+            {% set prob = states('sensor.washing_guard_precipitation_probability_now') %}
+            {% set out_at = states('input_datetime.washing_put_out_at') %}
+            {%- if candidate == 4 -%}
+            🌧️ It's raining now
+            {%- elif candidate == 3 -%}
+            ⚠️ Rain within 15 minutes
+            {%- elif candidate == 2 -%}
+            🌦 Rain in about 15–30 minutes — worth bringing it in
+            {%- else -%}
+            🌤 Heads-up — rain expected in about 30–45 minutes
+            {%- endif %}
+
+            Washing is still outside.
+            {% if candidate < 4 and at is not none %}
+            Expected to start around {{ at }}.
+            {% endif %}
+            {% if prob not in ['unknown', 'unavailable'] %}
+            Chance of rain now: {{ prob }}%
+            {% endif %}
+            Rain now: {{ states('sensor.washing_guard_precipitation_now') }} mm
+            Forecast: {{ states('weather.forecast_home') }}
+            {% if out_at not in ['unknown', 'unavailable'] %}
+            Put out at {{ (out_at | as_datetime | as_local).strftime('%H:%M') }}.
+            {% endif %}
+          inline_keyboard:
+            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
+            - "😴 Snooze 10 min:/washing_snooze_{{ states('input_text.washing_rain_event_id') }}|🌦 Weather status:/washing_status"
+
+  # Confirms arming and reports the current risk.  When rain is already in the
+  # horizon this also adopts that stage, so the acknowledgement serves as the
+  # first alert instead of being followed by a near-duplicate.
+  - id: washing_guard_armed_acknowledgement
+    alias: "Washing: Armed acknowledgement"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.washing_outside
+        from: "off"
+        to: "on"
+
+    actions:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.washing_put_out_at
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.washing_snooze_until
+        data:
+          datetime: "1970-01-01 00:00:00"
+
+      - variables:
+          candidate: "{{ states('sensor.washing_guard_rain_stage') | int(0) }}"
+
+      - if:
+          - condition: template
+            value_template: "{{ candidate > 0 }}"
+        then:
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.washing_rain_event_id
+            data:
+              value: "{{ now().timestamp() | int }}"
+
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.washing_alert_stage
+            data:
+              value: "{{ candidate }}"
+        else:
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.washing_rain_event_id
+            data:
+              value: ""
+
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.washing_alert_stage
+            data:
+              value: 0
+
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          parse_mode: plain_text
+          message: >-
+            {% set onset = states('sensor.washing_guard_rain_onset') %}
+            {% set at = (onset | as_datetime | as_local).strftime('%H:%M')
+               if onset not in ['unknown', 'unavailable', 'none', ''] else none %}
+            {% set prob = states('sensor.washing_guard_precipitation_probability_now') %}
+            🧺 Washing Guard is on
+
+            {% if candidate == 4 %}
+            🌧️ It's raining now — bring it back in.
+            {% elif candidate == 3 %}
+            ⚠️ Rain within 15 minutes{% if at is not none %}, around {{ at }}{% endif %}.
+            {% elif candidate == 2 %}
+            🌦 Rain in about 15–30 minutes{% if at is not none %}, around {{ at }}{% endif %}.
+            {% elif candidate == 1 %}
+            🌤 Rain expected in about 30–45 minutes{% if at is not none %}, around {{ at }}{% endif %}.
+            {% else %}
+            ✅ No rain expected in the next {{ state_attr('sensor.washing_guard_rain_stage', 'horizon_minutes') | default(45) }} minutes.
+            {% endif %}
+            {% if prob not in ['unknown', 'unavailable'] %}
+            Chance of rain now: {{ prob }}%
+            {% endif %}
+            Forecast: {{ states('weather.forecast_home') }}
+
+            I'll warn you as rain approaches.
+          inline_keyboard:
+            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
+            - "🌦 Weather status:/washing_status"
+
+  # Turning the helper off, from anywhere, is the single reset path.
+  - id: washing_guard_reset_on_disarm
+    alias: "Washing: Reset when disarmed"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.washing_outside
+        from: "on"
+        to: "off"
+
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_rain_event_id
+        data:
+          value: ""
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.washing_alert_stage
+        data:
+          value: 0
+
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.washing_snooze_until
+        data:
+          datetime: "1970-01-01 00:00:00"
+
+  # The genuine-clear rule.  `for` on a plain state trigger expresses the ten
+  # continuous minutes directly, so no timestamp bookkeeping helper is needed.
+  # Only after this does a later episode become a new event and re-arm.
+  - id: washing_guard_rain_event_cleared
+    alias: "Washing: Clear rain event after sustained dry forecast"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.washing_guard_rain_in_horizon
+        to: "off"
+        for: "00:10:00"
+
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ (states('input_text.washing_rain_event_id') | trim)
+             not in ['', 'unknown', 'unavailable'] }}
+
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_rain_event_id
+        data:
+          value: ""
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.washing_alert_stage
+        data:
+          value: 0
+
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.washing_snooze_until
+        data:
+          datetime: "1970-01-01 00:00:00"
+
+  # Telegram inline buttons, following the bin collection callback pattern.
+  - id: washing_guard_telegram_callbacks
+    alias: "Washing: Telegram callbacks"
+    mode: parallel
+    max: 10
+
+    triggers:
+      - trigger: event
+        event_type: telegram_callback
+
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.event.data.chat_id | int == -4936739997 }}
+
+      - condition: template
+        value_template: >-
+          {{ (trigger.event.data.data | default('', true)).startswith('/washing_') }}
+
+    actions:
+      - variables:
+          payload: "{{ trigger.event.data.data | default('', true) }}"
+          token: "{{ (trigger.event.data.data | default('', true)).split('_') | last }}"
+          event_id: >-
+            {% set eid = states('input_text.washing_rain_event_id') | trim %}
+            {{ '' if eid in ['unknown', 'unavailable'] else eid }}
+          actor: >-
+            {{ (trigger.event.data.from_first | default('Someone', true))
+               ~ ((' ' ~ trigger.event.data.from_last)
+                  if trigger.event.data.from_last | default('', true) else '') }}
+          original_message: >-
+            {{ trigger.event.data.message.text
+               | default('🧺 Washing Guard alert', true) }}
+
+      - choose:
+          # Read-only, so it is always valid regardless of event identity.  The
+          # callback is acknowledged first, then the detail is sent as a normal
+          # message rather than squeezed into the acknowledgement.
+          - conditions:
+              - condition: template
+                value_template: "{{ payload == '/washing_status' }}"
+            sequence:
+              - action: telegram_bot.answer_callback_query
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  callback_query_id: "{{ trigger.event.data.id }}"
+                  message: "Sending weather status…"
+                  show_alert: false
+
+              - action: telegram_bot.send_message
+                data:
+                  chat_id:
+                    - -4936739997
+                  parse_mode: plain_text
+                  message: >-
+                    {% set onset = states('sensor.washing_guard_rain_onset') %}
+                    {% set at = (onset | as_datetime | as_local).strftime('%H:%M')
+                       if onset not in ['unknown', 'unavailable', 'none', ''] else none %}
+                    {% set mins = states('sensor.washing_guard_minutes_to_rain') %}
+                    {% set prob = states('sensor.washing_guard_precipitation_probability_now') %}
+                    {% set horizon = state_attr('sensor.washing_guard_rain_stage', 'horizon_minutes') | default(45) %}
+                    🌦 Weather status
+
+                    Raining now: {% if is_state_attr('sensor.washing_guard_rain_stage', 'raining_now', true) %}yes{% else %}no{% endif %} ({{ states('sensor.washing_guard_precipitation_now') }} mm)
+                    {% if prob not in ['unknown', 'unavailable'] %}
+                    Chance of rain now: {{ prob }}%
+                    {% endif %}
+                    {% if at is not none %}
+                    Next rain: around {{ at }}{% if mins not in ['unknown', 'unavailable'] %} (in about {{ mins }} minutes){% endif %}
+                    {% else %}
+                    Next rain: none expected in the next {{ horizon }} minutes
+                    {% endif %}
+                    Forecast: {{ states('weather.forecast_home') }}{% if state_attr('weather.forecast_home', 'temperature') is not none %}, {{ state_attr('weather.forecast_home', 'temperature') }}°C{% endif %}
+
+                    Washing outside: {{ states('input_boolean.washing_outside') }}
+                    {% if is_state('input_boolean.washing_outside', 'on') and states('input_datetime.washing_put_out_at') not in ['unknown', 'unavailable'] %}
+                    Put out at {{ (states('input_datetime.washing_put_out_at') | as_datetime | as_local).strftime('%H:%M') }}.
+                    {% endif %}
+                    Timings come from 15-minute forecast data.
+
+          # Accept for the active event, or when no event is active but the
+          # washing is still marked out, since confirming it is in is safe and
+          # idempotent.  A token from a different, superseded event is refused.
+          - conditions:
+              - condition: template
+                value_template: "{{ payload.startswith('/washing_in_') }}"
+              - condition: state
+                entity_id: input_boolean.washing_outside
+                state: "on"
+              - condition: template
+                value_template: >-
+                  {{ (event_id != '' and token == event_id) or event_id == '' }}
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.washing_outside
+
+              - action: telegram_bot.answer_callback_query
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  callback_query_id: "{{ trigger.event.data.id }}"
+                  message: "Washing marked as in ✅"
+                  show_alert: false
+
+              - action: telegram_bot.edit_message
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  chat_id: "{{ trigger.event.data.chat_id }}"
+                  message_id: >-
+                    {{ trigger.event.data.message.message_id }}
+                  parse_mode: plain_text
+                  message: |-
+                    {{ original_message }}
+
+                    ✅ Washing brought in by {{ actor }} at {{ now().strftime('%H:%M') }}.
+                  inline_keyboard: []
+
+          - conditions:
+              - condition: template
+                value_template: "{{ payload.startswith('/washing_in_') }}"
+              - condition: state
+                entity_id: input_boolean.washing_outside
+                state: "off"
+            sequence:
+              - action: telegram_bot.answer_callback_query
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  callback_query_id: "{{ trigger.event.data.id }}"
+                  message: "Already marked as in ✅"
+                  show_alert: false
+
+          - conditions:
+              - condition: template
+                value_template: "{{ payload.startswith('/washing_snooze_') }}"
+              - condition: template
+                value_template: "{{ event_id != '' and token == event_id }}"
+            sequence:
+              - action: input_datetime.set_datetime
+                target:
+                  entity_id: input_datetime.washing_snooze_until
+                data:
+                  datetime: >-
+                    {{ (now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S') }}
+
+              - action: telegram_bot.answer_callback_query
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  callback_query_id: "{{ trigger.event.data.id }}"
+                  message: "Snoozed 10 min 😴 urgent alerts stay on"
+                  show_alert: false
+
+        default:
+          - action: telegram_bot.answer_callback_query
+            data:
+              config_entry_id: >-
+                {{ trigger.event.data.bot.config_entry_id }}
+              callback_query_id: "{{ trigger.event.data.id }}"
+              message: "That washing alert is no longer active."
+              show_alert: false
