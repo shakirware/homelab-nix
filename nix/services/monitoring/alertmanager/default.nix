@@ -98,6 +98,7 @@ in {
     owner = "root";
     group = "nogroup";
     mode = "0440";
+    restartUnits = [ "podman-alertmanager.service" ];
   };
 
   systemd.tmpfiles.rules = lib.mkAfter [

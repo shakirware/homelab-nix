@@ -6,6 +6,8 @@
 
   homelab.secrets.envTemplates."caddy-cloudflare" = {
     env = { CLOUDFLARE_API_TOKEN = "CLOUDFLARE_API_TOKEN"; };
+    # Caddy reads this only into its process environment; reload is insufficient.
+    restartUnits = [ "caddy.service" ];
   };
 
   imports = [
