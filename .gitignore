@@ -6,3 +6,4 @@ infra/terraform.tfstate.*.backup
 terraform.tfstate
 tofu.log
 result
+hl.zip
