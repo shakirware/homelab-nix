@@ -19,12 +19,4 @@ in {
     defaultSopsFormat = "yaml";
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
   };
-
-  homelab.secrets.envTemplates."proxmox-exporter" = {
-    env = {
-      PVE_TOKEN_NAME = "proxmox/token_name";
-      PVE_TOKEN_VALUE = "proxmox/token_value";
-      PVE_USER = "proxmox/user";
-    };
-  };
 }

@@ -33,6 +33,16 @@ let
     echo "gluetun: healthy; VPN IP $vpn_ip differs from host IP $host_ip"
   '';
 in {
+  sops.secrets."gluetun/wireguard_config" = { };
+
+  sops.templates."gluetun-wg0.conf" = {
+    content = config.sops.placeholder."gluetun/wireguard_config";
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ "podman-gluetun.service" ];
+  };
+
   environment.systemPackages = with pkgs; [ podman ];
 
   systemd.services."podman-network-${vpnNet}" = {
@@ -79,13 +89,23 @@ in {
       FIREWALL_INPUT_PORTS = "8080,9696,6881,8901,8191";
     };
 
-    volumes = [ "/srv/appdata/gluetun:/gluetun" ];
+    volumes = [
+      "/srv/appdata/gluetun:/gluetun"
+      "${config.sops.templates."gluetun-wg0.conf".path}:/gluetun/wireguard/wg0.conf:ro"
+    ];
   };
 
   systemd.services.podman-gluetun = {
     after = [ "podman-network-${vpnNet}.service" "podman.service" ];
     requires = [ "podman-network-${vpnNet}.service" "podman.service" ];
   };
+
+  # These containers share Gluetun's network namespace.  PartOf ensures a
+  # credential-driven Gluetun restart recreates every namespace consumer too.
+  systemd.services.podman-flaresolverr.partOf = [ "podman-gluetun.service" ];
+  systemd.services.podman-prowlarr.partOf = [ "podman-gluetun.service" ];
+  systemd.services.podman-qbittorrent.partOf = [ "podman-gluetun.service" ];
+  systemd.services.podman-tuliprox.partOf = [ "podman-gluetun.service" ];
 
   systemd.services.gluetun-vpn-check = {
     description = "Verify Gluetun VPN connectivity and public IP";

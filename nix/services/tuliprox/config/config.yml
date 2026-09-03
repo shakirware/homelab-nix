@@ -1,0 +1,19 @@
+api:
+  host: |-
+    ${env:TULIPROX_API_HOST}
+  port: 8901
+  web_root: |-
+    ${env:TULIPROX_API_WEB_ROOT}
+
+working_dir: |-
+  ${env:TULIPROX_WORKING_DIR}
+update_on_boot: true
+
+log:
+  log_active_user: true
+  log_level: |-
+    ${env:TULIPROX_LOG_LEVEL}
+  sanitize_sensitive_info: true
+
+web_ui:
+  enabled: true

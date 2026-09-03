@@ -20,8 +20,10 @@ let
   logsDir = "${baseDir}/logs";
   uploadsDir = "${baseDir}/uploads";
 
-  envFile = "${baseDir}/.env";
-  mysqlEnvFile = "${baseDir}/mysql.env";
+  envName = "standardnotes.env";
+  mysqlEnvName = "standardnotes-mysql.env";
+  envFile = config.sops.templates.${envName}.path;
+  mysqlEnvFile = config.sops.templates.${mysqlEnvName}.path;
   localstackBootstrap = "${baseDir}/localstack_bootstrap.sh";
 
   podman = "${pkgs.podman}/bin/podman";
@@ -75,6 +77,51 @@ let
     echo "standardnotes: db + cache ready"
   '';
 in {
+  sops.secrets."standardnotes/db_password" = { };
+  sops.secrets."standardnotes/auth_jwt_secret" = { };
+  sops.secrets."standardnotes/auth_server_encryption_key" = { };
+  sops.secrets."standardnotes/valet_token_secret" = { };
+
+  # Database credential changes require a coordinated MySQL migration.  These
+  # templates deliberately do not restart containers automatically.
+  #
+  # COOKIE_DOMAIN must stay on the API host: the auth server issues session
+  # cookies scoped to it, so widening this to the base domain would invalidate
+  # every existing session.  Change only as a deliberate, announced migration.
+  sops.templates.${envName} = {
+    content = ''
+      DB_HOST=db
+      DB_PORT=3306
+      DB_USERNAME=std_notes_user
+      DB_PASSWORD=${config.sops.placeholder."standardnotes/db_password"}
+      DB_DATABASE=standard_notes_db
+      DB_TYPE=mysql
+      REDIS_PORT=6379
+      REDIS_HOST=cache
+      CACHE_TYPE=redis
+      AUTH_JWT_SECRET=${config.sops.placeholder."standardnotes/auth_jwt_secret"}
+      AUTH_SERVER_ENCRYPTION_SERVER_KEY=${config.sops.placeholder."standardnotes/auth_server_encryption_key"}
+      VALET_TOKEN_SECRET=${config.sops.placeholder."standardnotes/valet_token_secret"}
+      COOKIE_DOMAIN=${apiHost}
+      PUBLIC_FILES_SERVER_URL=https://${filesHost}
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ ];
+  };
+
+  sops.templates.${mysqlEnvName} = {
+    content = ''
+      MYSQL_ROOT_PASSWORD=${config.sops.placeholder."standardnotes/db_password"}
+      MYSQL_PASSWORD=${config.sops.placeholder."standardnotes/db_password"}
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ ];
+  };
+
   systemd.tmpfiles.rules = lib.mkAfter [
     "d ${baseDir} 0700 root root - -"
     "d ${logsDir} 0750 root root - -"
@@ -82,8 +129,7 @@ in {
   ];
 
   systemd.services.standardnotes-config = {
-    description =
-      "Prepare Standard Notes (env + secrets + localstack bootstrap)";
+    description = "Prepare Standard Notes directories and LocalStack bootstrap";
     wantedBy = [ "multi-user.target" ];
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
@@ -93,7 +139,7 @@ in {
       RemainAfterExit = true;
     };
 
-    path = [ pkgs.coreutils pkgs.bash pkgs.curl pkgs.openssl pkgs.gnugrep ];
+    path = [ pkgs.coreutils pkgs.bash pkgs.curl ];
 
     script = ''
             set -euo pipefail
@@ -107,44 +153,6 @@ in {
               chmod 0755 ${localstackBootstrap}
             fi
 
-            if [ ! -f ${envFile} ]; then
-              DB_PASSWORD="$(openssl rand -hex 12)"
-              AUTH_JWT_SECRET="$(openssl rand -hex 32)"
-              AUTH_SERVER_ENCRYPTION_SERVER_KEY="$(openssl rand -hex 32)"
-              VALET_TOKEN_SECRET="$(openssl rand -hex 32)"
-
-              cat > ${envFile} <<EOF
-      DB_HOST=db
-      DB_PORT=3306
-      DB_USERNAME=std_notes_user
-      DB_PASSWORD=$DB_PASSWORD
-      DB_DATABASE=standard_notes_db
-      DB_TYPE=mysql
-
-      REDIS_PORT=6379
-      REDIS_HOST=cache
-      CACHE_TYPE=redis
-
-      AUTH_JWT_SECRET=$AUTH_JWT_SECRET
-      AUTH_SERVER_ENCRYPTION_SERVER_KEY=$AUTH_SERVER_ENCRYPTION_SERVER_KEY
-      VALET_TOKEN_SECRET=$VALET_TOKEN_SECRET
-
-      # Important: allow cookies across notes-api / notes / notes-files
-      COOKIE_DOMAIN=${baseDomain}
-
-      PUBLIC_FILES_SERVER_URL=https://${filesHost}
-      EOF
-              chmod 0600 ${envFile}
-            fi
-
-            if [ ! -f ${mysqlEnvFile} ]; then
-              DB_PASSWORD="$(grep '^DB_PASSWORD=' ${envFile} | cut -d= -f2-)"
-              cat > ${mysqlEnvFile} <<EOF
-      MYSQL_ROOT_PASSWORD=$DB_PASSWORD
-      MYSQL_PASSWORD=$DB_PASSWORD
-      EOF
-              chmod 0600 ${mysqlEnvFile}
-            fi
     '';
   };
 
