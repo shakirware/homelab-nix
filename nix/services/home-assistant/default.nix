@@ -11,6 +11,9 @@ let
   packageDir = "${cfgDir}/packages";
   snapshotDir = "${mediaDir}/doorbell";
 
+  secretsTemplateName = "home-assistant-secrets.yaml";
+  secretsFile = config.sops.templates.${secretsTemplateName}.path;
+
   homeAssistantHost = "homeassistant.${config.homelab.baseDomain}";
   gwIp = config.homelab.ips.gw;
 
@@ -23,6 +26,8 @@ let
 
     homeassistant:
       name: Home
+      latitude: !secret home_latitude
+      longitude: !secret home_longitude
       country: GB
       elevation: 0
       unit_system: metric
@@ -71,6 +76,20 @@ let
         _ "{{ video_url }}"
   '';
 in {
+  sops.secrets."home-assistant/latitude" = { };
+  sops.secrets."home-assistant/longitude" = { };
+
+  sops.templates.${secretsTemplateName} = {
+    content = ''
+      home_latitude: ${config.sops.placeholder."home-assistant/latitude"}
+      home_longitude: ${config.sops.placeholder."home-assistant/longitude"}
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ "podman-home-assistant.service" ];
+  };
+
   systemd.tmpfiles.rules = lib.mkAfter [
     "d ${cfgRoot} 2775 ${config.homelab.ids.user} media - -"
     "d ${cfgDir} 2775 ${config.homelab.ids.user} media - -"
@@ -143,6 +162,7 @@ in {
 
     volumes = [
       "${cfgDir}:/config"
+      "${secretsFile}:/config/secrets.yaml:ro"
       "${mediaDir}:/media"
       "${backupDir}:/backup"
       "/etc/localtime:/etc/localtime:ro"
