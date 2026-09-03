@@ -135,7 +135,7 @@ in {
     };
 
     tracearr-redis = {
-      image = "redis:8-alpine@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d";
+      image = "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576";
       autoStart = true;
 
       cmd = [ "redis-server" "--appendonly" "yes" ];
