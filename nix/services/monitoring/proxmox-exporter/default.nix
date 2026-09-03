@@ -16,9 +16,15 @@ in {
         token_value: "${config.sops.placeholder."proxmox/token_value"}"
         verify_ssl: false
     '';
-    owner = "root";
-    group = "root";
-    mode = "0444"; # or "0644"
+    # The exporter image runs as uid/gid 101 (prometheus) with no user-namespace
+    # remapping, so a root-owned 0400 file would be unreadable inside the
+    # container.  Own the rendered file by that id instead of making it
+    # world-readable, mirroring how the alertmanager template targets its own
+    # container user.  Keep in sync with the image's prometheus uid.
+    uid = 101;
+    gid = 101;
+    mode = "0400";
+    restartUnits = [ "podman-proxmox_exporter.service" ];
   };
 
   virtualisation.oci-containers.containers.proxmox_exporter = {
@@ -32,7 +38,7 @@ in {
     extraOptions = [ "--network=host" "--name=proxmox-exporter" ];
   };
 
-  systemd.services.podman-proxmox_exporter = {
+  systemd.services."podman-proxmox_exporter" = {
     after = [ "podman.service" ];
     requires = [ "podman.service" ];
   };

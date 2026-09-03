@@ -40,6 +40,9 @@ let
   '';
 in {
   homelab.secrets.envTemplates."couchdb-obsidian" = {
+    # Changing these values requires a coordinated CouchDB administrator
+    # credential migration, not an automatic container restart.
+    restartUnits = [ ];
     env = {
       COUCHDB_USER = "obsidian/couchdb_user";
       COUCHDB_PASSWORD = "obsidian/couchdb_password";

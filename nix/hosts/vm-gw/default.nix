@@ -22,6 +22,7 @@ in {
   };
 
   homelab.secrets.envTemplates.homepage = {
+    restartUnits = [ "podman-homepage.service" ];
     env = {
       HOMEPAGE_VAR_QBITTORRENT_USER = "HOMEPAGE_VAR_QBITTORRENT_USER";
       HOMEPAGE_VAR_QBITTORRENT_PASS = "HOMEPAGE_VAR_QBITTORRENT_PASS";

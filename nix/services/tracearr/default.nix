@@ -73,6 +73,9 @@ in {
     owner = "root";
     group = "root";
     mode = "0400";
+    # This template includes the database password.  Rotation is a coordinated
+    # PostgreSQL migration and must never trigger an ordinary restart.
+    restartUnits = [ ];
   };
 
   sops.templates.${dbEnvName} = {
@@ -82,6 +85,7 @@ in {
     owner = "root";
     group = "root";
     mode = "0400";
+    restartUnits = [ ];
   };
 
   systemd.services."podman-network-${net}" = {

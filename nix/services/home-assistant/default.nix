@@ -118,6 +118,15 @@ in {
 
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${./config/packages/bin_collection_alerts.yaml} ${packageDir}/bin_collection_alerts.yaml
+
+      # During a switch, validate the newly installed files with the currently
+      # running Home Assistant before its container is recreated.  Cold boots
+      # skip this because there is no prior container available as a validator.
+      if ${pkgs.podman}/bin/podman container exists home-assistant \
+        && [ "$(${pkgs.podman}/bin/podman inspect -f '{{.State.Running}}' home-assistant)" = true ]; then
+        ${pkgs.podman}/bin/podman exec home-assistant \
+          python -m homeassistant --script check_config -c /config
+      fi
     '';
   };
 
@@ -143,6 +152,13 @@ in {
     after = [ "home-assistant-config.service" "network-online.target" ];
     requires = [ "home-assistant-config.service" ];
     wants = [ "network-online.target" ];
+    restartTriggers = [
+      configuration
+      ./config/packages/ring_ai_doorbell.yaml
+      ./config/packages/home_comfort_alerts.yaml
+      ./config/packages/d10_robot_vacuum.yaml
+      ./config/packages/bin_collection_alerts.yaml
+    ];
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
