@@ -59,7 +59,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.yamtrack-redis = {
-    image = "redis:8-alpine";
+    image = "redis:8-alpine@sha256:978f0e01593e65eed801f2402944efcd936d43b5027e4908a7897baf88ed6241";
     autoStart = true;
 
     volumes = [
@@ -87,7 +87,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.yamtrack = {
-    image = "ghcr.io/fuzzygrim/yamtrack:0.25.3";
+    image = "ghcr.io/fuzzygrim/yamtrack:0.25.3@sha256:00acf008bca8171226063bc0f8f08ef7ffe24a10bcebf8676cce335ce312c307";
     autoStart = true;
 
     environment = {
