@@ -15,9 +15,10 @@ resource "proxmox_virtual_environment_vm" "vm" {
   description     = each.value.description
   scsi_hardware   = each.value.scsi_hardware
 
-  started         = true
-  on_boot         = true
-  stop_on_destroy = true
+  started             = true
+  on_boot             = true
+  stop_on_destroy     = true
+  reboot_after_update = false
 
   boot_order = each.value.boot_order
 
@@ -107,7 +108,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   lifecycle {
-    ignore_changes = [clone]
+    ignore_changes = [clone, description]
   }
 }
 
@@ -123,9 +124,10 @@ resource "proxmox_virtual_environment_vm" "vm_storage" {
   description     = each.value.description
   scsi_hardware   = each.value.scsi_hardware
 
-  started         = true
-  on_boot         = true
-  stop_on_destroy = true
+  started             = true
+  on_boot             = true
+  stop_on_destroy     = true
+  reboot_after_update = false
 
   boot_order = each.value.boot_order
 
@@ -190,6 +192,6 @@ resource "proxmox_virtual_environment_vm" "vm_storage" {
   }
 
   lifecycle {
-    ignore_changes = [clone]
+    ignore_changes = [clone, description]
   }
 }
