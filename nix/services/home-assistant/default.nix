@@ -1,4 +1,10 @@
-{ config, lib, pkgs, home, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  home,
+  ...
+}:
 
 let
   tz = "Europe/London";
@@ -13,6 +19,8 @@ let
 
   secretsTemplateName = "home-assistant-secrets.yaml";
   secretsFile = config.sops.templates.${secretsTemplateName}.path;
+
+  homeAssistantImage = "ghcr.io/home-assistant/home-assistant:2026.9.0@sha256:372d991e58882a1d8c68c07e9aa3f3b509276e695355f73ccdb03baa70407293";
 
   homeAssistantHost = "homeassistant.${config.homelab.baseDomain}";
   gwIp = config.homelab.ips.gw;
@@ -75,7 +83,50 @@ let
         done'
         _ "{{ video_url }}"
   '';
-in {
+
+  validateConfig = pkgs.writeShellScript "home-assistant-validate-config" ''
+    set -euo pipefail
+
+    validation_root="$(${pkgs.coreutils}/bin/mktemp -d /run/home-assistant-config-check.XXXXXX)"
+    trap '${pkgs.coreutils}/bin/rm -rf "$validation_root"' EXIT
+
+    ${pkgs.coreutils}/bin/install -d -m 0700 \
+      "$validation_root/config/packages" "$validation_root/media"
+    ${pkgs.coreutils}/bin/install -m 0600 \
+      ${configuration} "$validation_root/config/configuration.yaml"
+    ${pkgs.coreutils}/bin/touch \
+      "$validation_root/config/automations.yaml" \
+      "$validation_root/config/scripts.yaml" \
+      "$validation_root/config/scenes.yaml"
+
+    ${pkgs.coreutils}/bin/install -m 0600 \
+      ${./config/packages/ring_ai_doorbell.yaml} \
+      "$validation_root/config/packages/ring_ai_doorbell.yaml"
+    ${pkgs.coreutils}/bin/install -m 0600 \
+      ${./config/packages/home_comfort_alerts.yaml} \
+      "$validation_root/config/packages/home_comfort_alerts.yaml"
+    ${pkgs.coreutils}/bin/install -m 0600 \
+      ${./config/packages/d10_robot_vacuum.yaml} \
+      "$validation_root/config/packages/d10_robot_vacuum.yaml"
+    ${pkgs.coreutils}/bin/install -m 0600 \
+      ${./config/packages/bin_collection_alerts.yaml} \
+      "$validation_root/config/packages/bin_collection_alerts.yaml"
+    ${pkgs.coreutils}/bin/install -m 0600 \
+      ${./config/packages/washing_guard.yaml} \
+      "$validation_root/config/packages/washing_guard.yaml"
+
+    ${pkgs.coreutils}/bin/timeout 480 \
+      ${pkgs.podman}/bin/podman run --rm --pull=missing --network=none \
+        --name home-assistant-config-check \
+        --entrypoint python \
+        -v "$validation_root/config:/config:ro" \
+        -v ${secretsFile}:/config/secrets.yaml:ro \
+        -v "$validation_root/media:/media:ro" \
+        ${homeAssistantImage} \
+        -m homeassistant --script check_config -c /config
+  '';
+in
+{
   sops.secrets."home-assistant/latitude" = { };
   sops.secrets."home-assistant/longitude" = { };
 
@@ -98,6 +149,16 @@ in {
     "d ${packageDir} 2775 ${config.homelab.ids.user} media - -"
     "d ${snapshotDir} 2775 ${config.homelab.ids.user} media - -"
   ];
+
+  # Activation runs before systemd stops or replaces the production container.
+  # The validator uses only declarative files and the runtime SOPS template, so
+  # production state (including .storage) is never mounted or modified.
+  system.activationScripts.home-assistant-config-check = {
+    deps = [ "setupSecrets" ];
+    text = ''
+      ${validateConfig}
+    '';
+  };
 
   systemd.services.home-assistant-config = {
     description = "Seed Home Assistant config";
@@ -141,19 +202,11 @@ in {
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${./config/packages/washing_guard.yaml} ${packageDir}/washing_guard.yaml
 
-      # During a switch, validate the newly installed files with the currently
-      # running Home Assistant before its container is recreated.  Cold boots
-      # skip this because there is no prior container available as a validator.
-      if ${pkgs.podman}/bin/podman container exists home-assistant \
-        && [ "$(${pkgs.podman}/bin/podman inspect -f '{{.State.Running}}' home-assistant)" = true ]; then
-        ${pkgs.podman}/bin/podman exec home-assistant \
-          python -m homeassistant --script check_config -c /config
-      fi
     '';
   };
 
   virtualisation.oci-containers.containers."home-assistant" = {
-    image = "ghcr.io/home-assistant/home-assistant:2026.9.0@sha256:372d991e58882a1d8c68c07e9aa3f3b509276e695355f73ccdb03baa70407293";
+    image = homeAssistantImage;
     autoStart = true;
 
     environment = {
@@ -172,7 +225,10 @@ in {
   };
 
   systemd.services.podman-home-assistant = {
-    after = [ "home-assistant-config.service" "network-online.target" ];
+    after = [
+      "home-assistant-config.service"
+      "network-online.target"
+    ];
     requires = [ "home-assistant-config.service" ];
     wants = [ "network-online.target" ];
     restartTriggers = [
