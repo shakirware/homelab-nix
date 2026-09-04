@@ -153,7 +153,7 @@ in {
   };
 
   virtualisation.oci-containers.containers."home-assistant" = {
-    image = "ghcr.io/home-assistant/home-assistant:2026.7.4@sha256:5a531753cea96444200158fc2b0ac7ccd739291ec50414877b396de6e0bb29b3";
+    image = "ghcr.io/home-assistant/home-assistant:2026.9.0@sha256:372d991e58882a1d8c68c07e9aa3f3b509276e695355f73ccdb03baa70407293";
     autoStart = true;
 
     environment = {
