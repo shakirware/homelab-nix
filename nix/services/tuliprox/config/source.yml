@@ -4,35 +4,41 @@ templates:
     value: |-
       ${env:TULIPROX_TEMPLATE_VALUE}
 
+# tuliprox 3.3.0 moved input definitions out of each source into this global
+# section; sources now reference an input by its name instead of inlining it.
+inputs:
+  - enabled: true
+    name: |-
+      ${env:TULIPROX_INPUT_NAME}
+    type: |-
+      ${env:TULIPROX_INPUT_TYPE}
+    url: |-
+      ${env:TULIPROX_SOURCE_URL}
+    username: |-
+      ${env:TULIPROX_SOURCE_USERNAME}
+    password: |-
+      ${env:TULIPROX_SOURCE_PASSWORD}
+    persist: |-
+      ${env:TULIPROX_PERSIST}
+    headers:
+      User-Agent: |-
+        ${env:TULIPROX_USER_AGENT}
+    epg:
+      sources:
+        - url: |-
+            ${env:TULIPROX_EPG_URL}
+          priority: 0
+          logo_override: true
+      smart_match:
+        enabled: true
+        fuzzy_matching: true
+        match_threshold: 80
+        best_match_threshold: 99
+
 sources:
   - inputs:
-      - enabled: true
-        name: |-
-          ${env:TULIPROX_INPUT_NAME}
-        type: |-
-          ${env:TULIPROX_INPUT_TYPE}
-        url: |-
-          ${env:TULIPROX_SOURCE_URL}
-        username: |-
-          ${env:TULIPROX_SOURCE_USERNAME}
-        password: |-
-          ${env:TULIPROX_SOURCE_PASSWORD}
-        persist: |-
-          ${env:TULIPROX_PERSIST}
-        headers:
-          User-Agent: |-
-            ${env:TULIPROX_USER_AGENT}
-        epg:
-          sources:
-            - url: |-
-                ${env:TULIPROX_EPG_URL}
-              priority: 0
-              logo_override: true
-          smart_match:
-            enabled: true
-            fuzzy_matching: true
-            match_threshold: 80
-            best_match_threshold: 99
+      - |-
+        ${env:TULIPROX_INPUT_NAME}
 
     targets:
       - name: |-
