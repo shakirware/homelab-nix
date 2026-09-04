@@ -9,7 +9,7 @@ let
   port = 6868;
 in {
   virtualisation.oci-containers.containers.profilarr = {
-    image = "santiagosayshey/profilarr:latest@sha256:c8ad91a8e5d60b3816321b3a1f68332b29a23f910f6bd2c2d7b4a83f881f032f";
+    image = "santiagosayshey/profilarr:latest@sha256:8033e9c6d6995f37625afeb93d7020e99566f549ae83b65f1db7e11048952d0f";
 
     autoStart = true;
 
