@@ -107,7 +107,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.grimmory = {
-    image = "ghcr.io/grimmory-tools/grimmory:v3.2.4@sha256:dfa7afdfcf25d649fd664497a62385dd00cd9678c37546e182c172e41c8e80cb";
+    image = "ghcr.io/grimmory-tools/grimmory:v3.3.3@sha256:fffd0ae0bfccd64ca00441e8fa58a14e286b9115e5df1cb47eecf294ad09e6ff";
     autoStart = true;
 
     environment = {
