@@ -33,6 +33,7 @@ let
   prowlarrHost = "prowlarr.${baseDomain}";
   qbittorrentHost = "qbittorrent.${baseDomain}";
   iptvHost = "iptv.${baseDomain}";
+  netvHost = "netv.${baseDomain}";
   profilarrHost = "profilarr.${baseDomain}";
   tracearrHost = "tracearr.${baseDomain}";
   cleanuparrHost = "cleanuparr.${baseDomain}";
@@ -81,6 +82,7 @@ let
     PROWLARR_HOST = prowlarrHost;
     QBITTORRENT_HOST = qbittorrentHost;
     IPTV_HOST = iptvHost;
+    NETV_HOST = netvHost;
     PROFILARR_HOST = profilarrHost;
     TRACEARR_HOST = tracearrHost;
     CLEANUPARR_HOST = cleanuparrHost;
