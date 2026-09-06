@@ -31,6 +31,11 @@
         href: https://@IPTV_HOST@
         description: Tuliprox IPTV (Xtream)
         siteMonitor: https://@IPTV_HOST@
+    - neTV:
+        icon: mdi-television-classic
+        href: https://@NETV_HOST@
+        description: IPTV player
+        siteMonitor: https://@NETV_HOST@
 
 - Requests:
     - Seerr:

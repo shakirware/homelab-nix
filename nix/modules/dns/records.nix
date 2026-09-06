@@ -28,6 +28,7 @@ in {
     "prowlarr.${base}" = ips.gw;
     "qbittorrent.${base}" = ips.gw;
     "iptv.${base}" = ips.gw;
+    "netv.${base}" = ips.gw;
     "obsidian-sync.${base}" = ips.gw;
     "homeassistant.${base}" = ips.gw;
     "yamtrack.${base}" = ips.gw;
@@ -108,6 +109,10 @@ in {
     {
       host = "iptv.${base}";
       upstream = "${ips.media}:8901";
+    }
+    {
+      host = "netv.${base}";
+      upstream = "${ips.media}:8000";
     }
     {
       host = "profilarr.${base}";

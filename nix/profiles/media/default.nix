@@ -30,5 +30,7 @@
     ../../services/tuliprox
 
     ../../services/pinchflat
+
+    ../../services/netv
   ];
 }
