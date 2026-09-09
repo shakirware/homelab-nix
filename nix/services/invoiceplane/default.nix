@@ -17,6 +17,10 @@ let
   viewsDir = "${baseDir}/custom-views";
   ipconfigPath = "${baseDir}/ipconfig.php";
 
+  # Merged over application/config/config.php by CodeIgniter because
+  # CI_ENV=production; see the file for why it is needed.
+  envConfig = ./config/config-production.php;
+
   dbEnvName = "invoiceplane-db.env";
   appEnvName = "invoiceplane-app.env";
   dbEnvFile = config.sops.templates.${dbEnvName}.path;
@@ -165,6 +169,7 @@ in {
       "${viewsDir}:/var/www/html/application/views"
       "${baseDir}/runtime:/var/www/html/runtime"
       "${ipconfigPath}:/var/www/html/ipconfig.php"
+      "${envConfig}:/var/www/html/application/config/production/config.php:ro"
     ];
 
     ports = [ "${bindIp}:${toString port}:80" ];
