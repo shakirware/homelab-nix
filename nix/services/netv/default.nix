@@ -27,7 +27,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.netv = {
-    image = "ghcr.io/jvdillon/netv:latest@sha256:40d07f67b0bda1e29430bbead1fdc7adcfe6415cc73ebe948eb345f2ec09738d";
+    image = "ghcr.io/jvdillon/netv:latest@sha256:82059563a250b75d78aaab40ff5aef7fd7199f754104de6f9d610c35781fe353";
     autoStart = true;
 
     environment = {
