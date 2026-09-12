@@ -19,34 +19,35 @@
 #
 # FORECAST SOURCES
 #   Immediate mode  : Open-Meteo minutely_15 (true 15-minute buckets, ~2h ahead)
-#   Planning mode   : weather.forecast_home  (Met.no)     - primary, HOURLY
-#                     weather.home           (Open-Meteo) - fallback, HOURLY
+#   Planning mode   : weather.met_office_northwood (Met Office) - PRIMARY, HOURLY
+#                     weather.forecast_home        (Met.no)     - fallback, HOURLY
+#                     weather.home                 (Open-Meteo) - fallback + dew
 #
-#   Met.no is primary because it is the only configured source that CAN carry
-#   hourly precipitation probability as well as amount.  It does not always do
-#   so: Met.no omits probability_of_precipitation for some lead times, and the
-#   HA integration drops the key when it is null.  Scoring therefore degrades
-#   cleanly to amount-only whenever probability is absent, and the
-#   `has_probability` attribute records which applied to a given verdict.
-#   Open-Meteo's hourly forecast never carries probability, so as a fallback it
-#   is always scored on amount alone.
+#   Met Office is primary: its hourly forecast carries BOTH
+#   precipitation (totalPrecipAmount) and precipitation_probability
+#   (probOfPrecipitation), it is the UK national service, and the integration
+#   refreshes every 15 minutes.  It exposes no humidity and no dew point.
+#
+#   Met.no carries amount always but probability only for some lead times (the
+#   HA integration drops the key when null).  Open-Meteo hourly never carries
+#   probability, so as a fallback it is scored on amount alone -- but it is the
+#   only configured provider exposing DEW POINT, which the damp sensor uses.
+#
+#   Providers are normalised to a common slot shape {ts, prob, mm} before any
+#   decision logic runs, so the engine never touches provider-specific field
+#   names.  Fallback is provider-level, never per-slot: one slot missing a
+#   field does not abandon the provider.  See the planning block for the rule.
 #
 #   NOTE ON RESOLUTION: planning data is HOURLY.  A slot labelled 03:00 covers
 #   03:00-04:00.  Messages therefore say "during the 03:00 hour", never a
 #   precise minute.  Interpolating these to 15 minutes would be dishonest and
 #   is not done.
 #
-#   UK MET OFFICE: not configured on this system.  There is no `metoffice`
-#   config entry, so no Met Office entity exists and none is invented here.
-#   To adopt it later, the ONLY change needed is the `planning_sources`
-#   selection inside the planning template below -- see the comment there.
-#   Adding it requires, outside this file:
-#     1. A Met Office DataHub account and API credentials.
-#     2. The `metoffice` integration added via the HA UI (Settings ->
-#        Devices & Services), because it is a config-flow integration and
-#        cannot be created from YAML.
-#     3. The resulting weather entity id substituted into planning_sources.
-#   Nothing else in this package needs to change.
+#   UK MET OFFICE: configured via the HA UI config flow (it cannot be created
+#   from YAML) against a Met Office DataHub API key, which stays in that config
+#   entry and never enters this repository.  The entity id below was read from
+#   the live entity registry, not assumed.  To change provider order later,
+#   edit only the `raw` list in the planning block.
 
 input_boolean:
   washing_outside:
@@ -87,6 +88,23 @@ input_text:
   washing_plan_signature:
     name: Washing planning signature
     icon: mdi:fingerprint
+    min: 0
+    max: 255
+
+  # Sticky verdict for the ACTIVE unavailable window, as
+  # "<window start date>|<decision>|<risk timestamp>".
+  #
+  # Why this exists: once inside the window, every provider drops past hours,
+  # so rain that already fell at 03:00 is simply absent from the 05:00
+  # forecast.  A naive re-read after a restart would therefore turn "the
+  # washing may already have been rained on" into "safe".  The latch records
+  # the worst verdict seen for this window and the reported decision is the
+  # WORSE of live and latched.  Keyed by window start date, so a new night
+  # starts clean, and it only ever escalates, so it cannot cause repeat
+  # notifications.
+  washing_overnight_latch:
+    name: Washing overnight latch
+    icon: mdi:lock-clock
     min: 0
     max: 255
 
@@ -204,9 +222,12 @@ input_datetime:
     has_time: true
     initial: "10:30"
 
-  # Optional, cosmetic only.  Used to phrase nicer messages such as "safe
-  # overnight and until you wake, but rain risk increases during the 09:00
-  # hour".  It never changes the safety verdict.
+  # RETAINED, AND COSMETIC ONLY.  It selects between two message wordings -
+  # "safe overnight, but rain risk increases during the 09:00 hour" versus
+  # "rain during the 03:00 hour while we're unavailable" - which is genuinely
+  # more useful phrasing.  It NEVER changes the safety verdict: that is decided
+  # solely by washing_next_available, which remains authoritative.  Removing
+  # this helper would only degrade wording, never safety.
   washing_expected_wake:
     name: Washing expected wake time
     icon: mdi:weather-sunset-up
@@ -353,14 +374,33 @@ template:
   # ---------------------------------------------------------------------
   # PLANNING BLOCK
   #
-  # Runs the whole overnight analysis ONCE and shares it with every derived
-  # entity through the `plan` variable, rather than repeating the window and
-  # slot maths in each template.
+  # Runs the whole analysis ONCE and shares it with every derived entity
+  # through the `plan` variable, rather than repeating window and slot maths.
   #
-  # `action:` fetches the hourly forecasts.  continue_on_error means a failing
-  # or missing weather integration leaves its response variable undefined
-  # instead of aborting the block, and the analysis then reports `unknown`
-  # rather than silently reusing yesterday's answer.
+  # PROVIDER NORMALISATION
+  #   Each provider is reduced to the same internal slot shape before any
+  #   Washing Guard logic runs:
+  #       { ts, prob, mm, provider, label, resolution, slot_minutes }
+  #   The decision engine below never references a provider-specific field
+  #   name, so adding or reordering providers is a one-line change to the
+  #   `raw` list and nothing else.
+  #
+  # PROVIDER PRIORITY   Met Office -> Met.no -> Open-Meteo
+  #
+  # FALLBACK RULE (provider-level, never per-slot)
+  #   A provider is used when it returns slots AND at least one of its slots
+  #   carries a usable probability or amount.  A single slot missing a field
+  #   does NOT cause a fallback: that slot is simply scored on whatever it
+  #   does carry.  Falling back happens only when a provider is wholly
+  #   unusable - the call failed, it returned nothing, or every slot is blank.
+  #   Preference is given to a provider that also reaches the end of the
+  #   availability window, because a covering fallback beats a primary that
+  #   stops short; `provider_reason` records which rule applied.
+  #
+  # `action:` fetches each forecast.  continue_on_error means a failing or
+  # missing integration leaves its response variable undefined instead of
+  # aborting the block, and the analysis reports `unknown` rather than
+  # silently reusing a previous answer.
   # ---------------------------------------------------------------------
   - trigger:
       - trigger: time_pattern
@@ -381,8 +421,20 @@ template:
           - input_number.washing_risk_mm_bring_in
 
     action:
-      # PRIMARY source.  Met.no is the only configured forecast with hourly
-      # precipitation probability as well as amount.
+      # PRIMARY.  Met Office DataHub, hourly.  Observed live to carry both
+      # `precipitation` (totalPrecipAmount) and `precipitation_probability`
+      # (probOfPrecipitation).  Refreshes every 15 minutes and its hourly list
+      # begins at the current hour.
+      - action: weather.get_forecasts
+        continue_on_error: true
+        target:
+          entity_id: weather.met_office_northwood
+        data:
+          type: hourly
+        response_variable: mo_fc
+
+      # FALLBACK 1.  Met.no.  Carries amount always, probability only for some
+      # lead times (the HA integration drops the key when null).
       - action: weather.get_forecasts
         continue_on_error: true
         target:
@@ -391,8 +443,9 @@ template:
           type: hourly
         response_variable: met_fc
 
-      # FALLBACK source.  Open-Meteo hourly has amount but NO probability, so
-      # it scores on amount alone.  Used only when Met.no is unusable.
+      # FALLBACK 2, and the dew-point source.  Open-Meteo hourly carries
+      # amount but never probability; it is the only configured provider
+      # exposing dew point, which the damp sensor uses.
       - action: weather.get_forecasts
         continue_on_error: true
         target:
@@ -403,7 +456,6 @@ template:
 
       - variables:
           plan: >-
-            {#- Tunable thresholds, all from input_number helpers. -#}
             {% set prob_adv = states('input_number.washing_risk_prob_advisory') | float(35) %}
             {% set prob_big = states('input_number.washing_risk_prob_bring_in') | float(60) %}
             {% set mm_adv = states('input_number.washing_risk_mm_advisory') | float(0.2) %}
@@ -414,121 +466,229 @@ template:
             {% set wake_s = states('input_datetime.washing_expected_wake') %}
 
             {%- if ua_s in bad or na_s in bad -%}
-              {{ {'ok': false, 'decision': 'unknown', 'reason': 'helpers_unset',
-                  'safe_until_label': 'unknown', 'signature': 'helpers_unset'} }}
+              {{ {'ok': false, 'decision': 'unknown', 'live_decision': 'unknown',
+                  'reason': 'helpers_unset', 'safe_until_label': 'unknown',
+                  'signature': 'helpers_unset'} }}
             {%- else -%}
 
-            {#- Window resolution.  today_at() and now() are both timezone-aware
-                local datetimes, so every comparison below is aware-vs-aware. -#}
+            {#- Window.  today_at() and now() are both tz-aware local, so every
+                comparison is aware-vs-aware.  23:00 -> 10:30 crosses midnight
+                and resolves to TOMORROW, never earlier the same day. -#}
             {% set n = now() %}
             {% set ua_t = today_at(ua_s) %}
             {% set na_raw = today_at(na_s) %}
-
-            {#- First next_available strictly after a given start; +1 day when
-                the pair crosses midnight (23:00 -> 10:30 means TOMORROW). -#}
             {% set na_after_ua = na_raw if na_raw > ua_t else na_raw + timedelta(days=1) %}
             {% set ua_prev = ua_t - timedelta(days=1) %}
             {% set na_prev = na_raw if na_raw > ua_prev else na_raw + timedelta(days=1) %}
-
-            {#- Are we already inside last night's window, or looking ahead to
-                tonight's?  Covers before-bed, after-midnight and daytime. -#}
             {% set inside_prev = n < ua_t and n < na_prev %}
             {% set w_start = ua_prev if inside_prev else ua_t %}
             {% set w_end = na_prev if inside_prev else na_after_ua %}
-
             {% set wake_t = none if wake_s in bad else
                (today_at(wake_s) if today_at(wake_s) > w_start
                 else today_at(wake_s) + timedelta(days=1)) %}
 
-            {#- Source selection.  To adopt the UK Met Office later, add its
-                entity here as the first candidate; nothing else changes. -#}
-            {% set met = met_fc['weather.forecast_home'].forecast
-               if (met_fc is defined and met_fc is mapping
-                   and 'weather.forecast_home' in met_fc) else none %}
-            {% set om = om_fc['weather.home'].forecast
-               if (om_fc is defined and om_fc is mapping
-                   and 'weather.home' in om_fc) else none %}
-            {% set use_met = met is iterable and met is not string and (met | count) > 0 %}
-            {% set fc = met if use_met else
-               (om if (om is iterable and om is not string and (om | count) > 0) else none) %}
-            {% set src = 'weather.forecast_home' if use_met
-               else ('weather.home' if fc is not none else none) %}
-            {% set src_label = 'Met.no' if use_met
-               else ('Open-Meteo' if fc is not none else none) %}
+            {#- ---- provider normalisation ---------------------------------
+                Priority order is the order of this list.  To change providers
+                later, edit only here. -#}
+            {% set raw = [
+                 ('metoffice', 'Met Office', 'weather.met_office_northwood',
+                  (mo_fc['weather.met_office_northwood'].forecast
+                   if (mo_fc is defined and mo_fc is mapping
+                       and 'weather.met_office_northwood' in mo_fc) else none)),
+                 ('met', 'Met.no', 'weather.forecast_home',
+                  (met_fc['weather.forecast_home'].forecast
+                   if (met_fc is defined and met_fc is mapping
+                       and 'weather.forecast_home' in met_fc) else none)),
+                 ('open_meteo', 'Open-Meteo', 'weather.home',
+                  (om_fc['weather.home'].forecast
+                   if (om_fc is defined and om_fc is mapping
+                       and 'weather.home' in om_fc) else none))
+               ] %}
 
-            {%- if fc is none -%}
-              {{ {'ok': false, 'decision': 'unknown', 'reason': 'no_forecast_source',
+            {% set pv = namespace(list=[]) %}
+            {% for pid, plabel, pent, fc in raw %}
+              {% set s = namespace(slots=[], nprob=0, nmm=0, first=none, last_end=none, field_names=[]) %}
+              {% if fc is iterable and fc is not string %}
+                {% for f in fc %}
+                  {% set tsr = f.get('datetime') %}
+                  {% set t = (tsr | as_datetime) if tsr is not none else none %}
+                  {% if t is not none %}
+                    {% set t = t | as_local %}
+                    {% set mmv = f.get('precipitation') %}
+                    {% set prv = f.get('precipitation_probability') %}
+                    {% set mm = (mmv | float(none)) if mmv is not none else none %}
+                    {% set pr = (prv | float(none)) if prv is not none else none %}
+                    {% if mm is not none %}{% set s.nmm = s.nmm + 1 %}{% endif %}
+                    {% if pr is not none %}{% set s.nprob = s.nprob + 1 %}{% endif %}
+                    {% if s.first is none or t < s.first %}{% set s.first = t %}{% endif %}
+                    {% set te = t + timedelta(hours=1) %}
+                    {% if s.last_end is none or te > s.last_end %}{% set s.last_end = te %}{% endif %}
+                    {% if s.field_names | count == 0 %}{% set s.field_names = f.keys() | list | sort %}{% endif %}
+                    {% set s.slots = s.slots + [{'ts': t, 'mm': mm, 'pr': pr}] %}
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+              {% set usable = (s.slots | count) > 0 and (s.nmm + s.nprob) > 0 %}
+              {% set covers = s.last_end is not none and s.last_end >= w_end %}
+              {#- Data age is the age of the SOURCE ENTITY's last write, not of
+                  its first slot.  Providers differ in whether they include
+                  past hours (Met Office starts at the current hour, Met.no
+                  includes some past, Open-Meteo drops it), so first-slot age
+                  measures provider style rather than freshness and would
+                  falsely condemn a perfectly current forecast. -#}
+              {% set eobj = states[pent] %}
+              {% set upd = none if eobj is none
+                 else (eobj.last_reported if eobj.last_reported is not none
+                       else eobj.last_changed) %}
+              {% set age = ((n - upd).total_seconds() / 60) | round(0) | int
+                 if upd is not none else none %}
+              {% set first_age = ((n - s.first).total_seconds() / 60) | round(0) | int
+                 if s.first is not none and s.first < n else 0 %}
+              {% set fresh = age is none or age <= 180 %}
+              {% set pv.list = pv.list + [{
+                   'id': pid, 'label': plabel, 'entity': pent,
+                   'slots': s.slots, 'count': s.slots | count,
+                   'n_prob': s.nprob, 'n_mm': s.nmm,
+                   'usable': usable, 'covers': covers, 'fresh': fresh,
+                   'first': s.first, 'last_end': s.last_end,
+                   'age_minutes': age, 'first_slot_age_minutes': first_age,
+                   'field_names': s.field_names,
+                   'resolution': 'hourly', 'slot_minutes': 60 } ] %}
+            {% endfor %}
+
+            {#- Selection tiers, highest priority provider within each tier.
+                Freshness and coverage are SELECTION criteria, not just report
+                fields, so a stale primary steps aside for a fresh fallback
+                instead of collapsing the verdict to unknown.  Only when no
+                provider is both fresh and covering does the verdict degrade,
+                and `provider_reason` records exactly which tier applied. -#}
+            {% set t1 = pv.list | selectattr('usable') | selectattr('covers')
+                        | selectattr('fresh') | list %}
+            {% set t2 = pv.list | selectattr('usable') | selectattr('fresh') | list %}
+            {% set t3 = pv.list | selectattr('usable') | selectattr('covers') | list %}
+            {% set t4 = pv.list | selectattr('usable') | list %}
+            {% set chosen = t1[0] if (t1 | count) > 0
+               else (t2[0] if (t2 | count) > 0
+               else (t3[0] if (t3 | count) > 0
+               else (t4[0] if (t4 | count) > 0 else none))) %}
+            {% set preason = 'fresh_and_covering' if (t1 | count) > 0
+               else ('fresh_but_short_horizon' if (t2 | count) > 0
+               else ('covering_but_stale' if (t3 | count) > 0
+               else ('usable_only' if (t4 | count) > 0 else 'none_usable'))) %}
+
+            {%- if chosen is none -%}
+              {{ {'ok': false, 'decision': 'unknown', 'live_decision': 'unknown',
+                  'reason': 'no_forecast_source', 'provider_reason': preason,
                   'source': none, 'source_label': none,
                   'w_start': w_start.isoformat(), 'w_end': w_end.isoformat(),
-                  'safe_until_label': 'unknown',
+                  'safe_until_label': 'unknown', 'next_rain': none,
+                  'providers': pv.list | map(attribute='id') | list,
                   'signature': w_start.date() ~ '|unknown|no_source'} }}
             {%- else -%}
 
-            {#- Slot scan.  An hourly slot labelled T covers T..T+1h, so a slot
-                counts when it OVERLAPS the window at all.  The window end may
-                fall mid-slot (10:30 inside the 10:00 slot); that slot is
-                included deliberately, because failing conservative is correct
-                when the data cannot say which half of the hour it rains. -#}
+            {#- Scoring is provider-agnostic: it sees only ts / pr / mm.  A
+                missing field scores as "no evidence from that field" rather
+                than as zero risk, so one blank field never masks the other. -#}
             {% set ns = namespace(first_risk=none, first_big=none, worst=0,
-                                  considered=0, last_end=none, has_prob=false) %}
-            {% for f in fc %}
-              {% set ts = f.get('datetime') %}
-              {% if ts is not none %}
-                {% set t = ts | as_datetime %}
-                {% if t is not none %}
-                  {% set t = t | as_local %}
-                  {% set t_end = t + timedelta(hours=1) %}
-                  {% if ns.last_end is none or t_end > ns.last_end %}
-                    {% set ns.last_end = t_end %}
-                  {% endif %}
-                  {% if t_end > w_start and t < w_end %}
-                    {% set p = f.get('precipitation') | float(0) %}
-                    {% set praw = f.get('precipitation_probability') %}
-                    {% set pr = praw | float(-1) if praw is not none else -1 %}
-                    {% if pr >= 0 %}{% set ns.has_prob = true %}{% endif %}
-                    {% set sev = 2 if (pr >= prob_big or p >= mm_big)
-                       else (1 if (pr >= prob_adv or p >= mm_adv) else 0) %}
-                    {% set ns.considered = ns.considered + 1 %}
-                    {% if sev > ns.worst %}{% set ns.worst = sev %}{% endif %}
-                    {% if sev >= 1 and ns.first_risk is none %}
-                      {% set ns.first_risk = t %}
-                    {% endif %}
-                    {% if sev >= 2 and ns.first_big is none %}
-                      {% set ns.first_big = t %}
-                    {% endif %}
-                  {% endif %}
-                {% endif %}
+                                  considered=0, used_prob=false,
+                                  nr_ts=none, nr_sev=0, nr_pr=none, nr_mm=none) %}
+            {% set h24 = n + timedelta(hours=24) %}
+            {% for sl in chosen.slots %}
+              {% set t = sl.ts %}
+              {% set t_end = t + timedelta(hours=1) %}
+              {% set pr = sl.pr %}
+              {% set mm = sl.mm %}
+              {% set hit_big = (pr is not none and pr >= prob_big)
+                 or (mm is not none and mm >= mm_big) %}
+              {% set hit_adv = (pr is not none and pr >= prob_adv)
+                 or (mm is not none and mm >= mm_adv) %}
+              {% set sev = 2 if hit_big else (1 if hit_adv else 0) %}
+
+              {#- (a) availability window -> the safety verdict -#}
+              {% if t_end > w_start and t < w_end %}
+                {% set ns.considered = ns.considered + 1 %}
+                {% if pr is not none %}{% set ns.used_prob = true %}{% endif %}
+                {% if sev > ns.worst %}{% set ns.worst = sev %}{% endif %}
+                {% if sev >= 1 and ns.first_risk is none %}{% set ns.first_risk = t %}{% endif %}
+                {% if sev >= 2 and ns.first_big is none %}{% set ns.first_big = t %}{% endif %}
+              {% endif %}
+
+              {#- (b) rolling 24h -> the informational next-rain sensor -#}
+              {% if ns.nr_ts is none and sev >= 1 and t_end > n and t < h24 %}
+                {% set ns.nr_ts = t %}{% set ns.nr_sev = sev %}
+                {% set ns.nr_pr = pr %}{% set ns.nr_mm = mm %}
               {% endif %}
             {% endfor %}
 
-            {#- Horizon check: refuse to call it safe if the forecast simply
-                does not reach the end of the window. -#}
-            {% set covered = ns.last_end is not none and ns.last_end >= w_end %}
-            {% set usable = ns.considered > 0 and covered %}
-
-            {% set decision = 'unknown' if not usable
+            {% set covered = chosen.covers %}
+            {#- A forecast cached from yesterday can still have slots covering
+                tonight, so coverage alone cannot prove freshness.  Met Office
+                refreshes every 15 min and the others at least hourly, so three
+                hours without a write means the integration is stuck. -#}
+            {% set stale = chosen.age_minutes is not none and chosen.age_minutes > 180 %}
+            {% set usable = ns.considered > 0 and covered and not stale %}
+            {% set live = 'unknown' if not usable
                else ('bring_in' if ns.worst >= 2
                else ('advisory' if ns.worst >= 1 else 'safe')) %}
+            {#- "Safe until" must be the EARLIEST meaningful wetting event, not
+                the first severe one: if a 06:00 slot can already wet the
+                washing, claiming safety until a 07:00 downpour overstates it
+                by an hour.  Severity still comes from the worst slot in the
+                window; `severe_at` records where that peak sits. -#}
+            {% set live_risk = ns.first_risk %}
 
-            {% set risk_at = ns.first_big if ns.first_big is not none else ns.first_risk %}
+            {#- ---- overnight latch ---------------------------------------
+                Once inside the window, providers drop past hours, so rain that
+                already fell at 03:00 is invisible at 05:00 and a naive live
+                read would flip to "safe".  The verdict for the active window
+                is therefore latched, and the reported decision is the WORSE of
+                live and latched.  The latch is keyed by window start date, so
+                a new night starts clean. -#}
+            {% set lraw = states('input_text.washing_overnight_latch') | default('', true) %}
+            {% set lp = lraw.split('|') if lraw not in bad else [] %}
+            {% set lvalid = (lp | count) == 3 and lp[0] == (w_start.date() | string) %}
+            {% set rank = {'safe': 0, 'advisory': 1, 'bring_in': 2} %}
+            {% set lrank = rank.get(lp[1], -1) if lvalid else -1 %}
+            {% set vrank = rank.get(live, -1) %}
+            {% set use_latch = lvalid and lrank > vrank %}
+            {% set decision = lp[1] if use_latch else live %}
+            {% set risk_at = ((lp[2] | as_datetime | as_local)
+                              if (use_latch and lp[2] not in ['none', ''])
+                              else live_risk) %}
+            {% if use_latch and lp[2] in ['none', ''] %}{% set risk_at = none %}{% endif %}
+
             {% set tomorrow = risk_at is not none and risk_at.date() > n.date() %}
             {% set label = 'unknown' if decision == 'unknown'
                else ('safe through next availability' if decision == 'safe'
                else risk_at.strftime('%H:%M') ~ (' tomorrow' if tomorrow else '')) %}
-
-            {#- After the expected wake time but before retrieval?  Cosmetic
-                only; it changes wording, never the verdict. -#}
             {% set after_wake = risk_at is not none and wake_t is not none
                and risk_at >= wake_t %}
 
             {{ {
                  'ok': usable,
                  'decision': decision,
-                 'reason': 'ok' if usable else ('horizon' if ns.considered > 0 else 'no_slots'),
-                 'source': src,
-                 'source_label': src_label,
-                 'has_probability': ns.has_prob,
-                 'resolution': 'hourly',
+                 'live_decision': live,
+                 'from_latch': use_latch,
+                 'reason': 'ok' if usable
+                           else ('stale' if stale
+                           else ('horizon' if ns.considered > 0 else 'no_slots')),
+                 'provider_reason': preason,
+                 'source': chosen.entity,
+                 'source_label': chosen.label,
+                 'source_id': chosen.id,
+                 'has_probability': ns.used_prob,
+                 'provider_slots': chosen.count,
+                 'provider_slots_with_probability': chosen.n_prob,
+                 'provider_slots_with_amount': chosen.n_mm,
+                 'provider_age_minutes': chosen.age_minutes,
+                 'provider_first_slot_age_minutes': chosen.first_slot_age_minutes,
+                 'provider_fields': chosen.field_names,
+                 'provider_horizon_end': chosen.last_end.isoformat()
+                                         if chosen.last_end is not none else none,
+                 'providers_available': pv.list | selectattr('usable')
+                                        | map(attribute='id') | list,
+                 'resolution': chosen.resolution,
+                 'slot_minutes': chosen.slot_minutes,
                  'w_start': w_start.isoformat(),
                  'w_end': w_end.isoformat(),
                  'wake': wake_t.isoformat() if wake_t is not none else none,
@@ -537,9 +697,17 @@ template:
                  'worst': ns.worst,
                  'risk_at': risk_at.isoformat() if risk_at is not none else none,
                  'risk_hour': risk_at.strftime('%H:00') if risk_at is not none else none,
+                 'severe_at': ns.first_big.isoformat() if ns.first_big is not none else none,
+                 'severe_hour': ns.first_big.strftime('%H:00') if ns.first_big is not none else none,
                  'risk_tomorrow': tomorrow,
                  'after_wake': after_wake,
+                 'live_risk_at': live_risk.isoformat() if live_risk is not none else none,
                  'safe_until_label': label,
+                 'next_rain_ts': ns.nr_ts.isoformat() if ns.nr_ts is not none else none,
+                 'next_rain_hour': ns.nr_ts.strftime('%H:00') if ns.nr_ts is not none else none,
+                 'next_rain_severity': ns.nr_sev,
+                 'next_rain_prob': ns.nr_pr,
+                 'next_rain_mm': ns.nr_mm,
                  'generated_at': n.isoformat(),
                  'signature': w_start.date() ~ '|' ~ decision ~ '|'
                               ~ (risk_at.strftime('%Y-%m-%dT%H') if risk_at is not none else 'none')
@@ -549,19 +717,35 @@ template:
             {%- endif -%}
 
     sensor:
-      # Earliest meaningful forecast wetting event inside the availability
-      # window.  Wording is deliberately hour-grained; see `resolution`.
+      # Earliest meaningful wetting event inside the availability window.
+      # Wording is hour-grained on purpose; see `resolution`.
       - name: Washing Guard safe until
         unique_id: washing_guard_safe_until
         icon: mdi:clock-check-outline
         state: "{{ plan.safe_until_label | default('unknown') }}"
         attributes:
           decision: "{{ plan.decision | default('unknown') }}"
+          # Pre-latch value, i.e. what this refresh alone concluded.  The
+          # latch automation reads these two rather than the merged result.
+          live_decision: "{{ plan.live_decision | default('unknown') }}"
+          live_risk_at: "{{ plan.live_risk_at | default(none) }}"
+          from_latch: "{{ plan.from_latch | default(false) }}"
           reason: "{{ plan.reason | default('unknown') }}"
           forecast_source: "{{ plan.source | default(none) }}"
           forecast_source_label: "{{ plan.source_label | default(none) }}"
+          forecast_source_id: "{{ plan.source_id | default(none) }}"
+          provider_reason: "{{ plan.provider_reason | default(none) }}"
+          providers_available: "{{ plan.providers_available | default([]) }}"
           has_probability: "{{ plan.has_probability | default(false) }}"
+          provider_slots: "{{ plan.provider_slots | default(0) }}"
+          provider_slots_with_probability: "{{ plan.provider_slots_with_probability | default(0) }}"
+          provider_slots_with_amount: "{{ plan.provider_slots_with_amount | default(0) }}"
+          provider_age_minutes: "{{ plan.provider_age_minutes | default(none) }}"
+          provider_first_slot_age_minutes: "{{ plan.provider_first_slot_age_minutes | default(none) }}"
+          provider_horizon_end: "{{ plan.provider_horizon_end | default(none) }}"
+          provider_fields: "{{ plan.provider_fields | default([]) }}"
           resolution: "{{ plan.resolution | default('hourly') }}"
+          slot_minutes: "{{ plan.slot_minutes | default(60) }}"
           window_start: "{{ plan.w_start | default(none) }}"
           window_end: "{{ plan.w_end | default(none) }}"
           expected_wake: "{{ plan.wake | default(none) }}"
@@ -570,14 +754,47 @@ template:
           worst_severity: "{{ plan.worst | default(0) }}"
           risk_at: "{{ plan.risk_at | default(none) }}"
           risk_hour: "{{ plan.risk_hour | default(none) }}"
+          severe_at: "{{ plan.severe_at | default(none) }}"
+          severe_hour: "{{ plan.severe_hour | default(none) }}"
           risk_after_wake: "{{ plan.after_wake | default(false) }}"
           generated_at: "{{ plan.generated_at | default(none) }}"
           signature: "{{ plan.signature | default('') }}"
 
+      # Informational only - the earliest meaningful rain in roughly the next
+      # 24 hours, independent of the availability window.  Nothing notifies on
+      # this; it exists for the dashboard.  Unknown when no provider is usable,
+      # so an outage never reads as "no rain coming".
+      - name: Washing Guard next rain
+        unique_id: washing_guard_next_rain
+        icon: mdi:weather-rainy
+        device_class: timestamp
+        availability: >-
+          {{ plan is mapping and plan.get('source') is not none
+             and plan.get('next_rain_ts') is not none }}
+        state: "{{ plan.next_rain_ts }}"
+        attributes:
+          expected_hour: "{{ plan.next_rain_hour | default(none) }}"
+          # Hour-grained: "during the 03:00 hour", never a precise minute.
+          expected_wording: >-
+            {% if plan.get('next_rain_hour') is not none %}
+              around {{ plan.next_rain_hour }}
+            {% else %}
+              none in the next 24 hours
+            {% endif %}
+          provider: "{{ plan.source_label | default(none) }}"
+          provider_entity: "{{ plan.source | default(none) }}"
+          probability: "{{ plan.next_rain_prob | default(none) }}"
+          precipitation_mm: "{{ plan.next_rain_mm | default(none) }}"
+          severity: >-
+            {% set s = plan.next_rain_severity | default(0) %}
+            {{ 'bring in' if s >= 2 else ('advisory' if s >= 1 else 'none') }}
+          resolution: "{{ plan.resolution | default('hourly') }}"
+          horizon_hours: 24
+          generated_at: "{{ plan.generated_at | default(none) }}"
+
       # Informational only.  Dew is NOT rain and never feeds the rain verdict.
-      # Open-Meteo hourly is used because it is the only configured source
-      # exposing dew point.  High risk = air close to saturation, little wind
-      # to stir it, and clear skies letting surfaces radiate heat away.
+      # Open-Meteo is used because it is the only configured provider exposing
+      # dew point (Met Office hourly does not, nor does the HA Met.no mapping).
       - name: Washing Guard overnight damp risk
         unique_id: washing_guard_overnight_damp_risk
         icon: mdi:water-opacity
@@ -585,7 +802,7 @@ template:
           {{ om_fc is defined and om_fc is mapping
              and 'weather.home' in om_fc
              and (om_fc['weather.home'].forecast | count) > 0
-             and plan is mapping and plan.w_start is defined }}
+             and plan is mapping and plan.get('w_start') is not none }}
         state: >-
           {% set fc = om_fc['weather.home'].forecast %}
           {% set ws = plan.w_start | as_datetime | as_local %}
@@ -621,33 +838,17 @@ template:
                else ('moderate' if ns.gap <= 3.0 and calm else 'low') }}
           {% endif %}
         attributes:
-          min_temp_dewpoint_gap_c: >-
-            {% set fc = om_fc['weather.home'].forecast %}
-            {% set ws = plan.w_start | as_datetime | as_local %}
-            {% set we = plan.w_end | as_datetime | as_local %}
-            {% set ns = namespace(gap=none) %}
-            {% for f in fc %}
-              {% set t = f.get('datetime') | as_datetime %}
-              {% if t is not none and ((t | as_local) + timedelta(hours=1)) > ws
-                    and (t | as_local) < we %}
-                {% set tm = f.get('temperature') %}
-                {% set dp = f.get('dew_point') %}
-                {% if tm is not none and dp is not none %}
-                  {% set g = (tm | float) - (dp | float) %}
-                  {% if ns.gap is none or g < ns.gap %}{% set ns.gap = g %}{% endif %}
-                {% endif %}
-              {% endif %}
-            {% endfor %}
-            {{ ns.gap | round(1) if ns.gap is not none else none }}
+          source: Open-Meteo (dew point)
           note: Informational only - dew is not rainfall and does not affect rain alerts.
 
     binary_sensor:
       # True when a meaningful wetting event sits inside the window.
+      # Unavailable (never "off") when the verdict is unknown.
       - name: Washing Guard overnight risk
         unique_id: washing_guard_overnight_risk
         icon: mdi:weather-night-partly-cloudy
         availability: >-
-          {{ plan is mapping and plan.decision | default('unknown') != 'unknown' }}
+          {{ plan is mapping and (plan.decision | default('unknown')) != 'unknown' }}
         state: >-
           {{ plan.decision in ['advisory', 'bring_in'] }}
 
@@ -1251,6 +1452,82 @@ automation:
             - "🌦 Weather status:/washing_status"
 
   # ---------------------------------------------------------------------
+  # OVERNIGHT VERDICT LATCH
+  #
+  # Records the worst verdict seen for the ACTIVE window so that, once past
+  # hours have dropped out of the forecast, "already rained on" cannot decay
+  # back to "safe" - including across a Home Assistant restart, because the
+  # latch lives in an input_text and is restored.
+  #
+  # It only ever ESCALATES within a window (safe -> advisory -> bring_in) and
+  # resets when the window date changes.  It writes no notifications of its
+  # own: the planner still dedupes on its signature, and since the latch can
+  # only raise severity it cannot oscillate, so it cannot cause spam.
+  #
+  # `live_decision` is read rather than `decision`, because `decision` already
+  # includes the latch - using it would feed the latch its own output.
+  # ---------------------------------------------------------------------
+  - id: washing_guard_latch_overnight_verdict
+    alias: "Washing: Latch overnight verdict"
+    mode: single
+    max_exceeded: silent
+
+    triggers:
+      - trigger: state
+        entity_id: sensor.washing_guard_safe_until
+
+      - trigger: time_pattern
+        minutes: "/5"
+
+      - trigger: homeassistant
+        event: start
+
+    conditions:
+      - condition: state
+        entity_id: input_boolean.washing_outside
+        state: "on"
+
+    actions:
+      - variables:
+          s: sensor.washing_guard_safe_until
+          wdate: >-
+            {% set ws = state_attr('sensor.washing_guard_safe_until', 'window_start') %}
+            {{ (ws | as_datetime | as_local).date()
+               if ws not in [none, 'none', 'unknown', 'unavailable'] else '' }}
+          live: >-
+            {{ state_attr('sensor.washing_guard_safe_until', 'live_decision')
+               | default('unknown', true) }}
+          live_risk: >-
+            {{ state_attr('sensor.washing_guard_safe_until', 'live_risk_at')
+               | default('none', true) }}
+          cur: "{{ states('input_text.washing_overnight_latch') | default('', true) }}"
+
+      # Only latch real verdicts against a real window.
+      - condition: template
+        value_template: >-
+          {{ wdate != '' and live in ['safe', 'advisory', 'bring_in'] }}
+
+      - variables:
+          parts: >-
+            {{ cur.split('|') if cur not in ['', 'unknown', 'unavailable'] else [] }}
+          same_window: "{{ (parts | count) == 3 and parts[0] == wdate }}"
+          ranks: "{{ {'safe': 0, 'advisory': 1, 'bring_in': 2} }}"
+          cur_rank: >-
+            {{ ranks.get(parts[1], -1) if same_window else -1 }}
+          new_rank: "{{ ranks.get(live, -1) }}"
+
+      # Write on a new window (reset), or when severity genuinely increases.
+      - condition: template
+        value_template: "{{ not same_window or new_rank > cur_rank }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_overnight_latch
+        data:
+          value: >-
+            {{ (wdate ~ '|' ~ live ~ '|' ~ (live_risk if live_risk not in [none, 'none', ''] else 'none'))[:255] }}
+
+  # ---------------------------------------------------------------------
   # ONE-TIME THRESHOLD SEEDING
   #
   # input_number helpers are created at their minimum when no `initial:` is
@@ -1333,5 +1610,11 @@ automation:
       - action: input_text.set_value
         target:
           entity_id: input_text.washing_plan_signature
+        data:
+          value: ""
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_overnight_latch
         data:
           value: ""
