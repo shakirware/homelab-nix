@@ -1,19 +1,72 @@
 # Washing Guard
 #
-# Warns over Telegram when laundry is drying outside and rain is approaching,
-# escalating as the forecast onset closes in.
+# Warns over Telegram when laundry is drying outside and rain is approaching.
+# Two layers, deliberately kept separate:
 #
-# The configured met and open_meteo weather entities only expose hourly
-# forecasts, which cannot honestly support a sub-hourly warning.  Open-Meteo's
-# minutely_15 endpoint provides genuine 15-minute precipitation resolution, so
-# it is polled directly through the built-in rest integration.  All timings are
-# therefore treated as 15-minute buckets and are never reported to the minute.
-# weather.forecast_home is used only as supporting context in messages.
+#   IMMEDIATE MODE (unchanged)
+#     Escalating 45/30/15-minute warnings while somebody is expected to be
+#     awake and able to react.  Driven by Open-Meteo's minutely_15 endpoint,
+#     which is genuine 15-minute precipitation resolution, polled through the
+#     built-in rest integration.
+#
+#   PLANNING MODE (added)
+#     Answers a different question: "if the washing stays out, will it be
+#     rained on at any point before somebody can next realistically fetch it?"
+#     It inspects the WHOLE interval unavailable_from -> next_available, so
+#     rain at 03:00 that has stopped by the 10:30 retrieval still counts as a
+#     soaking and still warns before bed.  This is not a check of whether it
+#     happens to be raining at retrieval time.
+#
+# FORECAST SOURCES
+#   Immediate mode  : Open-Meteo minutely_15 (true 15-minute buckets, ~2h ahead)
+#   Planning mode   : weather.forecast_home  (Met.no)     - primary, HOURLY
+#                     weather.home           (Open-Meteo) - fallback, HOURLY
+#
+#   Met.no is primary because it is the only configured source that CAN carry
+#   hourly precipitation probability as well as amount.  It does not always do
+#   so: Met.no omits probability_of_precipitation for some lead times, and the
+#   HA integration drops the key when it is null.  Scoring therefore degrades
+#   cleanly to amount-only whenever probability is absent, and the
+#   `has_probability` attribute records which applied to a given verdict.
+#   Open-Meteo's hourly forecast never carries probability, so as a fallback it
+#   is always scored on amount alone.
+#
+#   NOTE ON RESOLUTION: planning data is HOURLY.  A slot labelled 03:00 covers
+#   03:00-04:00.  Messages therefore say "during the 03:00 hour", never a
+#   precise minute.  Interpolating these to 15 minutes would be dishonest and
+#   is not done.
+#
+#   UK MET OFFICE: not configured on this system.  There is no `metoffice`
+#   config entry, so no Met Office entity exists and none is invented here.
+#   To adopt it later, the ONLY change needed is the `planning_sources`
+#   selection inside the planning template below -- see the comment there.
+#   Adding it requires, outside this file:
+#     1. A Met Office DataHub account and API credentials.
+#     2. The `metoffice` integration added via the HA UI (Settings ->
+#        Devices & Services), because it is a config-flow integration and
+#        cannot be created from YAML.
+#     3. The resulting weather entity id substituted into planning_sources.
+#   Nothing else in this package needs to change.
 
 input_boolean:
   washing_outside:
     name: Washing outside
     icon: mdi:tshirt-crew
+
+  # Hook for a future "wake me for unexpected high-confidence rain" mode.
+  # Deliberately OFF by default: overnight noise is exactly what this package
+  # is meant to avoid.  When on, immediate-mode escalation is allowed to fire
+  # during the unavailable window as well.
+  washing_overnight_alerts:
+    name: Washing overnight alerts
+    icon: mdi:bell-sleep-outline
+
+  # Marker for one-time threshold seeding (see the seeding automation).
+  # Turning this OFF by hand re-seeds the documented defaults on the next
+  # restart, which doubles as a "reset thresholds to defaults" control.
+  washing_thresholds_seeded:
+    name: Washing thresholds seeded
+    icon: mdi:database-check-outline
 
 input_text:
   # Identity of the rain event currently being alerted on.  Set once when an
@@ -26,6 +79,17 @@ input_text:
     min: 0
     max: 16
 
+  # Fingerprint of the last planning notification actually sent, as
+  # "<window date>|<decision>|<first risk slot>".  A planning message is only
+  # sent when this changes, which is what stops identical nightly repeats and
+  # what stops a Home Assistant restart from re-sending (input_text restores
+  # its state across restarts).
+  washing_plan_signature:
+    name: Washing planning signature
+    icon: mdi:fingerprint
+    min: 0
+    max: 255
+
 input_number:
   # Highest stage already sent for the active event.  Escalation compares
   # against this, which is what makes each stage fire at most once.
@@ -35,6 +99,73 @@ input_number:
     min: 0
     max: 4
     step: 1
+    mode: box
+
+  # ---------------------------------------------------------------------
+  # PLANNING THRESHOLDS - the single place to tune overnight risk appetite.
+  # All four are live-editable from the UI; no redeploy needed.
+  #
+  # Deliberately no `initial:` on these.  In Home Assistant an input_number
+  # with `initial` is forced back to that value on EVERY restart, which would
+  # throw away anything tuned in the UI.  Without it the helper is created at
+  # its minimum instead, so the defaults below are written once by the
+  # "Seed planning thresholds" automation and then left alone forever.
+  #
+  # An hourly slot scores:
+  #   2 "bring it in"  if probability >= prob_bring_in OR amount >= mm_bring_in
+  #   1 "advisory"     if probability >= prob_advisory OR amount >= mm_advisory
+  #   0 otherwise
+  #
+  # Because amount alone can reach score 2, a substantial rainfall still wins
+  # even when the probability is only moderate - erring toward protecting the
+  # washing, as intended.  A trace of drizzle at low probability scores 0 and
+  # stays quiet.  When the source has no probability (Open-Meteo fallback)
+  # scoring degrades cleanly to amount only.
+  # ---------------------------------------------------------------------
+  washing_risk_prob_advisory:
+    name: Washing risk - advisory probability
+    icon: mdi:water-percent
+    min: 0
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    mode: box
+
+  washing_risk_prob_bring_in:
+    name: Washing risk - bring-in probability
+    icon: mdi:water-percent-alert
+    min: 0
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    mode: box
+
+  washing_risk_mm_advisory:
+    name: Washing risk - advisory amount
+    icon: mdi:water
+    min: 0
+    max: 20
+    step: 0.1
+    unit_of_measurement: mm
+    mode: box
+
+  washing_risk_mm_bring_in:
+    name: Washing risk - bring-in amount
+    icon: mdi:water-alert
+    min: 0
+    max: 20
+    step: 0.1
+    unit_of_measurement: mm
+    mode: box
+
+  # How long before washing_unavailable_from the planning verdict is sent.
+  washing_plan_lead_minutes:
+    name: Washing planning lead time
+    icon: mdi:clock-start
+    min: 5
+    max: 240
+    step: 5
+    unit_of_measurement: min
     mode: box
 
 input_datetime:
@@ -47,6 +178,41 @@ input_datetime:
     name: Washing put out at
     has_date: true
     has_time: true
+
+  # ---------------------------------------------------------------------
+  # AVAILABILITY WINDOW - time-only helpers, editable from the UI.
+  # The interval normally crosses midnight (23:00 -> 10:30 next day) and the
+  # templates below resolve that explicitly; 10:30 is never mistaken for
+  # earlier the same day.
+  # ---------------------------------------------------------------------
+
+  # From this time onward, assume nobody will act on an ordinary alert.
+  washing_unavailable_from:
+    name: Washing unavailable from
+    icon: mdi:bed-clock
+    has_date: false
+    has_time: true
+    initial: "23:00"
+
+  # The authoritative safety cutoff: the next time somebody can realistically
+  # retrieve the washing.  Being awake is not the same as being able to deal
+  # with it, which is why this - not the wake time - decides safety.
+  washing_next_available:
+    name: Washing next available
+    icon: mdi:hanger
+    has_date: false
+    has_time: true
+    initial: "10:30"
+
+  # Optional, cosmetic only.  Used to phrase nicer messages such as "safe
+  # overnight and until you wake, but rain risk increases during the 09:00
+  # hour".  It never changes the safety verdict.
+  washing_expected_wake:
+    name: Washing expected wake time
+    icon: mdi:weather-sunset-up
+    has_date: false
+    has_time: true
+    initial: "09:00"
 
 rest:
   # past_minutely_15=1 guarantees a bucket covering the present moment, which
@@ -184,6 +350,332 @@ template:
         availability: "{{ analysis is mapping }}"
         state: "{{ analysis.rain_in_horizon }}"
 
+  # ---------------------------------------------------------------------
+  # PLANNING BLOCK
+  #
+  # Runs the whole overnight analysis ONCE and shares it with every derived
+  # entity through the `plan` variable, rather than repeating the window and
+  # slot maths in each template.
+  #
+  # `action:` fetches the hourly forecasts.  continue_on_error means a failing
+  # or missing weather integration leaves its response variable undefined
+  # instead of aborting the block, and the analysis then reports `unknown`
+  # rather than silently reusing yesterday's answer.
+  # ---------------------------------------------------------------------
+  - trigger:
+      - trigger: time_pattern
+        minutes: "/10"
+
+      - trigger: homeassistant
+        event: start
+
+      - trigger: state
+        entity_id:
+          - input_boolean.washing_outside
+          - input_datetime.washing_unavailable_from
+          - input_datetime.washing_next_available
+          - input_datetime.washing_expected_wake
+          - input_number.washing_risk_prob_advisory
+          - input_number.washing_risk_prob_bring_in
+          - input_number.washing_risk_mm_advisory
+          - input_number.washing_risk_mm_bring_in
+
+    action:
+      # PRIMARY source.  Met.no is the only configured forecast with hourly
+      # precipitation probability as well as amount.
+      - action: weather.get_forecasts
+        continue_on_error: true
+        target:
+          entity_id: weather.forecast_home
+        data:
+          type: hourly
+        response_variable: met_fc
+
+      # FALLBACK source.  Open-Meteo hourly has amount but NO probability, so
+      # it scores on amount alone.  Used only when Met.no is unusable.
+      - action: weather.get_forecasts
+        continue_on_error: true
+        target:
+          entity_id: weather.home
+        data:
+          type: hourly
+        response_variable: om_fc
+
+      - variables:
+          plan: >-
+            {#- Tunable thresholds, all from input_number helpers. -#}
+            {% set prob_adv = states('input_number.washing_risk_prob_advisory') | float(35) %}
+            {% set prob_big = states('input_number.washing_risk_prob_bring_in') | float(60) %}
+            {% set mm_adv = states('input_number.washing_risk_mm_advisory') | float(0.2) %}
+            {% set mm_big = states('input_number.washing_risk_mm_bring_in') | float(0.5) %}
+            {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+            {% set ua_s = states('input_datetime.washing_unavailable_from') %}
+            {% set na_s = states('input_datetime.washing_next_available') %}
+            {% set wake_s = states('input_datetime.washing_expected_wake') %}
+
+            {%- if ua_s in bad or na_s in bad -%}
+              {{ {'ok': false, 'decision': 'unknown', 'reason': 'helpers_unset',
+                  'safe_until_label': 'unknown', 'signature': 'helpers_unset'} }}
+            {%- else -%}
+
+            {#- Window resolution.  today_at() and now() are both timezone-aware
+                local datetimes, so every comparison below is aware-vs-aware. -#}
+            {% set n = now() %}
+            {% set ua_t = today_at(ua_s) %}
+            {% set na_raw = today_at(na_s) %}
+
+            {#- First next_available strictly after a given start; +1 day when
+                the pair crosses midnight (23:00 -> 10:30 means TOMORROW). -#}
+            {% set na_after_ua = na_raw if na_raw > ua_t else na_raw + timedelta(days=1) %}
+            {% set ua_prev = ua_t - timedelta(days=1) %}
+            {% set na_prev = na_raw if na_raw > ua_prev else na_raw + timedelta(days=1) %}
+
+            {#- Are we already inside last night's window, or looking ahead to
+                tonight's?  Covers before-bed, after-midnight and daytime. -#}
+            {% set inside_prev = n < ua_t and n < na_prev %}
+            {% set w_start = ua_prev if inside_prev else ua_t %}
+            {% set w_end = na_prev if inside_prev else na_after_ua %}
+
+            {% set wake_t = none if wake_s in bad else
+               (today_at(wake_s) if today_at(wake_s) > w_start
+                else today_at(wake_s) + timedelta(days=1)) %}
+
+            {#- Source selection.  To adopt the UK Met Office later, add its
+                entity here as the first candidate; nothing else changes. -#}
+            {% set met = met_fc['weather.forecast_home'].forecast
+               if (met_fc is defined and met_fc is mapping
+                   and 'weather.forecast_home' in met_fc) else none %}
+            {% set om = om_fc['weather.home'].forecast
+               if (om_fc is defined and om_fc is mapping
+                   and 'weather.home' in om_fc) else none %}
+            {% set use_met = met is iterable and met is not string and (met | count) > 0 %}
+            {% set fc = met if use_met else
+               (om if (om is iterable and om is not string and (om | count) > 0) else none) %}
+            {% set src = 'weather.forecast_home' if use_met
+               else ('weather.home' if fc is not none else none) %}
+            {% set src_label = 'Met.no' if use_met
+               else ('Open-Meteo' if fc is not none else none) %}
+
+            {%- if fc is none -%}
+              {{ {'ok': false, 'decision': 'unknown', 'reason': 'no_forecast_source',
+                  'source': none, 'source_label': none,
+                  'w_start': w_start.isoformat(), 'w_end': w_end.isoformat(),
+                  'safe_until_label': 'unknown',
+                  'signature': w_start.date() ~ '|unknown|no_source'} }}
+            {%- else -%}
+
+            {#- Slot scan.  An hourly slot labelled T covers T..T+1h, so a slot
+                counts when it OVERLAPS the window at all.  The window end may
+                fall mid-slot (10:30 inside the 10:00 slot); that slot is
+                included deliberately, because failing conservative is correct
+                when the data cannot say which half of the hour it rains. -#}
+            {% set ns = namespace(first_risk=none, first_big=none, worst=0,
+                                  considered=0, last_end=none, has_prob=false) %}
+            {% for f in fc %}
+              {% set ts = f.get('datetime') %}
+              {% if ts is not none %}
+                {% set t = ts | as_datetime %}
+                {% if t is not none %}
+                  {% set t = t | as_local %}
+                  {% set t_end = t + timedelta(hours=1) %}
+                  {% if ns.last_end is none or t_end > ns.last_end %}
+                    {% set ns.last_end = t_end %}
+                  {% endif %}
+                  {% if t_end > w_start and t < w_end %}
+                    {% set p = f.get('precipitation') | float(0) %}
+                    {% set praw = f.get('precipitation_probability') %}
+                    {% set pr = praw | float(-1) if praw is not none else -1 %}
+                    {% if pr >= 0 %}{% set ns.has_prob = true %}{% endif %}
+                    {% set sev = 2 if (pr >= prob_big or p >= mm_big)
+                       else (1 if (pr >= prob_adv or p >= mm_adv) else 0) %}
+                    {% set ns.considered = ns.considered + 1 %}
+                    {% if sev > ns.worst %}{% set ns.worst = sev %}{% endif %}
+                    {% if sev >= 1 and ns.first_risk is none %}
+                      {% set ns.first_risk = t %}
+                    {% endif %}
+                    {% if sev >= 2 and ns.first_big is none %}
+                      {% set ns.first_big = t %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+
+            {#- Horizon check: refuse to call it safe if the forecast simply
+                does not reach the end of the window. -#}
+            {% set covered = ns.last_end is not none and ns.last_end >= w_end %}
+            {% set usable = ns.considered > 0 and covered %}
+
+            {% set decision = 'unknown' if not usable
+               else ('bring_in' if ns.worst >= 2
+               else ('advisory' if ns.worst >= 1 else 'safe')) %}
+
+            {% set risk_at = ns.first_big if ns.first_big is not none else ns.first_risk %}
+            {% set tomorrow = risk_at is not none and risk_at.date() > n.date() %}
+            {% set label = 'unknown' if decision == 'unknown'
+               else ('safe through next availability' if decision == 'safe'
+               else risk_at.strftime('%H:%M') ~ (' tomorrow' if tomorrow else '')) %}
+
+            {#- After the expected wake time but before retrieval?  Cosmetic
+                only; it changes wording, never the verdict. -#}
+            {% set after_wake = risk_at is not none and wake_t is not none
+               and risk_at >= wake_t %}
+
+            {{ {
+                 'ok': usable,
+                 'decision': decision,
+                 'reason': 'ok' if usable else ('horizon' if ns.considered > 0 else 'no_slots'),
+                 'source': src,
+                 'source_label': src_label,
+                 'has_probability': ns.has_prob,
+                 'resolution': 'hourly',
+                 'w_start': w_start.isoformat(),
+                 'w_end': w_end.isoformat(),
+                 'wake': wake_t.isoformat() if wake_t is not none else none,
+                 'covered': covered,
+                 'slots_considered': ns.considered,
+                 'worst': ns.worst,
+                 'risk_at': risk_at.isoformat() if risk_at is not none else none,
+                 'risk_hour': risk_at.strftime('%H:00') if risk_at is not none else none,
+                 'risk_tomorrow': tomorrow,
+                 'after_wake': after_wake,
+                 'safe_until_label': label,
+                 'generated_at': n.isoformat(),
+                 'signature': w_start.date() ~ '|' ~ decision ~ '|'
+                              ~ (risk_at.strftime('%Y-%m-%dT%H') if risk_at is not none else 'none')
+               } }}
+
+            {%- endif -%}
+            {%- endif -%}
+
+    sensor:
+      # Earliest meaningful forecast wetting event inside the availability
+      # window.  Wording is deliberately hour-grained; see `resolution`.
+      - name: Washing Guard safe until
+        unique_id: washing_guard_safe_until
+        icon: mdi:clock-check-outline
+        state: "{{ plan.safe_until_label | default('unknown') }}"
+        attributes:
+          decision: "{{ plan.decision | default('unknown') }}"
+          reason: "{{ plan.reason | default('unknown') }}"
+          forecast_source: "{{ plan.source | default(none) }}"
+          forecast_source_label: "{{ plan.source_label | default(none) }}"
+          has_probability: "{{ plan.has_probability | default(false) }}"
+          resolution: "{{ plan.resolution | default('hourly') }}"
+          window_start: "{{ plan.w_start | default(none) }}"
+          window_end: "{{ plan.w_end | default(none) }}"
+          expected_wake: "{{ plan.wake | default(none) }}"
+          forecast_covers_window: "{{ plan.covered | default(false) }}"
+          slots_considered: "{{ plan.slots_considered | default(0) }}"
+          worst_severity: "{{ plan.worst | default(0) }}"
+          risk_at: "{{ plan.risk_at | default(none) }}"
+          risk_hour: "{{ plan.risk_hour | default(none) }}"
+          risk_after_wake: "{{ plan.after_wake | default(false) }}"
+          generated_at: "{{ plan.generated_at | default(none) }}"
+          signature: "{{ plan.signature | default('') }}"
+
+      # Informational only.  Dew is NOT rain and never feeds the rain verdict.
+      # Open-Meteo hourly is used because it is the only configured source
+      # exposing dew point.  High risk = air close to saturation, little wind
+      # to stir it, and clear skies letting surfaces radiate heat away.
+      - name: Washing Guard overnight damp risk
+        unique_id: washing_guard_overnight_damp_risk
+        icon: mdi:water-opacity
+        availability: >-
+          {{ om_fc is defined and om_fc is mapping
+             and 'weather.home' in om_fc
+             and (om_fc['weather.home'].forecast | count) > 0
+             and plan is mapping and plan.w_start is defined }}
+        state: >-
+          {% set fc = om_fc['weather.home'].forecast %}
+          {% set ws = plan.w_start | as_datetime | as_local %}
+          {% set we = plan.w_end | as_datetime | as_local %}
+          {% set ns = namespace(gap=none, wind=[], cloud=[], n=0) %}
+          {% for f in fc %}
+            {% set t = f.get('datetime') | as_datetime %}
+            {% if t is not none %}
+              {% set t = t | as_local %}
+              {% if (t + timedelta(hours=1)) > ws and t < we %}
+                {% set tm = f.get('temperature') %}
+                {% set dp = f.get('dew_point') %}
+                {% if tm is not none and dp is not none %}
+                  {% set g = (tm | float) - (dp | float) %}
+                  {% if ns.gap is none or g < ns.gap %}{% set ns.gap = g %}{% endif %}
+                  {% set ns.n = ns.n + 1 %}
+                {% endif %}
+                {% if f.get('wind_speed') is not none %}
+                  {% set ns.wind = ns.wind + [f.get('wind_speed') | float] %}
+                {% endif %}
+                {% if f.get('cloud_coverage') is not none %}
+                  {% set ns.cloud = ns.cloud + [f.get('cloud_coverage') | float] %}
+                {% endif %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {% if ns.n == 0 or ns.gap is none %}
+            unknown
+          {% else %}
+            {% set calm = (ns.wind | count) == 0 or (ns.wind | average) < 10 %}
+            {% set clear = (ns.cloud | count) == 0 or (ns.cloud | average) < 50 %}
+            {{ 'high' if (ns.gap <= 1.5 and calm and clear)
+               else ('moderate' if ns.gap <= 3.0 and calm else 'low') }}
+          {% endif %}
+        attributes:
+          min_temp_dewpoint_gap_c: >-
+            {% set fc = om_fc['weather.home'].forecast %}
+            {% set ws = plan.w_start | as_datetime | as_local %}
+            {% set we = plan.w_end | as_datetime | as_local %}
+            {% set ns = namespace(gap=none) %}
+            {% for f in fc %}
+              {% set t = f.get('datetime') | as_datetime %}
+              {% if t is not none and ((t | as_local) + timedelta(hours=1)) > ws
+                    and (t | as_local) < we %}
+                {% set tm = f.get('temperature') %}
+                {% set dp = f.get('dew_point') %}
+                {% if tm is not none and dp is not none %}
+                  {% set g = (tm | float) - (dp | float) %}
+                  {% if ns.gap is none or g < ns.gap %}{% set ns.gap = g %}{% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.gap | round(1) if ns.gap is not none else none }}
+          note: Informational only - dew is not rainfall and does not affect rain alerts.
+
+    binary_sensor:
+      # True when a meaningful wetting event sits inside the window.
+      - name: Washing Guard overnight risk
+        unique_id: washing_guard_overnight_risk
+        icon: mdi:weather-night-partly-cloudy
+        availability: >-
+          {{ plan is mapping and plan.decision | default('unknown') != 'unknown' }}
+        state: >-
+          {{ plan.decision in ['advisory', 'bring_in'] }}
+
+  # ---------------------------------------------------------------------
+  # Availability gate.  State-based (not trigger-based) so Home Assistant
+  # re-renders it every minute as now() advances.  Closed-form handling of the
+  # midnight crossing: when unavailable_from is later in the day than
+  # next_available the window wraps, otherwise it does not.
+  # ---------------------------------------------------------------------
+  - binary_sensor:
+      - name: Washing Guard unavailable now
+        unique_id: washing_guard_unavailable_now
+        icon: mdi:sleep
+        availability: >-
+          {{ states('input_datetime.washing_unavailable_from')
+             not in ['unknown', 'unavailable', 'none', '']
+             and states('input_datetime.washing_next_available')
+             not in ['unknown', 'unavailable', 'none', ''] }}
+        state: >-
+          {% set ua = today_at(states('input_datetime.washing_unavailable_from')) %}
+          {% set na = today_at(states('input_datetime.washing_next_available')) %}
+          {% set n = now() %}
+          {% if ua > na %}
+            {{ n >= ua or n < na }}
+          {% else %}
+            {{ n >= ua and n < na }}
+          {% endif %}
+
 automation:
   # Escalating warnings while the washing is out.  Stage is recomputed from the
   # forecast; the input_number records the highest stage already sent so each
@@ -210,6 +702,14 @@ automation:
       - condition: template
         value_template: >-
           {{ states('sensor.washing_guard_rain_stage') | int(0) > 0 }}
+
+      # Stay quiet while nobody is available to act.  The planning verdict has
+      # already had its say before bed.  Flipping input_boolean.washing_overnight_alerts
+      # on is the hook for a future "wake me for high-confidence rain" mode.
+      - condition: template
+        value_template: >-
+          {{ is_state('binary_sensor.washing_guard_unavailable_now', 'off')
+             or is_state('input_boolean.washing_overnight_alerts', 'on') }}
 
     actions:
       - variables:
@@ -614,3 +1114,224 @@ automation:
               callback_query_id: "{{ trigger.event.data.id }}"
               message: "That washing alert is no longer active."
               show_alert: false
+
+  # ---------------------------------------------------------------------
+  # PLANNING VERDICT
+  #
+  # Fires only in the lead-up to washing_unavailable_from, so the household is
+  # told to bring the washing in BEFORE bed rather than being woken at 02:15 by
+  # the ordinary 45-minute warning.  Examines the entire window, so rain that
+  # starts and stops overnight still counts.
+  #
+  # Repeat suppression is by signature (window date + decision + risk hour).
+  # An unchanged forecast never re-sends; a forecast that meaningfully changes
+  # does.  The signature lives in an input_text, which restores across
+  # restarts, so a Home Assistant restart inside the lead window does not
+  # re-send a message that already went out.
+  # ---------------------------------------------------------------------
+  - id: washing_guard_overnight_plan
+    alias: "Washing: Overnight planning verdict"
+    mode: single
+    max_exceeded: silent
+
+    triggers:
+      - trigger: state
+        entity_id: sensor.washing_guard_safe_until
+
+      - trigger: time_pattern
+        minutes: "/5"
+
+      - trigger: state
+        entity_id: input_boolean.washing_outside
+        to: "on"
+
+      - trigger: homeassistant
+        event: start
+
+    conditions:
+      - condition: state
+        entity_id: input_boolean.washing_outside
+        state: "on"
+
+      # Planning messages belong to the waking day only.  Once the unavailable
+      # window opens, ordinary notifications stop entirely.
+      - condition: state
+        entity_id: binary_sensor.washing_guard_unavailable_now
+        state: "off"
+
+      # Only inside the lead-in before the window opens.
+      - condition: template
+        value_template: >-
+          {% set ws = state_attr('sensor.washing_guard_safe_until', 'window_start') %}
+          {% if ws in [none, 'none', 'unknown', 'unavailable'] %}
+            false
+          {% else %}
+            {% set ws = ws | as_datetime | as_local %}
+            {% set lead = states('input_number.washing_plan_lead_minutes') | int(60) %}
+            {{ now() >= (ws - timedelta(minutes=lead)) and now() < ws }}
+          {% endif %}
+
+    actions:
+      - variables:
+          gen: "{{ state_attr('sensor.washing_guard_safe_until', 'generated_at') }}"
+          # A plan that has not refreshed recently is treated as unverified.
+          # Never let staleness read as "safe".
+          stale: >-
+            {% if gen in [none, 'none', 'unknown', 'unavailable'] %}
+              true
+            {% else %}
+              {{ (now() - (gen | as_datetime | as_local)).total_seconds() > 1800 }}
+            {% endif %}
+          decision: >-
+            {% set d = state_attr('sensor.washing_guard_safe_until', 'decision') %}
+            {{ 'unknown' if stale or d in [none, 'none'] else d }}
+          signature: >-
+            {% if stale %}
+              {{ now().date() ~ '|unknown|stale' }}
+            {% else %}
+              {{ state_attr('sensor.washing_guard_safe_until', 'signature') | default('', true) }}
+            {% endif %}
+
+      - condition: template
+        value_template: >-
+          {{ signature != ''
+             and signature != (states('input_text.washing_plan_signature') | trim) }}
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_plan_signature
+        data:
+          value: "{{ signature[:255] }}"
+
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          parse_mode: plain_text
+          message: >-
+            {% set s = 'sensor.washing_guard_safe_until' %}
+            {% set ws = state_attr(s, 'window_start') | as_datetime | as_local %}
+            {% set we = state_attr(s, 'window_end') | as_datetime | as_local %}
+            {% set hour = state_attr(s, 'risk_hour') %}
+            {% set tmr = state_attr(s, 'risk_tomorrow') %}
+            {% set when = hour ~ (' tomorrow' if tmr else '') if hour is not none else none %}
+            {% set src = state_attr(s, 'forecast_source_label') %}
+            {% set damp = states('sensor.washing_guard_overnight_damp_risk') %}
+            {%- if decision == 'unknown' -%}
+            ⚠️ I can't verify the overnight forecast, so don't assume the washing is safe outside.
+
+            Unable to confirm it will stay dry until {{ we.strftime('%H:%M') }}.
+            Reason: {{ state_attr(s, 'reason') | default('forecast unavailable') }}
+            {%- elif decision == 'bring_in' -%}
+            🛏️ Washing is outside and rain is likely during the {{ when }} hour, while we're unavailable.
+
+            Bring it in before {{ ws.strftime('%H:%M') }}.
+            {%- elif decision == 'advisory' and state_attr(s, 'risk_after_wake') -%}
+            🧺 Safe overnight, but rain risk increases during the {{ when }} hour.
+
+            That's before the washing can be fetched at {{ we.strftime('%H:%M') }}, so bring it in before then.
+            {%- elif decision == 'advisory' -%}
+            🌦 Washing is outside and there's a moderate chance of rain during the {{ when }} hour, while we're unavailable.
+
+            Worth bringing it in before {{ ws.strftime('%H:%M') }}.
+            {%- else -%}
+            🧺 Washing looks safe overnight. No meaningful rain is expected before {{ we.strftime('%H:%M') }}.
+            {%- endif %}
+            {% if decision != 'unknown' %}
+            Checked {{ ws.strftime('%H:%M') }} → {{ we.strftime('%H:%M') }} using {{ src }} hourly data.
+            {% if not state_attr(s, 'has_probability') %}
+            (amount only — no probability from this source)
+            {% endif %}
+            {% endif %}
+            {% if damp in ['high', 'moderate'] %}
+            💧 {{ 'High' if damp == 'high' else 'Moderate' }} overnight damp/dew risk — clothes may be damp by morning even without rain.
+            {% endif %}
+          inline_keyboard:
+            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
+            - "🌦 Weather status:/washing_status"
+
+  # ---------------------------------------------------------------------
+  # ONE-TIME THRESHOLD SEEDING
+  #
+  # input_number helpers are created at their minimum when no `initial:` is
+  # given, and `initial:` would reset them on every restart and destroy any UI
+  # tuning.  So the documented defaults are written exactly once, guarded by a
+  # marker boolean, and never touched again.
+  #
+  # Turning input_boolean.washing_thresholds_seeded off by hand re-runs this,
+  # which is a convenient "reset thresholds to defaults".
+  #
+  # Defaults chosen so that: a trace of drizzle at low confidence stays quiet,
+  # a moderate chance becomes advisory, and either a likely or a substantial
+  # rainfall says bring it in.
+  # ---------------------------------------------------------------------
+  - id: washing_guard_seed_thresholds
+    alias: "Washing: Seed planning thresholds once"
+    mode: single
+
+    triggers:
+      - trigger: homeassistant
+        event: start
+
+      - trigger: state
+        entity_id: input_boolean.washing_thresholds_seeded
+        to: "off"
+
+    conditions:
+      - condition: state
+        entity_id: input_boolean.washing_thresholds_seeded
+        state: "off"
+
+    actions:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.washing_risk_prob_advisory
+        data:
+          value: 35
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.washing_risk_prob_bring_in
+        data:
+          value: 60
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.washing_risk_mm_advisory
+        data:
+          value: 0.2
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.washing_risk_mm_bring_in
+        data:
+          value: 0.5
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.washing_plan_lead_minutes
+        data:
+          value: 60
+
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.washing_thresholds_seeded
+
+  # Clearing the signature when the washing comes in means the next time it
+  # goes out, tonight's verdict is allowed to send again.
+  - id: washing_guard_reset_plan_signature
+    alias: "Washing: Reset planning signature when disarmed"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.washing_outside
+        from: "on"
+        to: "off"
+
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_plan_signature
+        data:
+          value: ""
