@@ -858,6 +858,73 @@ template:
   # midnight crossing: when unavailable_from is later in the day than
   # next_available the window wraps, otherwise it does not.
   # ---------------------------------------------------------------------
+  # ---------------------------------------------------------------------
+  # DASHBOARD SUMMARY
+  #
+  # One sensor that collapses immediate mode, planning mode and availability
+  # into a single human phrase, so the Overview needs exactly one tile instead
+  # of a wall of helpers.  State-based rather than trigger-based so it reacts
+  # the moment the immediate stage moves, not on the 10-minute planning tick.
+  #
+  # Priority: an imminent soaking outranks everything; an unverifiable forecast
+  # outranks any "safe"; overnight risk is phrased differently depending on
+  # whether there is still time to act before bed.
+  # ---------------------------------------------------------------------
+  - sensor:
+      - name: Washing Guard status
+        unique_id: washing_guard_status
+        state: >-
+          {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
+          {% set d = state_attr('sensor.washing_guard_safe_until', 'decision')
+             | default('unknown', true) %}
+          {% set nr = states('sensor.washing_guard_next_rain') %}
+          {% set unav = is_state('binary_sensor.washing_guard_unavailable_now', 'on') %}
+          {% if stage >= 3 %}Bring in now
+          {% elif stage >= 1 %}Bring in soon
+          {% elif d == 'unknown' %}Forecast unavailable
+          {% elif d in ['advisory', 'bring_in'] %}
+            {{ 'Overnight risk' if unav else 'Bring in before bed' }}
+          {% elif nr not in ['unknown', 'unavailable', 'none', ''] %}Rain later
+          {% else %}Safe
+          {% endif %}
+        icon: >-
+          {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
+          {% set d = state_attr('sensor.washing_guard_safe_until', 'decision')
+             | default('unknown', true) %}
+          {% if stage >= 3 %}mdi:weather-pouring
+          {% elif stage >= 1 %}mdi:weather-rainy
+          {% elif d == 'unknown' %}mdi:cloud-question
+          {% elif d in ['advisory', 'bring_in'] %}mdi:weather-night-partly-cloudy
+          {% else %}mdi:tshirt-crew-outline
+          {% endif %}
+        attributes:
+          # Secondary line for the tile, via the card's state_content.
+          # Hour-grained wording only - the planning sources are hourly.
+          detail: >-
+            {% set s = 'sensor.washing_guard_safe_until' %}
+            {% set d = state_attr(s, 'decision') | default('unknown', true) %}
+            {% set we = state_attr(s, 'window_end') %}
+            {% set rh = state_attr(s, 'risk_hour') %}
+            {% set rt = state_attr(s, 'risk_tomorrow') %}
+            {% set nrh = state_attr('sensor.washing_guard_next_rain', 'expected_hour') %}
+            {% set mins = states('sensor.washing_guard_minutes_to_rain') %}
+            {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
+            {% if stage >= 4 %}Raining now
+            {% elif stage >= 1 and mins not in ['unknown', 'unavailable'] %}
+              Rain in about {{ mins }} min
+            {% elif d == 'unknown' %}Forecast could not be verified
+            {% elif d in ['advisory', 'bring_in'] and rh is not none %}
+              Safe until around {{ rh }}{{ ' tomorrow' if rt else '' }}
+            {% elif d == 'safe' and we not in [none, 'none', 'unknown', 'unavailable'] %}
+              No meaningful rain before
+              {{ (we | as_datetime | as_local).strftime('%H:%M') }}
+            {% elif nrh is not none %}Next rain: around {{ nrh }}
+            {% else %}No meaningful rain forecast
+            {% endif %}
+          provider: >-
+            {{ state_attr('sensor.washing_guard_safe_until', 'forecast_source_label')
+               | default('unknown', true) }}
+
   - binary_sensor:
       - name: Washing Guard unavailable now
         unique_id: washing_guard_unavailable_now
