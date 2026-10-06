@@ -32,5 +32,7 @@
     ../../services/pinchflat
 
     ../../services/netv
+
+    ../../services/monitoring/mount-probe
   ];
 }

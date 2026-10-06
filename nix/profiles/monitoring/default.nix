@@ -10,5 +10,6 @@
     ../../services/monitoring/alertmanager
     ../../services/monitoring/loki
     ../../services/monitoring/proxmox-exporter
+    ../../services/monitoring/blackbox-exporter
   ];
 }
