@@ -11,5 +11,6 @@
     ../../services/monitoring/loki
     ../../services/monitoring/proxmox-exporter
     ../../services/monitoring/blackbox-exporter
+    ../../services/monitoring/heartbeat
   ];
 }
