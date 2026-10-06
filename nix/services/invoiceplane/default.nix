@@ -12,6 +12,12 @@ let
 
   baseDir = "/srv/appdata/invoiceplane";
   dbDataDir = "${baseDir}/mariadb";
+  # mysql uid/gid inside the official mariadb image. The data dir must stay
+  # owned by it: tmpfiles re-applies ownership on every deploy while the DB
+  # runs (the image entrypoint only fixes it at container start), and a
+  # non-writable dir stops mariadbd deleting tc.log on clean shutdown,
+  # which then blocks the next start ("Bad magic header in tc log").
+  mysqlId = "999";
   uploadsDir = "${baseDir}/uploads";
   cssDir = "${baseDir}/custom-css";
   viewsDir = "${baseDir}/custom-views";
@@ -87,7 +93,7 @@ in {
 
   systemd.tmpfiles.rules = lib.mkAfter [
     "d ${baseDir}    2775 ${config.homelab.ids.user} media - -"
-    "d ${dbDataDir}  2775 ${config.homelab.ids.user} media - -"
+    "d ${dbDataDir}  2775 ${mysqlId} ${mysqlId} - -"
     "d ${uploadsDir} 2775 ${config.homelab.ids.user} media - -"
     "d ${cssDir}     2775 ${config.homelab.ids.user} media - -"
     "d ${viewsDir}   2775 ${config.homelab.ids.user} media - -"
