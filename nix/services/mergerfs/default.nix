@@ -10,6 +10,11 @@ let
     "category.create=ff"
     "moveonenospc=true"
     "minfreespace=50G"
+    # Required when the pool is exported over NFS (see mergerfs(1), "NFS"):
+    # without noforget mergerfs drops nodes NFS still holds handles to, which
+    # left clients' long-lived subdirectory bind mounts with ESTALE.
+    "noforget"
+    "inodecalc=path-hash"
     "nofail"
     "x-systemd.mount-timeout=60s"
   ];
