@@ -105,7 +105,7 @@ in {
 
   virtualisation.oci-containers.containers = {
     tracearr-db = {
-      image = "timescale/timescaledb:latest-pg16@sha256:289d55704b1b3ee8263cd3805c6930f9cd54506835a8f19f9b85dad17d5c5a8a";
+      image = "timescale/timescaledb:latest-pg16@sha256:6f139d56042989bd35f50ba5986e492cd32e35cc6778c50be2659add298dc09f";
       autoStart = true;
 
       cmd = [
