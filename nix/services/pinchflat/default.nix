@@ -17,11 +17,12 @@ let
 
   gwIp = config.homelab.ips.gw;
 in {
+  # downloadsDir lives on the NFS mount and is created by media-library-dirs
+  # on vm-storage. tmpfiles runs before the mount at boot, so rules for it
+  # would write to the local mount point instead.
   systemd.tmpfiles.rules = lib.mkAfter [
     "d ${appdataDir} 2775 ${config.homelab.ids.user} media - -"
-    "d ${downloadsDir} 2775 ${config.homelab.ids.user} media - -"
     "Z ${appdataDir} - ${config.homelab.ids.user} media - -"
-    "Z ${downloadsDir} - ${config.homelab.ids.user} media - -"
   ];
 
   virtualisation.oci-containers.containers.pinchflat = {

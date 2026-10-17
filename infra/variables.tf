@@ -12,6 +12,12 @@ variable "vms" {
     serial_console  = bool
     cloud_init_user = optional(string)
     root_discard    = string
+    # Proxmox start order (lower first); shutdown runs in reverse.
+    startup = optional(object({
+      order      = number
+      up_delay   = optional(number)
+      down_delay = optional(number)
+    }))
     nics = list(object({
       bridge  = string
       mac     = string
