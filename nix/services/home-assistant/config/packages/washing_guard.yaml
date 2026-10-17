@@ -1,7 +1,11 @@
 # Washing Guard
 #
-# Warns over Telegram when laundry is drying outside and rain is approaching.
-# Two layers, deliberately kept separate:
+# Give one actionable, weather-aware line-drying recommendation over Telegram.
+# Drying estimate uses hourly temperature, humidity, wind and daylight; rain
+# forecasts are checked through estimated completion, not merely 45 minutes.
+# Estimated drying time is NOT a guarantee (fabric/load size and line exposure
+# vary). If drying runs into night, send a one-time dusk reminder.
+# Two existing rain-safety layers remain separate:
 #
 #   IMMEDIATE MODE (unchanged)
 #     Escalating 45/30/15-minute warnings while somebody is expected to be
@@ -107,6 +111,18 @@ input_text:
     icon: mdi:lock-clock
     min: 0
     max: 255
+
+  washing_drying_signature:
+    name: Washing last drying alert
+    icon: mdi:weather-cloudy-alert
+    min: 0
+    max: 255
+
+  washing_dusk_reminded_on:
+    name: Washing dusk reminder sent
+    icon: mdi:weather-sunset-down
+    min: 0
+    max: 16
 
 input_number:
   # Highest stage already sent for the active event.  Escalation compares
@@ -251,6 +267,23 @@ rest:
         json_attributes:
           - current
           - minutely_15
+
+  # Drying conditions (hourly, with one day of recent modelled conditions).
+  # Separate from rain safety: the Met Office remains the preferred rain source.
+  # Past hours are an estimate, NOT measured proof that washing is already dry.
+  - resource_template: >-
+      https://api.open-meteo.com/v1/forecast?latitude={{ state_attr('zone.home', 'latitude') | round(4) }}&longitude={{ state_attr('zone.home', 'longitude') | round(4) }}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,shortwave_radiation,is_day,precipitation,precipitation_probability&daily=sunrise,sunset&past_hours=24&forecast_hours=48&timeformat=unixtime&timezone=auto
+    scan_interval: 900
+    timeout: 30
+    sensor:
+      - name: Washing Guard drying weather
+        unique_id: washing_guard_drying_weather
+        icon: mdi:weather-partly-cloudy
+        value_template: "{{ value_json.hourly.time | count }}"
+        unit_of_measurement: hours
+        json_attributes:
+          - hourly
+          - daily
 
 template:
   # A trigger-based block so the bucket analysis runs once and is shared by
@@ -419,6 +452,8 @@ template:
           - input_number.washing_risk_prob_bring_in
           - input_number.washing_risk_mm_advisory
           - input_number.washing_risk_mm_bring_in
+          - input_datetime.washing_put_out_at
+          - sensor.washing_guard_drying_weather
 
     action:
       # PRIMARY.  Met Office DataHub, hourly.  Observed live to carry both
@@ -613,9 +648,14 @@ template:
                 {% if sev >= 2 and ns.first_big is none %}{% set ns.first_big = t %}{% endif %}
               {% endif %}
 
-              {#- (b) rolling 24h -> the informational next-rain sensor -#}
-              {% if ns.nr_ts is none and sev >= 1 and t_end > n and t < h24 %}
-                {% set ns.nr_ts = t %}{% set ns.nr_sev = sev %}
+              {#- (b) rolling 24h -> informational next rain / daily outlook.
+                  Include even light measurable rain (>=0.1 mm), while keeping
+                  the configurable higher overnight ALERT thresholds above
+                  unchanged.  Never infer "dry" from precipitation probability
+                  alone when the provider omits that field. -#}
+              {% set measurable = (mm is not none and mm >= 0.1) or sev >= 1 %}
+              {% if ns.nr_ts is none and measurable and t_end > n and t < h24 %}
+                {% set ns.nr_ts = t %}{% set ns.nr_sev = [sev, 1] | max %}
                 {% set ns.nr_pr = pr %}{% set ns.nr_mm = mm %}
               {% endif %}
             {% endfor %}
@@ -716,7 +756,208 @@ template:
             {%- endif -%}
             {%- endif -%}
 
+
+      - variables:
+        # Calculate separately so `plan` from the preceding action is in scope.
+        # Approximate outdoor line-drying model. An ideal mixed load needs ~4.5
+        # effective drying hours. We accumulate hourly progress from the actual
+        # put-out timestamp (or now when it is not out). Temperature, relative
+        # humidity, wind and solar radiation change the pace. Nighttime near dew
+        # point and rainy hours add no drying progress. This is NOT a moisture
+        # sensor; reported ETAs are deliberately approximate (+/- 1-2 hours).
+        # Rain is checked independently against the preferred hourly rain provider
+        # over the entire drying window (and 90-minute allowance), not just 45 min.
+          drying: >-
+            {% set n = now() %}
+            {% set tn = as_timestamp(n) %}
+            {% set raw_start = states('input_datetime.washing_put_out_at') %}
+            {% set washing = is_state('input_boolean.washing_outside', 'on') %}
+            {% set putout = (as_timestamp(raw_start, none)
+                if washing and raw_start not in ['unknown','unavailable','none',''] else none) %}
+            {% set start = putout if putout is not none and putout <= tn else tn %}
+            {% set hour = state_attr('sensor.washing_guard_drying_weather','hourly') %}
+            {% set days = state_attr('sensor.washing_guard_drying_weather','daily') %}
+            {% set wx_entity = states.sensor.washing_guard_drying_weather %}
+            {% set wx_age = as_timestamp(wx_entity.last_updated, 0) if wx_entity is not none else 0 %}
+            {% set valid = hour is mapping and hour.get('time') is iterable
+               and (hour.time | count) > 2
+               and hour.get('temperature_2m') is not none
+               and hour.get('relative_humidity_2m') is not none
+               and hour.get('wind_speed_10m') is not none
+               and hour.get('shortwave_radiation') is not none
+               and hour.get('is_day') is not none
+               and wx_age > 0 and tn - wx_age < 5400
+               and plan is mapping and plan.get('source') is not none %}
+            {% if not valid %}
+              {{ {'verdict':'unknown', 'reason':'weather_unavailable',
+                  'eta':none, 'rain_ts':none, 'sunset':none,
+                  'forecast_label':plan.source_label | default('unavailable')} }}
+            {% else %}
+              {% set latest = (hour.time | last | float(0)) + 3600 %}
+              {% set earliest = hour.time[0] | float(0) %}
+              {% set missing_history = (start < earliest) %}
+              {% set start = [start,earliest] | max %}
+              {% set d = namespace(progress=0.0, finish=none, processed=0,
+                   sunset=none, sunrise=none, past_wet=false, recent_day=none,
+                   incomplete=false) %}
+              {% if days is mapping %}
+                {% for x in days.get('sunset',[]) %}
+                  {% if x is number and x >= tn and d.sunset is none %}
+                    {% set d.sunset = x %}
+                  {% endif %}
+                {% endfor %}
+                {% for x in days.get('sunrise',[]) %}
+                  {% if x is number and x >= tn and d.sunrise is none %}
+                    {% set d.sunrise = x %}
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+              {% set hlen = hour.time | count %}
+              {% for i in range(hlen) %}
+                {% set t = hour.time[i] | float(0) %}
+                {% set left = [t,start] | max %}
+                {% set right = [t + 3600, latest] | min %}
+                {% if right > left and d.finish is none %}
+                  {% set temp = hour.temperature_2m[i] | float(none) %}
+                  {% set rh = hour.relative_humidity_2m[i] | float(none) %}
+                  {% set wind = hour.wind_speed_10m[i] | float(none) %}
+                  {% set solar = hour.shortwave_radiation[i] | float(none) %}
+                  {% set daylight = hour.is_day[i] | int(-1) %}
+                  {% set prec = hour.precipitation[i] | float(none)
+                     if hour.get('precipitation') is not none else none %}
+                  {% set prob = hour.precipitation_probability[i] | float(none)
+                     if hour.get('precipitation_probability') is not none else none %}
+                  {% if temp is none or rh is none or wind is none or solar is none
+                       or daylight not in [0,1] %}
+                    {% set d.incomplete = true %}
+                  {% else %}
+                    {% set rain = (prec is not none and prec >= 0.1)
+                       or (prob is not none and prob >= 60) %}
+                    {% if rain and left < tn and right > start %}
+                      {% set d.past_wet = true %}
+                      {# After past probable rain, earlier progress cannot be trusted. #}
+                      {% set d.progress = 0.0 %}
+                    {% endif %}
+                    {% set tr = [[0.75 + (temp - 15) * 0.045, 0.2] | max, 1.6] | min %}
+                    {% set hr = [[(100 - rh) / 42, 0.16] | max, 1.4] | min %}
+                    {% set wr = [[0.75 + wind / 35, 0.55] | max, 1.6] | min %}
+                    {% set sr = [[0.68 + solar / 650, 0.55] | max, 1.5] | min %}
+                    {% set rate = tr * hr * wr * sr %}
+                    {% if rain or (daylight == 0 and rh >= 80) %}
+                      {% set rate = 0 %}
+                    {% elif daylight == 0 %}
+                      {% set rate = rate * 0.45 %}
+                    {% endif %}
+                    {% set span = (right - left) / 3600 %}
+                    {% if rate > 0 and d.progress + span * rate >= 4.5 %}
+                      {% set d.finish = left + (4.5 - d.progress) / rate * 3600 %}
+                    {% else %}
+                      {% set d.progress = d.progress + span * rate %}
+                    {% endif %}
+                    {% set d.processed = d.processed + 1 %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+
+              {# Rain safety uses the provider chosen by the existing planner. #}
+              {% set rp = plan.source %}
+              {% set fc = (mo_fc['weather.met_office_northwood'].forecast
+                    if rp == 'weather.met_office_northwood' and mo_fc is defined
+                       and mo_fc is mapping and rp in mo_fc
+                    else (met_fc['weather.forecast_home'].forecast
+                    if rp == 'weather.forecast_home' and met_fc is defined
+                       and met_fc is mapping and rp in met_fc
+                    else (om_fc['weather.home'].forecast
+                    if rp == 'weather.home' and om_fc is defined
+                       and om_fc is mapping and rp in om_fc else []))) %}
+              {% set upper = (d.finish + 5400 if d.finish is not none
+                             else [tn + 86400,latest] | min) %}
+              {% set first = namespace(rain=none, pr=none, mm=none, end=0,
+                                       covered_current=false) %}
+              {% for f in fc %}
+                {% set ft = as_timestamp(f.get('datetime'), none) %}
+                {% if ft is not none %}
+                  {% set fe = ft + 3600 %}
+                  {% if fe > first.end %}{% set first.end = fe %}{% endif %}
+                  {% if ft <= tn and fe > tn %}{% set first.covered_current = true %}{% endif %}
+                  {% set amt = f.get('precipitation') | float(none)
+                     if f.get('precipitation') is not none else none %}
+                  {% set pct = f.get('precipitation_probability') | float(none)
+                     if f.get('precipitation_probability') is not none else none %}
+                  {% if fe > tn and ft < upper and ((amt is not none and amt >= 0.1)
+                       or (pct is not none and pct >= 35))
+                       and (first.rain is none or ft < first.rain) %}
+                    {% set first.rain = ft %}
+                    {% set first.pr = pct %}
+                    {% set first.mm = amt %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+              {% set fresh_rain = (plan.provider_age_minutes is not none
+                    and (plan.provider_age_minutes | float(99999)) <= 180
+                    and first.covered_current) %}
+              {% set rain_covered = first.end >= upper and fresh_rain %}
+              {% set early_rain = first.rain is not none %}
+              {% set night = d.sunset is not none and (d.finish is none
+                             or (d.finish + 3600) > d.sunset) %}
+              {% set night_now = hour.is_day[([((tn - earliest) / 3600) | int, 0] | max) | int]
+                   if tn >= earliest and tn < latest else 1 %}
+              {% set night = night or night_now == 0 %}
+              {% set history_ok = not missing_history and not d.past_wet %}
+              {% set forecast_ok = d.processed > 0 and not d.incomplete %}
+              {% set result = ('unknown' if not forecast_ok or not fresh_rain
+                 else ('rain' if early_rain
+                 else ('check_wet' if washing and d.past_wet
+                 else ('unknown' if washing and missing_history
+                 else ('slow' if d.finish is none
+                 else ('unknown' if not rain_covered
+                 else ('check_now' if washing and d.finish < tn
+                 else ('overnight' if night else 'safe')))))))) %}
+              {{ {'verdict':result,
+                   'reason': 'incomplete_weather' if not forecast_ok
+                      else ('rain_forecast_unavailable' if not fresh_rain else 'ok'),
+                   'eta': d.finish | round(0) | int if d.finish is not none and not (washing and missing_history) else none,
+                   'rain_ts': first.rain | round(0) | int if early_rain else none,
+                   'rain_probability': first.pr,
+                   'rain_mm':first.mm,
+                   'sunset': d.sunset,
+                   'sunrise': d.sunrise,
+                   'overnight': night,
+                   'night_now': night_now == 0,
+                   'past_rain_possible': d.past_wet,
+                   'past_data_complete': history_ok,
+                   'started_at':start | round(0) | int,
+                   'out_since':putout,
+                   'rain_forecast_until':first.end,
+                   'rain_window_covered':rain_covered,
+                   'forecast_label':plan.source_label | default('unavailable'),
+                   'progress_pct':[(100 * d.progress / 4.5) | round(0) | int,100] | min,
+                   'model_note':'Approximate mixed-load estimate (not a moisture measurement).'} }}
+            {% endif %}
+
     sensor:
+      - name: Washing Guard drying plan
+        unique_id: washing_guard_drying_plan
+        icon: mdi:timer-sand
+        state: "{{ drying.verdict | default('unknown') }}"
+        attributes:
+          estimated_dry_at: "{{ drying.eta | default(none) }}"
+          rain_before_dry_at: "{{ drying.rain_ts | default(none) }}"
+          rain_probability: "{{ drying.rain_probability | default(none) }}"
+          sunset_at: "{{ drying.sunset | default(none) }}"
+          sunrise_at: "{{ drying.sunrise | default(none) }}"
+          overnight: "{{ drying.overnight | default(false) }}"
+          night_now: "{{ drying.night_now | default(false) }}"
+          past_rain_possible: "{{ drying.past_rain_possible | default(false) }}"
+          past_data_complete: "{{ drying.past_data_complete | default(false) }}"
+          started_at: "{{ drying.started_at | default(none) }}"
+          out_since: "{{ drying.out_since | default(none) }}"
+          rain_forecast_until: "{{ drying.rain_forecast_until | default(none) }}"
+          rain_window_covered: "{{ drying.rain_window_covered | default(false) }}"
+          source: "{{ drying.forecast_label | default('unavailable') }}"
+          reason: "{{ drying.reason | default('weather_unavailable') }}"
+          estimate_disclaimer: "Approximate for an average mixed load; allow 1–2 hours either way."
+
       # Earliest meaningful wetting event inside the availability window.
       # Wording is hour-grained on purpose; see `resolution`.
       - name: Washing Guard safe until
@@ -760,8 +1001,9 @@ template:
           generated_at: "{{ plan.generated_at | default(none) }}"
           signature: "{{ plan.signature | default('') }}"
 
-      # Informational only - the earliest meaningful rain in roughly the next
-      # 24 hours, independent of the availability window.  Nothing notifies on
+      # Informational only - the earliest measurable rain (>=0.1 mm, or a
+      # probability crossing the advisory threshold) in roughly the next 24
+      # hours, independent of the availability window. Nothing notifies on
       # this; it exists for the dashboard.  Unknown when no provider is usable,
       # so an outage never reads as "no rain coming".
       - name: Washing Guard next rain
@@ -871,58 +1113,188 @@ template:
   # whether there is still time to act before bed.
   # ---------------------------------------------------------------------
   - sensor:
+      # Daily outlook is independent of the 45-minute alert window. The
+      # existing hourly planner already identifies the next meaningful rain
+      # within 24 hours; compare that with LOCAL midnight, and only call a
+      # dry day when the hourly source actually covers the end of today.
+      # Unknown is intentional if data is stale/short: never promise a dry
+      # day based on 45 minutes of data or an incomplete forecast.
+      - name: Washing Guard rain today
+        unique_id: washing_guard_rain_today
+        icon: mdi:weather-rainy
+        state: >-
+          {% set s = 'sensor.washing_guard_safe_until' %}
+          {% set raw = states('sensor.washing_guard_next_rain') %}
+          {% set nr = (raw | as_datetime | as_local)
+             if raw not in ['unknown', 'unavailable', 'none', ''] else none %}
+          {% set end_raw = state_attr(s, 'provider_horizon_end') %}
+          {% set end = (end_raw | as_datetime | as_local)
+             if end_raw not in [none, 'none', 'unknown', 'unavailable', ''] else none %}
+          {% set gen_raw = state_attr(s, 'generated_at') %}
+          {% set gen = (gen_raw | as_datetime | as_local)
+             if gen_raw not in [none, 'none', 'unknown', 'unavailable', ''] else none %}
+          {% set age = state_attr(s, 'provider_age_minutes') %}
+          {% set fresh = gen is not none
+             and 0 <= (now() - gen).total_seconds() <= 1800
+             and (age is none or (age | float(99999)) <= 180) %}
+          {% set midnight = today_at('00:00') + timedelta(days=1) %}
+          {% set has_hourly = state_attr(s, 'forecast_source')
+             not in [none, 'none', 'unknown', 'unavailable', ''] %}
+          {% set raining = is_state_attr('sensor.washing_guard_rain_stage', 'raining_now', true) %}
+          {% set onset_raw = states('sensor.washing_guard_rain_onset') %}
+          {% set onset = (onset_raw | as_datetime | as_local)
+             if onset_raw not in ['unknown', 'unavailable', 'none', ''] else none %}
+          {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
+          {% set soon_today = stage >= 1 and onset is not none
+             and onset.date() == now().date() %}
+          {% if raining or soon_today %}rain
+          {% elif fresh and nr is not none and nr.date() == now().date() %}rain
+          {% elif fresh and has_hourly and end is not none and end >= midnight %}dry
+          {% else %}unknown
+          {% endif %}
+        attributes:
+          first_hour: >-
+            {% set raw = states('sensor.washing_guard_next_rain') %}
+            {% set nr = (raw | as_datetime | as_local)
+               if raw not in ['unknown', 'unavailable', 'none', ''] else none %}
+            {% set onset_raw = states('sensor.washing_guard_rain_onset') %}
+            {% set onset = (onset_raw | as_datetime | as_local)
+               if onset_raw not in ['unknown', 'unavailable', 'none', ''] else none %}
+            {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
+            {% if is_state_attr('sensor.washing_guard_rain_stage', 'raining_now', true) %}
+              now
+            {% elif stage >= 1 and onset is not none and onset.date() == now().date() %}
+              {{ onset.strftime('%H:00') }}
+            {% elif nr is not none and nr.date() == now().date() %}
+              {{ nr.strftime('%H:00') }}
+            {% else %}
+              {{ none }}
+            {% endif %}
+          probability: >-
+            {% set raw = states('sensor.washing_guard_next_rain') %}
+            {% set nr = (raw | as_datetime | as_local)
+               if raw not in ['unknown', 'unavailable', 'none', ''] else none %}
+            {{ state_attr('sensor.washing_guard_next_rain', 'probability')
+               if nr is not none and nr.date() == now().date() else none }}
+          provider: >-
+            {{ state_attr('sensor.washing_guard_safe_until', 'forecast_source_label')
+               | default('unknown', true) }}
+
+      # One short, actionable sentence is shared by Telegram and the dashboard.
+      # Forecast uncertainty never turns into a false "safe".
+      - name: Washing Guard recommendation
+        unique_id: washing_guard_recommendation
+        icon: mdi:tshirt-crew
+        state: >-
+          {% set v = states('sensor.washing_guard_drying_plan') %}
+          {% set active = is_state('input_boolean.washing_outside', 'on') %}
+          {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
+          {% if active and stage >= 3 %}Bring in now
+          {% elif active and stage >= 1 %}Bring in before rain
+          {% elif v == 'rain' %}{{ 'Bring in before rain' if active else 'Not worth hanging out' }}
+          {% elif v == 'overnight' %}
+            {{ 'Bring in now' if active and is_state_attr('sensor.washing_guard_drying_plan', 'night_now', true)
+               else ('Bring in before dusk' if active else 'Won’t dry before dark') }}
+          {% elif v == 'check_wet' %}Check — may have got wet
+          {% elif v == 'slow' %}{{ 'Use indoor drying' if active else 'Better to dry indoors' }}
+          {% elif v == 'check_now' %}Check — may be dry already
+          {% elif v == 'safe' %}{{ 'Leave out — looks good' if active else 'Good time to hang out' }}
+          {% else %}Forecast uncertain
+          {% endif %}
+        attributes:
+          detail: >-
+            {% set p = 'sensor.washing_guard_drying_plan' %}
+            {% set v = states(p) %}
+            {% set active = is_state('input_boolean.washing_outside', 'on') %}
+            {% set eta = state_attr(p,'estimated_dry_at') | float(0) %}
+            {% set rain = state_attr(p,'rain_before_dry_at') | float(0) %}
+            {% set sunset = state_attr(p,'sunset_at') | float(0) %}
+            {% set overnight = is_state_attr(p, 'overnight', true) %}
+            {% set already_dark = is_state_attr(p, 'night_now', true) %}
+            {% set sunset_first = overnight and sunset > 0 and (rain == 0 or sunset <= rain) %}
+            {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
+            {% set out = 'Washing out' if active else 'If hung out now' %}
+            {% set eta_label = (((((eta + 900) // 1800) * 1800) | timestamp_custom('%a %H:%M', true))) if eta > 0 else 'not within the next 48h' %}
+            {% set rain_label = (rain | timestamp_custom('%a %H:00', true)) if rain > 0 else 'none before drying' %}
+            {% set sunset_label = (sunset | timestamp_custom('%H:%M', true)) if sunset > 0 else 'unknown' %}
+            {% if active and stage >= 3 %}
+              🚨 Bring the washing in now — rain is imminent.
+            {% elif active and stage >= 1 %}
+              🌧️ Bring washing in before rain arrives (within 45 minutes).
+            {% elif v == 'rain' %}
+              🌧️ {{ 'Bring it in now' if active and already_dark else ('Bring it in before dusk' if active and sunset_first else ('Bring it in before rain' if active else 'Best to wait before hanging it out')) }} — rain risk during the {{ rain_label }} hour, before clothes are likely dry.
+              {% if overnight %}
+                🌙 Drying also runs into the night{% if not already_dark %} (sunset {{ sunset_label }}){% endif %}; overnight dew can make it damp again.
+              {% endif %}
+            {% elif v == 'overnight' %}
+              🌙 {{ 'It’s already dark — bring washing inside' if active and already_dark else ('Bring it in before dusk' if active else 'Better to dry indoors or wait') }} — it may not dry before dark{% if not already_dark %} (sunset {{ sunset_label }}){% endif %}; dew overnight can make it damp again.
+            {% elif v == 'check_wet' %}
+              🌦️ Earlier forecast rain may have dampened the washing. Check it and bring it in if it is wet.
+            {% elif v == 'slow' %}
+              🐢 Conditions are too slow for a reliable finish in the next 48 hours. Indoor drying is the easier option.
+            {% elif v == 'check_now' %}
+              ✅ Clothes may already be dry — check them and bring them in rather than leaving them overnight.
+            {% elif v == 'safe' %}
+              ✅ {{ 'Leave it out for now' if active else 'Looks like a good drying window' }} — no meaningful rain is forecast before it should dry.
+            {% else %}
+              ⚠️ I can’t verify the full drying/rain window, so I can’t say it’s safe to leave outside.
+            {% endif %}
+            {% if eta > 0 %}
+              🧺 {{ out }}: likely dry around {{ eta_label }} (allow 1–2 hours either way).
+            {% elif v in ['slow','unknown'] %}
+              🧺 Estimated drying time: not reliably available.
+            {% endif %}
+            {% if v == 'overnight' and is_state('sensor.washing_guard_overnight_damp_risk', 'high') %}
+              💧 Overnight dew risk is high.
+            {% endif %}
+            {% if active and v != 'check_wet' and state_attr(p,'past_rain_possible') == true %}
+              🌦 Earlier forecast rain may have dampened the washing; check it physically.
+            {% endif %}
+            {% if active and v != 'check_wet' and state_attr(p,'past_data_complete') == false %}
+              Note: past drying conditions could not all be verified.
+            {% endif %}
+
       - name: Washing Guard status
         unique_id: washing_guard_status
         state: >-
           {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
-          {% set d = state_attr('sensor.washing_guard_safe_until', 'decision')
-             | default('unknown', true) %}
-          {% set nr = states('sensor.washing_guard_next_rain') %}
-          {% set unav = is_state('binary_sensor.washing_guard_unavailable_now', 'on') %}
-          {% if stage >= 3 %}Bring in now
-          {% elif stage >= 1 %}Bring in soon
-          {% elif d == 'unknown' %}Forecast unavailable
-          {% elif d in ['advisory', 'bring_in'] %}
-            {{ 'Overnight risk' if unav else 'Bring in before bed' }}
-          {% elif nr not in ['unknown', 'unavailable', 'none', ''] %}Rain later
-          {% else %}Safe
+          {% set v = states('sensor.washing_guard_drying_plan') %}
+          {% if is_state('input_boolean.washing_outside','on') and stage >= 3 %}Bring in now
+          {% elif is_state('input_boolean.washing_outside','on') and stage >= 1 %}Bring in soon
+          {% elif v in ['rain','overnight','slow','safe','check_now','check_wet'] %}
+            {{ states('sensor.washing_guard_recommendation') }}
+          {% else %}Forecast uncertain
           {% endif %}
         icon: >-
+          {% set v = states('sensor.washing_guard_drying_plan') %}
           {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
-          {% set d = state_attr('sensor.washing_guard_safe_until', 'decision')
-             | default('unknown', true) %}
-          {% if stage >= 3 %}mdi:weather-pouring
-          {% elif stage >= 1 %}mdi:weather-rainy
-          {% elif d == 'unknown' %}mdi:cloud-question
-          {% elif d in ['advisory', 'bring_in'] %}mdi:weather-night-partly-cloudy
+          {% if is_state('input_boolean.washing_outside','on') and stage >= 3 %}mdi:weather-pouring
+          {% elif v == 'rain' or stage >= 1 %}mdi:weather-rainy
+          {% elif v in ['overnight','slow'] %}mdi:weather-night-partly-cloudy
+          {% elif v in ['unknown','check_wet'] %}mdi:cloud-question
           {% else %}mdi:tshirt-crew-outline
           {% endif %}
         attributes:
-          # Secondary line for the tile, via the card's state_content.
-          # Hour-grained wording only - the planning sources are hourly.
           detail: >-
-            {% set s = 'sensor.washing_guard_safe_until' %}
-            {% set d = state_attr(s, 'decision') | default('unknown', true) %}
-            {% set we = state_attr(s, 'window_end') %}
-            {% set rh = state_attr(s, 'risk_hour') %}
-            {% set rt = state_attr(s, 'risk_tomorrow') %}
-            {% set nrh = state_attr('sensor.washing_guard_next_rain', 'expected_hour') %}
-            {% set mins = states('sensor.washing_guard_minutes_to_rain') %}
-            {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
-            {% if stage >= 4 %}Raining now
-            {% elif stage >= 1 and mins not in ['unknown', 'unavailable'] %}
-              Rain in about {{ mins }} min
-            {% elif d == 'unknown' %}Forecast could not be verified
-            {% elif d in ['advisory', 'bring_in'] and rh is not none %}
-              Safe until around {{ rh }}{{ ' tomorrow' if rt else '' }}
-            {% elif d == 'safe' and we not in [none, 'none', 'unknown', 'unavailable'] %}
-              No meaningful rain before
-              {{ (we | as_datetime | as_local).strftime('%H:%M') }}
-            {% elif nrh is not none %}Next rain: around {{ nrh }}
-            {% else %}No meaningful rain forecast
+            {% set p = 'sensor.washing_guard_drying_plan' %}
+            {% set v = states(p) %}
+            {% set eta = state_attr(p,'estimated_dry_at') | float(0) %}
+            {% set rain = state_attr(p,'rain_before_dry_at') | float(0) %}
+            {% set sunset = state_attr(p,'sunset_at') | float(0) %}
+            {% if is_state('input_boolean.washing_outside','on')
+                  and states('sensor.washing_guard_rain_stage') | int(-1) >= 1 %}
+              Rain approaching in the next 45 min
+            {% elif v == 'rain' and rain > 0 %}
+              Rain around {{ rain | timestamp_custom('%a %H:00', true) }} before dry
+            {% elif v in ['safe','overnight','check_now'] and eta > 0 %}
+              Approx. dry {{ (((eta + 900) // 1800) * 1800) | timestamp_custom('%a %H:%M', true) }}
+              {% if v == 'overnight' and sunset > 0 %} — sunset {{ sunset | timestamp_custom('%H:%M',true) }}{% endif %}
+            {% elif v == 'slow' %}Too damp to dry quickly
+            {% elif v == 'check_wet' %}May have been rained on
+            {% else %}Drying/rain forecast not verified
             {% endif %}
           provider: >-
-            {{ state_attr('sensor.washing_guard_safe_until', 'forecast_source_label')
+            {{ state_attr('sensor.washing_guard_drying_plan','source')
                | default('unknown', true) }}
 
   - binary_sensor:
@@ -1117,35 +1489,34 @@ automation:
             data:
               value: 0
 
+      # Avoid an acknowledgement built on the previous load's put-out time.
+      - wait_template: >-
+          {% set put = as_timestamp(states('input_datetime.washing_put_out_at'), none) %}
+          {% set gen = as_timestamp(state_attr('sensor.washing_guard_safe_until', 'generated_at'), 0) %}
+          {{ put is not none and gen >= put }}
+        timeout: "00:00:20"
+        continue_on_timeout: true
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_drying_signature
+        data:
+          value: >-
+            {{ (states('input_datetime.washing_put_out_at') ~ '|'
+                ~ states('sensor.washing_guard_drying_plan'))[:255] }}
+
       - action: telegram_bot.send_message
         data:
           chat_id:
             - -4936739997
           parse_mode: plain_text
           message: >-
-            {% set onset = states('sensor.washing_guard_rain_onset') %}
-            {% set at = (onset | as_datetime | as_local).strftime('%H:%M')
-               if onset not in ['unknown', 'unavailable', 'none', ''] else none %}
-            {% set prob = states('sensor.washing_guard_precipitation_probability_now') %}
             🧺 Washing Guard is on
 
-            {% if candidate == 4 %}
-            🌧️ It's raining now — bring it back in.
-            {% elif candidate == 3 %}
-            ⚠️ Rain within 15 minutes{% if at is not none %}, around {{ at }}{% endif %}.
-            {% elif candidate == 2 %}
-            🌦 Rain in about 15–30 minutes{% if at is not none %}, around {{ at }}{% endif %}.
-            {% elif candidate == 1 %}
-            🌤 Rain expected in about 30–45 minutes{% if at is not none %}, around {{ at }}{% endif %}.
-            {% else %}
-            ✅ No rain expected in the next {{ state_attr('sensor.washing_guard_rain_stage', 'horizon_minutes') | default(45) }} minutes.
-            {% endif %}
-            {% if prob not in ['unknown', 'unavailable'] %}
-            Chance of rain now: {{ prob }}%
-            {% endif %}
-            Forecast: {{ states('weather.forecast_home') }}
+            {{ state_attr('sensor.washing_guard_recommendation', 'detail')
+               | default('Weather forecast still updating — keep an eye on the washing.', true) }}
 
-            I'll warn you as rain approaches.
+            I’ll warn you if the risk changes.
           inline_keyboard:
             - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
             - "🌦 Weather status:/washing_status"
@@ -1274,30 +1645,29 @@ automation:
                     - -4936739997
                   parse_mode: plain_text
                   message: >-
-                    {% set onset = states('sensor.washing_guard_rain_onset') %}
-                    {% set at = (onset | as_datetime | as_local).strftime('%H:%M')
-                       if onset not in ['unknown', 'unavailable', 'none', ''] else none %}
-                    {% set mins = states('sensor.washing_guard_minutes_to_rain') %}
-                    {% set prob = states('sensor.washing_guard_precipitation_probability_now') %}
-                    {% set horizon = state_attr('sensor.washing_guard_rain_stage', 'horizon_minutes') | default(45) %}
-                    🌦 Weather status
+                    🧺 Washing advice — {{ now().strftime('%A') }}
 
-                    Raining now: {% if is_state_attr('sensor.washing_guard_rain_stage', 'raining_now', true) %}yes{% else %}no{% endif %} ({{ states('sensor.washing_guard_precipitation_now') }} mm)
-                    {% if prob not in ['unknown', 'unavailable'] %}
-                    Chance of rain now: {{ prob }}%
-                    {% endif %}
-                    {% if at is not none %}
-                    Next rain: around {{ at }}{% if mins not in ['unknown', 'unavailable'] %} (in about {{ mins }} minutes){% endif %}
+                    {{ state_attr('sensor.washing_guard_recommendation', 'detail')
+                       | default('Forecast updating — check again shortly.', true) }}
+
+                    🌦 Rest of today:
+                    {% set today = states('sensor.washing_guard_rain_today') %}
+                    {% set first = state_attr('sensor.washing_guard_rain_today', 'first_hour') %}
+                    {% if today == 'rain' %}
+                    Rain expected{% if first == 'now' %} now{% elif first not in [none, 'none', ''] %} during the {{ first }} hour{% endif %}.
+                    {% elif today == 'dry' %}
+                    No meaningful rain expected before midnight.
                     {% else %}
-                    Next rain: none expected in the next {{ horizon }} minutes
+                    Full-day rain forecast not verified.
                     {% endif %}
-                    Forecast: {{ states('weather.forecast_home') }}{% if state_attr('weather.forecast_home', 'temperature') is not none %}, {{ state_attr('weather.forecast_home', 'temperature') }}°C{% endif %}
-
-                    Washing outside: {{ states('input_boolean.washing_outside') }}
-                    {% if is_state('input_boolean.washing_outside', 'on') and states('input_datetime.washing_put_out_at') not in ['unknown', 'unavailable'] %}
-                    Put out at {{ (states('input_datetime.washing_put_out_at') | as_datetime | as_local).strftime('%H:%M') }}.
+                    {% set stage = states('sensor.washing_guard_rain_stage') | int(-1) %}
+                    {% if stage >= 4 %}
+                    Rain is already here.
+                    {% elif stage >= 1 %}
+                    Rain expected within 45 minutes.
+                    {% elif stage < 0 %}
+                    Immediate rain data unavailable.
                     {% endif %}
-                    Timings come from 15-minute forecast data.
 
           # Accept for the active event, or when no event is active but the
           # washing is still marked out, since confirming it is in is safe and
@@ -1478,42 +1848,128 @@ automation:
           parse_mode: plain_text
           message: >-
             {% set s = 'sensor.washing_guard_safe_until' %}
-            {% set ws = state_attr(s, 'window_start') | as_datetime | as_local %}
-            {% set we = state_attr(s, 'window_end') | as_datetime | as_local %}
-            {% set hour = state_attr(s, 'risk_hour') %}
-            {% set tmr = state_attr(s, 'risk_tomorrow') %}
-            {% set when = hour ~ (' tomorrow' if tmr else '') if hour is not none else none %}
-            {% set src = state_attr(s, 'forecast_source_label') %}
+            {% set ws = state_attr(s,'window_start') | as_datetime | as_local %}
+            {% set we = state_attr(s,'window_end') | as_datetime | as_local %}
+            {% set hour = state_attr(s,'risk_hour') %}
+            {% set tmr = state_attr(s,'risk_tomorrow') %}
+            {% set when = hour ~ (' tomorrow' if tmr else '') if hour is not none else 'an unknown' %}
             {% set damp = states('sensor.washing_guard_overnight_damp_risk') %}
-            {%- if decision == 'unknown' -%}
-            ⚠️ I can't verify the overnight forecast, so don't assume the washing is safe outside.
-
-            Unable to confirm it will stay dry until {{ we.strftime('%H:%M') }}.
-            Reason: {{ state_attr(s, 'reason') | default('forecast unavailable') }}
-            {%- elif decision == 'bring_in' -%}
-            🛏️ Washing is outside and rain is likely during the {{ when }} hour, while we're unavailable.
-
-            Bring it in before {{ ws.strftime('%H:%M') }}.
-            {%- elif decision == 'advisory' and state_attr(s, 'risk_after_wake') -%}
-            🧺 Safe overnight, but rain risk increases during the {{ when }} hour.
-
-            That's before the washing can be fetched at {{ we.strftime('%H:%M') }}, so bring it in before then.
-            {%- elif decision == 'advisory' -%}
-            🌦 Washing is outside and there's a moderate chance of rain during the {{ when }} hour, while we're unavailable.
-
-            Worth bringing it in before {{ ws.strftime('%H:%M') }}.
-            {%- else -%}
-            🧺 Washing looks safe overnight. No meaningful rain is expected before {{ we.strftime('%H:%M') }}.
-            {%- endif %}
-            {% if decision != 'unknown' %}
-            Checked {{ ws.strftime('%H:%M') }} → {{ we.strftime('%H:%M') }} using {{ src }} hourly data.
-            {% if not state_attr(s, 'has_probability') %}
-            (amount only — no probability from this source)
+            {% set drying = states('sensor.washing_guard_drying_plan') %}
+            {% if decision == 'bring_in' %}
+              🌧️ Bring the washing in before bed — rain risk during the {{ when }} hour before {{ we.strftime('%H:%M') }}.
+            {% elif decision == 'advisory' %}
+              🌦️ There is a chance of rain during the {{ when }} hour before {{ we.strftime('%H:%M') }}. Bring the washing in before bed.
+            {% elif decision == 'unknown' %}
+              ⚠️ Overnight rain forecast couldn't be verified. Bring it in before bed to be safe.
+            {% else %}
+              ✅ No meaningful overnight rain is forecast before {{ we.strftime('%H:%M') }}.
             {% endif %}
+            {% if drying in ['overnight','slow'] %}
+              🌙 It may still be damp by morning. Best to bring it in rather than leave it outside overnight.
+            {% elif drying == 'check_wet' %}
+              🧺 It may already have been rained on — check and bring it in.
+            {% elif drying == 'check_now' %}
+              🧺 It may already be dry. Check it and bring it inside now.
+            {% else %}
+              🧺 If the clothes are dry, bring them in before bed to avoid overnight dew.
             {% endif %}
-            {% if damp in ['high', 'moderate'] %}
-            💧 {{ 'High' if damp == 'high' else 'Moderate' }} overnight damp/dew risk — clothes may be damp by morning even without rain.
+            {% if damp in ['high','moderate'] %}
+              💧 {{ 'High' if damp == 'high' else 'Moderate' }} overnight damp/dew risk.
             {% endif %}
+          inline_keyboard:
+            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
+            - "🌦 Weather status:/washing_status"
+
+  # Alert only when the useful decision materially worsens. Keep a
+  # restored signature to avoid spamming on the 10-minute forecast refresh.
+  # Existing near-rain and pre-bed automations keep their own alert cadence.
+  - id: washing_guard_drying_changed
+    alias: "Washing: New drying risk"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: sensor.washing_guard_drying_plan
+      - trigger: time_pattern
+        minutes: "/10"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.washing_outside
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.washing_guard_unavailable_now
+        state: "off"
+    actions:
+      - variables:
+          verdict: "{{ states('sensor.washing_guard_drying_plan') }}"
+          stage: "{{ states('sensor.washing_guard_rain_stage') | int(0) }}"
+          signature: >-
+            {{ states('input_datetime.washing_put_out_at') ~ '|' ~ verdict }}
+      - condition: template
+        value_template: >-
+          {{ stage == 0 and verdict in ['rain','overnight','slow','check_wet','check_now']
+             and as_timestamp(now()) - as_timestamp(states('input_datetime.washing_put_out_at'), 0) > 120
+             and signature != states('input_text.washing_drying_signature') }}
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_drying_signature
+        data:
+          value: "{{ signature[:255] }}"
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          parse_mode: plain_text
+          message: >-
+            {{ state_attr('sensor.washing_guard_recommendation', 'detail')
+               | default('Drying risk changed — check the washing.', true) }}
+          inline_keyboard:
+            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
+            - "🌦 Weather status:/washing_status"
+
+  # A single, timely nudge BEFORE it gets dark; the bedtime planner
+  # alone would arrive too late to act on sunset/overnight damp.
+  - id: washing_guard_dusk_reminder
+    alias: "Washing: Bring in before dusk"
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        minutes: "/10"
+      - trigger: state
+        entity_id: sensor.washing_guard_drying_plan
+    conditions:
+      - condition: state
+        entity_id: input_boolean.washing_outside
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.washing_guard_unavailable_now
+        state: "off"
+    actions:
+      - variables:
+          sunset: "{{ state_attr('sensor.washing_guard_drying_plan', 'sunset_at') | float(0) }}"
+          eta: "{{ state_attr('sensor.washing_guard_drying_plan', 'estimated_dry_at') | float(0) }}"
+          day: "{{ now().date() | string }}"
+          stage: "{{ states('sensor.washing_guard_rain_stage') | int(0) }}"
+      - condition: template
+        value_template: >-
+          {{ sunset > as_timestamp(now())
+             and sunset - as_timestamp(now()) <= 3600
+             and (eta == 0 or eta + 3600 > sunset)
+             and stage == 0
+             and states('input_text.washing_dusk_reminded_on') != day }}
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_dusk_reminded_on
+        data:
+          value: "{{ day }}"
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          parse_mode: plain_text
+          message: >-
+            🌙 Sunset is around {{ sunset | timestamp_custom('%H:%M', true) }}.
+            The washing probably won't be fully dry by then and may get damp again overnight.
+            Bring it inside before dusk; finish drying indoors or try again tomorrow.
           inline_keyboard:
             - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
             - "🌦 Weather status:/washing_status"
@@ -1685,3 +2141,16 @@ automation:
           entity_id: input_text.washing_overnight_latch
         data:
           value: ""
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_drying_signature
+        data:
+          value: ""
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_dusk_reminded_on
+        data:
+          value: ""
+
