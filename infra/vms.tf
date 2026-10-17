@@ -20,6 +20,15 @@ resource "proxmox_virtual_environment_vm" "vm" {
   stop_on_destroy     = true
   reboot_after_update = false
 
+  dynamic "startup" {
+    for_each = each.value.startup == null ? [] : [each.value.startup]
+    content {
+      order      = startup.value.order
+      up_delay   = startup.value.up_delay
+      down_delay = startup.value.down_delay
+    }
+  }
+
   boot_order = each.value.boot_order
 
   clone {
@@ -128,6 +137,15 @@ resource "proxmox_virtual_environment_vm" "vm_storage" {
   on_boot             = true
   stop_on_destroy     = true
   reboot_after_update = false
+
+  dynamic "startup" {
+    for_each = each.value.startup == null ? [] : [each.value.startup]
+    content {
+      order      = startup.value.order
+      up_delay   = startup.value.up_delay
+      down_delay = startup.value.down_delay
+    }
+  }
 
   boot_order = each.value.boot_order
 

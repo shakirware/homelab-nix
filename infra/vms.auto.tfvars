@@ -11,6 +11,7 @@ vms = {
     serial_console  = false
     cloud_init_user = "root"
     root_discard    = "on"
+    startup         = { order = 2 }
     extra_disks     = []
     nics = [{
       bridge  = "vmbr0"
@@ -31,6 +32,7 @@ vms = {
     serial_console  = false
     cloud_init_user = "shakir"
     root_discard    = "on"
+    startup         = { order = 2 }
     extra_disks = [{
       interface         = "scsi1"
       path_in_datastore = "/dev/disk/by-id/ata-Samsung_SSD_860_PRO_1TB_S42NNF0K301218P"
@@ -56,6 +58,7 @@ vms = {
     scsi_hardware   = "virtio-scsi-pci"
     serial_console  = false
     root_discard    = "on"
+    startup         = { order = 1, up_delay = 30, down_delay = 180 }
     extra_disks = [
       {
         interface         = "scsi1"
@@ -90,6 +93,7 @@ vms = {
     scsi_hardware   = "virtio-scsi-pci"
     serial_console  = false
     root_discard    = "on"
+    startup         = { order = 2 }
     extra_disks     = []
     nics = [{
       bridge  = "vmbr0"
@@ -109,6 +113,7 @@ vms = {
     scsi_hardware  = "virtio-scsi-single"
     serial_console = true
     root_discard   = "on"
+    startup        = { order = 2 }
     extra_disks    = []
     nics = [{
       bridge  = "vmbr0"
@@ -128,6 +133,7 @@ vms = {
     scsi_hardware  = "virtio-scsi-single"
     serial_console = true
     root_discard   = "ignore"
+    startup        = { order = 2 }
     extra_disks    = []
     nics = [{
       bridge  = "vmbr0"
