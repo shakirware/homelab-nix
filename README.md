@@ -144,7 +144,7 @@ The lab runs on a single server built mostly from second-hand components, balanc
 | Component | Hardware |
 | --- | --- |
 | CPU | Intel Core i3-8100; iGPU passed through to `vm-media` |
-| Memory | 32 GB DDR4 |
+| Memory | 48 GB DDR4 (3 × 16 GB) |
 | Motherboard | ASUS PRIME H370-A |
 | Boot / VM storage | 512 GB NVMe SSD |
 | Bulk storage | 2 × 16 TB Seagate IronWolf Pro HDDs |
