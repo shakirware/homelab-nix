@@ -127,7 +127,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.invoiceplane-db = {
-    image = "mariadb:12.3@sha256:dd9b303aed4f4890ed09f766d8ca9ddfd176c0c6f6267feff53b3192ec65a979";
+    image = "mariadb:12.3@sha256:faae028e4d73efc946526ae1d5ba57181d4f162d64e60b6482c85095da31a084";
     autoStart = true;
 
     environment = {
