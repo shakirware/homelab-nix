@@ -1,4 +1,4 @@
-.PHONY: init plan apply \
+.PHONY: init plan apply router-init router-plan router-apply \
 	deploy-storage deploy-media deploy-apps deploy-monitoring deploy-sensitive deploy-gw \
 	deploy-all
 
@@ -10,6 +10,22 @@ plan: init
 
 apply: init
 	tofu -chdir=infra apply
+
+# MikroTik router (infra/router). Arm the dead-man switch first:
+# docs/network.md. router-apply applies only the plan router-plan saved, and
+# refuses destroys or replacements unless ALLOW_DESTROY=1.
+router-init:
+	tofu -chdir=infra/router init
+
+router-plan: router-init
+	umask 077; tofu -chdir=infra/router plan -out=router.tfplan
+
+router-apply:
+	@test -f infra/router/router.tfplan || { echo "no saved plan: run make router-plan"; exit 1; }
+	@if [ "$(ALLOW_DESTROY)" != 1 ] && tofu -chdir=infra/router show -no-color router.tfplan | grep -Eq '[1-9][0-9]* to destroy'; then \
+		echo "plan destroys or replaces resources; review it, then ALLOW_DESTROY=1 make router-apply"; exit 1; fi
+	tofu -chdir=infra/router apply router.tfplan
+	@rm -f infra/router/router.tfplan
 
 deploy-storage:
 	nix run .#colmena -- apply --on vm-storage
