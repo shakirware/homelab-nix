@@ -201,7 +201,4 @@ The router sends `info`, `warning`, `error` and `critical` to
 them in Loki as `job="router-syslog"`. Only the router's VLAN 20 address may
 send.
 
-**Loki retention is not enforced.** `retention_period: 30d` is set, but the
-compactor has no `retention_enabled`, so chunks back to February 2026 are
-kept. Enabling it deletes that history on the first compaction, which makes
-it a separate decision.
+Loki keeps 30 days of logs: its compactor enforces `retention_period`.

@@ -37,6 +37,12 @@ let
             prefix: index_
             period: 24h
 
+    # retention_period is only enforced by the compactor.
+    compactor:
+      working_directory: /loki/compactor
+      retention_enabled: true
+      delete_request_store: filesystem
+
     limits_config:
       retention_period: 30d
       ingestion_rate_mb: 16
