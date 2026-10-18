@@ -157,7 +157,7 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 ## Trade-offs
 
 - **Storage redundancy.** mergerfs combines multiple drives into a single storage pool without providing data redundancy. Independent backups and tested recovery procedures remain essential, even with redundant storage.
-- **Infrastructure outside Git.** The MikroTik router's VLAN and firewall configuration, along with the underlying Proxmox host setup are managed manually.
+- **Infrastructure outside Git.** The MikroTik router is managed with OpenTofu ([`infra/router`](infra/router), see [docs/network.md](docs/network.md)) apart from its IP services, accounts, VLAN 20 and the IoT SSIDs; the underlying Proxmox host setup is still managed manually.
 - **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
 
 ## Roadmap
