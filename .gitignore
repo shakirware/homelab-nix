@@ -3,6 +3,10 @@ infra/terraform.tfvars
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
 infra/terraform.tfstate.*.backup
+infra/router/.terraform/
+infra/router/terraform.tfstate*
+infra/router/*.tfplan
+infra/router/*.private.auto.tfvars
 terraform.tfstate
 tofu.log
 result

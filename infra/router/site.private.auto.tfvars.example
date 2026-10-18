@@ -1,0 +1,15 @@
+# Copy to site.private.auto.tfvars (gitignored). The repository is public:
+# SSIDs and MAC addresses stay out of it. The trusted passphrase is
+# TF_VAR_trusted_wifi_passphrase in secrets/env.yaml.
+#
+# Reservations use 192.168.40.2-99 (the pool is .100-.199):
+# .10-19 hub and cameras, .20-29 Apple TVs, .30-39 TVs, .40-79 small IoT.
+
+trusted_ssid = "Example_Trusted"
+
+iot_reservations = {
+  "reolink-hub"     = { mac = "02:00:00:00:00:01", ip = "192.168.40.10", role = "hub" }
+  "living-room-atv" = { mac = "02:00:00:00:00:02", ip = "192.168.40.20", role = "apple_tv" }
+  "lg-tv-a"         = { mac = "02:00:00:00:00:03", ip = "192.168.40.30", role = "tv" }
+  "desk-p110"       = { mac = "02:00:00:00:00:04", ip = "192.168.40.40", role = "iot", comment = "Home Assistant tplink" }
+}
