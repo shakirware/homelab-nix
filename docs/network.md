@@ -108,6 +108,7 @@ are operator steps, verified one at a time.
 | Add or move an IoT device | add a reservation to `site.private.auto.tfvars` (role `tv` or `apple_tv` for AirPlay and media access), plan, apply, reconnect the device |
 | Point Home Assistant at an IoT device | Reconfigure the integration with the 192.168.40.x address. If the dialog times out, stop the container and edit the host in `/srv/appdata/home-assistant/config/.storage/core.config_entries` on vm-apps (back it up first) |
 | Rotate the trusted passphrase | new value in `secrets/env.yaml` (`sops set --value-stdin`), then as `shakir`: `/interface wifi security set [find name=trusted] passphrase=…`. OpenTofu ignores the passphrase after creation because the `tofu` account can only read it masked |
+| Rotate the `tofu` password | generate it into `secrets/env.yaml` (`sops set --value-stdin`), then send `/user set [find name=tofu] password=…` over `ssh -T router` stdin, so it never appears on a command line or in the router log. REST sessions opened with the old password keep working for up to 10 minutes |
 | Change an IoT SSID or its password | by hand on `wifi1`/`wifi2`: every IoT device has to re-join |
 
 ### Enforcing the firewall
