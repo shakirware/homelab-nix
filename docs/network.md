@@ -136,7 +136,7 @@ Observation of TRUSTED and SERVERS started 2026-10-18 13:08 BST.
 | a change cuts access | wait for the dead-man |
 | the house Wi-Fi is down | phone hotspot on the laptop, `tailscale up` (vm-gw advertises 192.168.20.0/24 and is the exit node): `ssh vm-monitoring`, and `https://router.shakr.dev` as `shakir` (WebFig, full admin, with a Terminal). Only while away from the house Wi-Fi, because with Tailscale up at home the laptop reaches the servers through vm-gw instead of as .74. This path needs the router's WAN and VLAN 20 to work |
 | the workstation is lost | **MAC-WinBox** from any computer on TRUSTED as `shakir` (password in the password manager). It works at layer 2, regardless of addresses and firewall rules. Then add the new address to `admin_hosts`, `services.rsc` and a pinned lease |
-| the configuration is broken beyond that | restore the latest `.backup` from the router's flash |
+| the configuration is broken beyond that | restore the latest `.backup` from the router's flash (password: `ROUTER_BACKUP_PASSWORD`) |
 | nothing else works | physical reset and Netinstall |
 
 MAC-WinBox reachability is verified, but a password login over it has not
@@ -155,26 +155,27 @@ been tested yet, so the factory `admin` account stays enabled.
 - **State:** `infra/router/terraform.tfstate` is local, gitignored and mode
   600. It contains the trusted passphrase, so treat it and its copies in
   `~/.local/share/homelab/router-state/` as secrets. Back it up before any
-  `tofu state` command.
+  `tofu state` command, and after every apply run
+  [`backup-state.sh`](../infra/router/backup-state.sh): it keeps an
+  age-encrypted copy in `vm-storage:~/backups/router-state/` (restore with
+  `age -d -i "$SOPS_AGE_KEY_FILE"`).
 - **Private inputs:** `site.private.auto.tfvars` holds the trusted SSID and
   the IoT reservations (MAC addresses).
-- **Credentials:** the router password and the trusted passphrase are in
-  `secrets/env.yaml`, loaded by mise.
+- **Credentials:** the `tofu` password, the trusted passphrase and the router
+  backup password are in `secrets/env.yaml`, loaded by mise.
 
-| Backup (router flash) | Copy (`~/.local/share/homelab/router-backups/`) | Taken |
-| --- | --- | --- |
-| `pre-redesign-20261018.backup` | `.rsc` | before any change |
-| `post-phase2-20261018.backup` | `.rsc` | zones and logging, before the IoT VLAN |
-| `post-phase4-20261018-233257.backup` | `.rsc` | current layout |
+**Router backups:** one encrypted `.backup` on the router's flash, with a copy
+in `~/.local/share/homelab/router-backups/`, plus `.rsc` exports there that
+hide sensitive values. Replace both after any significant change:
 
-The `.backup` files are full, secret-bearing backups and stay on the router.
-The `.rsc` exports hide sensitive values and are safe to copy off. Take a new
-pair after any significant change:
-
-```
-/system backup save name=<name>
+```sh
+printf '/system backup save name=<name> encryption=aes-sha256 password="%s"\n' \
+  "$ROUTER_BACKUP_PASSWORD" | ssh -T router
+scp router:<name>.backup ~/.local/share/homelab/router-backups/
 ssh router /export > ~/.local/share/homelab/router-backups/<name>.rsc
 ```
+
+Restoring a `.backup` needs `ROUTER_BACKUP_PASSWORD` and reboots the router.
 
 ## Set by hand
 
