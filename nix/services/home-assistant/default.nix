@@ -221,7 +221,13 @@ in
       "/etc/localtime:/etc/localtime:ro"
     ];
 
-    extraOptions = [ "--network=host" ];
+    extraOptions = [
+      "--network=host"
+      # Without an in-network nameserver, the dhcp integration's network scan
+      # (aiodiscover) sends PTR lookups to the default gateway, which does not
+      # resolve.
+      "--dns=${gwIp}"
+    ];
   };
 
   systemd.services.podman-home-assistant = {
