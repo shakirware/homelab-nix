@@ -143,9 +143,10 @@ in
 
   systemd.tmpfiles.rules = lib.mkAfter [
     "d ${cfgRoot} 2775 ${config.homelab.ids.user} media - -"
-    "d ${cfgDir} 2775 ${config.homelab.ids.user} media - -"
+    # config/.storage and backups hold integration credentials.
+    "d ${cfgDir} 2770 ${config.homelab.ids.user} media - -"
     "d ${mediaDir} 2775 ${config.homelab.ids.user} media - -"
-    "d ${backupDir} 2775 ${config.homelab.ids.user} media - -"
+    "d ${backupDir} 2770 ${config.homelab.ids.user} media - -"
     "d ${packageDir} 2775 ${config.homelab.ids.user} media - -"
     "d ${snapshotDir} 2775 ${config.homelab.ids.user} media - -"
   ];
@@ -175,8 +176,10 @@ in
     script = ''
       set -euo pipefail
 
+      install -d -m 2770 -o ${config.homelab.ids.user} -g media \
+        ${cfgDir} ${backupDir}
       install -d -m 2775 -o ${config.homelab.ids.user} -g media \
-        ${cfgDir} ${packageDir} ${snapshotDir} ${mediaDir} ${backupDir}
+        ${packageDir} ${snapshotDir} ${mediaDir}
 
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${configuration} ${cfgDir}/configuration.yaml
