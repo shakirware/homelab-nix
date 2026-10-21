@@ -60,6 +60,7 @@
         vm-apps = mkHost "vm-apps" ./nix/hosts/vm-apps/default.nix;
         vm-monitoring =
           mkHost "vm-monitoring" ./nix/hosts/vm-monitoring/default.nix;
+        vm-ci = mkHost "vm-ci" ./nix/hosts/vm-ci/default.nix;
       };
 
       packages.${system} = {
@@ -133,6 +134,14 @@
           imports = [
             { networking.hostName = "vm-monitoring"; }
             ./nix/hosts/vm-monitoring/default.nix
+          ];
+        };
+
+        vm-ci = {
+          deployment.targetHost = "vm-ci";
+          imports = [
+            { networking.hostName = "vm-ci"; }
+            ./nix/hosts/vm-ci/default.nix
           ];
         };
       };

@@ -1,6 +1,6 @@
 .PHONY: init plan apply router-init router-plan router-apply \
 	deploy-storage deploy-media deploy-apps deploy-monitoring deploy-sensitive deploy-gw \
-	deploy-all
+	deploy-ci deploy-all
 
 init:
 	tofu -chdir=infra/proxmox init
@@ -42,4 +42,7 @@ deploy-apps:
 deploy-monitoring:
 	nix run .#colmena -- apply --on vm-monitoring
 
-deploy-all: deploy-storage deploy-media deploy-apps deploy-monitoring deploy-sensitive deploy-gw
+deploy-ci:
+	nix run .#colmena -- apply --on vm-ci
+
+deploy-all: deploy-storage deploy-media deploy-apps deploy-monitoring deploy-sensitive deploy-gw deploy-ci
