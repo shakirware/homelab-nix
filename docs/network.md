@@ -14,6 +14,7 @@ This guide describes the deployed configuration. For day-to-day work, start with
 | --- | --- | --- | --- |
 | **TRUSTED** | 1 (untagged) | `192.168.1.0/24` | Personal devices, admin workstation, Proxmox management |
 | **SERVERS** | 20 | `192.168.20.0/24` | NixOS VMs and Proxmox's server-side interface |
+| **CI** | 30 | `192.168.30.0/24` | `vm-ci` (`.10`), self-hosted GitHub Actions runners; internet only |
 | **IOT** | 40 | `192.168.40.0/24` | TVs, Apple TVs, smart devices and the Reolink hub |
 | **WAN** | — | PPPoE | Internet uplink |
 
@@ -22,7 +23,7 @@ This guide describes the deployed configuration. For day-to-day work, start with
 | `ether1` | WAN |
 | `ether2`, `ether3` | TRUSTED |
 | `ether4` | Reolink hub on IOT |
-| `ether5` | Proxmox trunk: VLAN 1 untagged, VLAN 20 tagged; no VLAN 40 |
+| `ether5` | Proxmox trunk: VLAN 1 untagged, VLANs 20 and 30 tagged; no VLAN 40 |
 | `wifi1-trusted`, `wifi2-trusted` | Trusted WPA2/WPA3 SSID on both radios, with 802.11r |
 | `wifi1`, `wifi2` | Existing 5 GHz and 2.4 GHz SSIDs, assigned to IOT |
 
@@ -34,11 +35,12 @@ currently disabled pending a separate IPv6 policy.
 
 ## Firewall policy
 
-The router uses RouterOS interface lists (`TRUSTED`, `SERVERS`, `IOT`) as zones.
+The router uses RouterOS interface lists (`TRUSTED`, `SERVERS`, `IOT`, `CI`) as
+zones.
 Established and related traffic is accepted; **new connections not explicitly
 permitted are dropped**. The policy lives in
 [`firewall.tf`](../infra/router/firewall.tf). IOT is not part of the RouterOS
-`LAN` interface list.
+`LAN` interface list, and neither is CI.
 
 | Source → destination | Permitted new connections |
 | --- | --- |
@@ -50,6 +52,9 @@ permitted are dropped**. The policy lives in
 | IOT → internet | Allowed, except DNS-over-TLS (TCP 853) |
 | IOT → SERVERS | DNS, Caddy and ICMP to `vm-gw`; direct Jellyfin/TuliProx for registered TVs |
 | IOT → TRUSTED | Restricted AirPlay receiver-to-sender UDP traffic, excluding ADMIN |
+| CI → internet | Unrestricted, except private and CGNAT ranges |
+| ADMIN → CI | SSH to `vm-ci` |
+| `vm-monitoring` → CI | Node exporter (TCP 9100) on `vm-ci` |
 
 The explicitly allowed direct service ports are:
 
@@ -87,6 +92,31 @@ actually affected.
 - **Discovery:** RouterOS repeats multicast mDNS between TRUSTED and IOT;
   discovery does not override firewall permissions.
 
+### CI network
+
+VLAN 30 exists so the self-hosted runners can run repository code without
+reaching anything else. Its `ci30:` rules in
+[`firewall.tf`](../infra/router/firewall.tf) come first in each chain: CI
+traffic to the router, to internal zones or to private ranges through the WAN
+is dropped and logged (`FW-CI-*`), as are sources outside the subnet. IPv6 is
+dropped both ways. `vm-ci` uses public DNS and NTP, so it needs nothing from
+the router but routing. [`rollback/ci30.rsc`](../infra/router/rollback/ci30.rsc)
+removes every `ci30:` object.
+
+The runners themselves are described in
+[`ci-runner`](../nix/services/ci-runner/default.nix): three ephemeral runners
+in Ubuntu containers under rootless Docker, registered to a single repository
+with the label `vm-ci`. The registration token lives in `secrets/vm-ci.yaml`
+(a fine-grained PAT with repository Administration access) and never reaches
+jobs.
+
+`vm-ci` accepts SSH only from the admin workstation. Connect with the `vm-ci`
+host alias in `~/.ssh/config`:
+
+```sh
+ssh vm-ci
+```
+
 ## DNS and services
 
 - **AdGuard Home → Unbound:** DNS for internal clients. Local service records
@@ -109,7 +139,7 @@ actually affected.
 
 | Managed by | Configuration |
 | --- | --- |
-| **OpenTofu** (`infra/router/`) | Managed bridge VLAN entries, VLAN 40 interfaces and ports, IoT DHCP and reservations, trusted virtual Wi-Fi, firewall/NAT, DNS settings, logging, NTP, IPv6 and MAC access services |
+| **OpenTofu** (`infra/router/`) | Managed bridge VLAN entries, VLAN 30 and 40 interfaces, VLAN 40 ports, IoT DHCP and reservations, trusted virtual Wi-Fi, firewall/NAT, DNS settings, logging, NTP, IPv6 and MAC access services |
 | **NixOS / Colmena** (`nix/`) | DNS and proxy applications, NFS exports and guards, Home Assistant and monitoring |
 | **SOPS / mise** (`secrets/env.yaml`) | Router API credential, trusted Wi-Fi passphrase and router-backup password |
 | **Private local variables** (`site.private.auto.tfvars`) | Trusted SSID name and IoT MAC/IP inventory |
