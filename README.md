@@ -70,12 +70,12 @@ This is my own infrastructure rather than a reusable installer but several compo
 
 | Area | Implementation | Why it's worth a look |
 | --- | --- | --- |
-| Provisioning and deployment | [`infra/vms.tf`](infra/vms.tf) · [`flake.nix`](flake.nix) | Proxmox VM definitions alongside six NixOS configurations and a Colmena hive |
+| Provisioning and deployment | [`infra/proxmox/vms.tf`](infra/proxmox/vms.tf) · [`flake.nix`](flake.nix) | Proxmox VM definitions alongside six NixOS configurations and a Colmena hive |
 | Role-based modules | [`nix/profiles/`](nix/profiles) | Shared defaults separated from application-specific roles |
 | Service discovery | [`records.nix`](nix/modules/dns/records.nix) | Common DNS and reverse-proxy host definitions |
 | Runtime secrets | [`templates.nix`](nix/modules/secrets/templates.nix) | sops-nix secrets rendered into environment files with dependent service restarts |
 | Monitoring the monitor | [`heartbeat/default.nix`](nix/services/monitoring/heartbeat/default.nix) | A systemd timer only sends an external heartbeat when local alerting checks pass |
-| Storage and passthrough | [`mergerfs/default.nix`](nix/services/mergerfs/default.nix) · [`pci.tf`](infra/pci.tf) | Pooled media storage and Intel iGPU passthrough to the media VM |
+| Storage and passthrough | [`mergerfs/default.nix`](nix/services/mergerfs/default.nix) · [`pci.tf`](infra/proxmox/pci.tf) | Pooled media storage and Intel iGPU passthrough to the media VM |
 | Home Assistant configuration | [`home-assistant/default.nix`](nix/services/home-assistant/default.nix) | Declarative configuration validated before activation |
 
 ## Observability
@@ -91,7 +91,9 @@ See the [monitoring modules](nix/services/monitoring) for exporters, probes, ale
 ```text
 .
 ├── flake.nix       # NixOS hosts, Colmena hive, Proxmox template
-├── infra/          # OpenTofu / Proxmox provisioning
+├── infra/
+│   ├── proxmox/    # OpenTofu: Proxmox VMs
+│   └── router/     # OpenTofu: MikroTik router
 ├── nix/
 │   ├── hosts/      # Per-VM settings
 │   ├── profiles/   # Shared defaults and role-specific composition

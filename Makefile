@@ -3,17 +3,14 @@
 	deploy-all
 
 init:
-	tofu -chdir=infra init
+	tofu -chdir=infra/proxmox init
 
 plan: init
-	tofu -chdir=infra plan
+	tofu -chdir=infra/proxmox plan
 
 apply: init
-	tofu -chdir=infra apply
+	tofu -chdir=infra/proxmox apply
 
-# MikroTik router (infra/router). Arm the dead-man switch first:
-# docs/network.md. router-apply applies only the plan router-plan saved, and
-# refuses destroys or replacements unless ALLOW_DESTROY=1.
 router-init:
 	tofu -chdir=infra/router init
 
