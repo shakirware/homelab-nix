@@ -64,7 +64,7 @@ let
     RUN apt-get update \
      && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
           build-essential make git curl ca-certificates jq unzip zstd xz-utils \
-          shellcheck python3 python3-venv lsb-release \
+          shellcheck python3 python3-venv lsb-release gh \
      && rm -rf /var/lib/apt/lists/*
     # The image has buildx but not Compose; pinned by checksum.
     RUN curl -fsSLo /usr/local/lib/docker/cli-plugins/docker-compose \
