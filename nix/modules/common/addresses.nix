@@ -20,5 +20,9 @@
     apps = "192.168.20.130";
     sensitive = "192.168.20.140";
     monitoring = "192.168.20.150";
+
+    # VLAN 30: internet only (infra/router/ci.tf).
+    router_vlan30 = "192.168.30.1";
+    ci = "192.168.30.10";
   };
 }
