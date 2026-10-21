@@ -11,7 +11,15 @@ variable "vms" {
     scsi_hardware   = string
     serial_console  = bool
     cloud_init_user = optional(string)
-    root_discard    = string
+    # Static first-boot addressing for networks without DHCP (VLAN 30).
+    cloud_init_network = optional(object({
+      address = string # CIDR
+      gateway = string
+      dns     = list(string)
+    }))
+    # Proxmox CPU weight; 1024 is what the existing VMs have.
+    cpu_units    = optional(number, 1024)
+    root_discard = string
     # Proxmox start order (lower first); shutdown runs in reverse.
     startup = optional(object({
       order      = number

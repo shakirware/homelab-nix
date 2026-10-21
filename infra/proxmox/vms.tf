@@ -53,6 +53,23 @@ resource "proxmox_virtual_environment_vm" "vm" {
         username = user_account.value
       }
     }
+
+    dynamic "ip_config" {
+      for_each = each.value.cloud_init_network == null ? [] : [each.value.cloud_init_network]
+      content {
+        ipv4 {
+          address = ip_config.value.address
+          gateway = ip_config.value.gateway
+        }
+      }
+    }
+
+    dynamic "dns" {
+      for_each = each.value.cloud_init_network == null ? [] : [each.value.cloud_init_network]
+      content {
+        servers = dns.value.dns
+      }
+    }
   }
 
   operating_system { type = "l26" }
@@ -60,6 +77,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   cpu {
     cores = each.value.cores
     type  = "host"
+    units = each.value.cpu_units
   }
 
   memory {
