@@ -1,204 +1,253 @@
 # Network
 
-A MikroTik hAP ax² (RouterOS 7.19, device-mode `home`) routes three internal
-zones. It is managed with OpenTofu in [`infra/router`](../infra/router),
-except for what is listed under [Set by hand](#set-by-hand). The NixOS side
-(NFS exports, host guards, the log receiver) is managed with Colmena.
+A MikroTik hAP ax² routes the homelab's trusted, server and IoT networks. RouterOS
+provides VLANs, Wi-Fi and a default-deny IPv4 firewall; AdGuard Home, Unbound,
+Caddy and Tailscale run on `vm-gw`. Router configuration is managed primarily by
+[OpenTofu](../infra/router), while host-side services use NixOS and Colmena.
 
-## Zones
+This guide describes the deployed configuration. For day-to-day work, start with
+[Operations](#operations); for access problems, see [Recovery](#recovery-and-secrets).
 
-| Zone | VLAN | Subnet | Router interface | Contents |
-| --- | --- | --- | --- | --- |
-| TRUSTED | 1 (untagged) | 192.168.1.0/24 | `bridge` | Workstation (.74), phones, Proxmox (.100) |
-| SERVERS | 20 | 192.168.20.0/24 | `vlan20` | The NixOS VMs |
-| IOT | 40 | 192.168.40.0/24 | `vlan40-iot` | IoT devices, TVs, Apple TVs, Reolink hub, guests |
-| WAN | — | PPPoE | `pppoe-out1` | Internet |
+## Topology
 
-| Port or SSID | Zone |
+| Zone | VLAN | Subnet | Purpose |
+| --- | --- | --- | --- |
+| **TRUSTED** | 1 (untagged) | `192.168.1.0/24` | Personal devices, admin workstation, Proxmox management |
+| **SERVERS** | 20 | `192.168.20.0/24` | NixOS VMs and Proxmox's server-side interface |
+| **IOT** | 40 | `192.168.40.0/24` | TVs, Apple TVs, smart devices and the Reolink hub |
+| **WAN** | — | PPPoE | Internet uplink |
+
+| Interface | Connection |
 | --- | --- |
-| ether1 | WAN |
-| ether2, ether3 | TRUSTED |
-| ether4 | IOT (Reolink Home Hub) |
-| ether5 | Proxmox trunk: VLAN 1 untagged, VLAN 20 tagged, never VLAN 40 |
-| trusted SSID (`wifi1-trusted`, `wifi2-trusted`; WPA2/WPA3, 802.11r) | TRUSTED |
-| the radios' original SSIDs (`wifi1` 5 GHz, `wifi2` 2.4 GHz) | IOT |
+| `ether1` | WAN |
+| `ether2`, `ether3` | TRUSTED |
+| `ether4` | Reolink hub on IOT |
+| `ether5` | Proxmox trunk: VLAN 1 untagged, VLAN 20 tagged; no VLAN 40 |
+| `wifi1-trusted`, `wifi2-trusted` | Trusted WPA2/WPA3 SSID on both radios, with 802.11r |
+| `wifi1`, `wifi2` | Existing 5 GHz and 2.4 GHz SSIDs, assigned to IOT |
 
-Devices that only know the original SSIDs land on IOT automatically: their
-password now grants internet access and nothing else. TRUSTED stays on
-untagged VLAN 1 because, with one router and no downstream switches,
-renumbering it would add risk without adding isolation.
+VLAN 1 remains untagged on the trusted network to preserve simple management
+and recovery. The Proxmox host uses `192.168.1.100` for local administration
+and `192.168.20.100` for VM-side services; these addresses are not freely
+interchangeable because of its routing arrangement. IPv6 forwarding is
+currently disabled pending a separate IPv6 policy.
 
-## Policy
+## Firewall policy
 
-Rules match new connections between zones ([`firewall.tf`](../infra/router/firewall.tf)).
+The router uses RouterOS interface lists (`TRUSTED`, `SERVERS`, `IOT`) as zones.
+Established and related traffic is accepted; **new connections not explicitly
+permitted are dropped**. The policy lives in
+[`firewall.tf`](../infra/router/firewall.tf). IOT is not part of the RouterOS
+`LAN` interface list.
 
-| From → To | Allowed |
+| Source → destination | Permitted new connections |
 | --- | --- |
-| TRUSTED → internet | everything |
-| TRUSTED → SERVERS | AdGuard DNS and Caddy on vm-gw (53, 80, 443); ping |
-| TRUSTED → IOT | everything (apps, casting, AirPlay) |
-| ADMIN hosts → SERVERS | everything |
-| SERVERS → internet | everything |
-| Home Assistant → IOT | everything |
-| IOT → internet | everything except DNS-over-TLS |
-| IOT → SERVERS | AdGuard (DNS, ping) and Caddy on vm-gw; Apple TVs and TVs also Jellyfin and TuliProx on vm-media (8096, 8901) |
-| IOT → TRUSTED | AirPlay return traffic (UDP) from Apple TVs and TVs, never to ADMIN hosts |
+| TRUSTED → internet / IOT | Unrestricted |
+| TRUSTED → SERVERS | DNS and Caddy on `vm-gw`; direct Tailscale; Jellyfin and TuliProx on `vm-media`; ICMP |
+| ADMIN → SERVERS | Unrestricted for the designated admin workstation |
+| SERVERS → internet | Unrestricted |
+| Home Assistant → IOT | Unrestricted from `vm-apps` |
+| IOT → internet | Allowed, except DNS-over-TLS (TCP 853) |
+| IOT → SERVERS | DNS, Caddy and ICMP to `vm-gw`; direct Jellyfin/TuliProx for registered TVs |
+| IOT → TRUSTED | Restricted AirPlay receiver-to-sender UDP traffic, excluding ADMIN |
 
-The router itself accepts DHCP from TRUSTED and IOT, mDNS for the repeater,
-management (SSH, WinBox, HTTP, HTTPS) from ADMIN hosts only, and HTTP from
-vm-gw for `router.shakr.dev`. It answers no DNS, and IPv6 forwarding is off.
+The explicitly allowed direct service ports are:
 
-Everything else:
+| Client | Destination | Ports |
+| --- | --- | --- |
+| TRUSTED | `vm-gw` (`192.168.20.2`) | DNS UDP/TCP 53; Caddy TCP 80/443 and HTTP/3 UDP 443; Tailscale UDP 41641 |
+| TRUSTED | `vm-media` (`192.168.20.120`) | Jellyfin TCP 8096; TuliProx TCP 8901 |
+| IOT TVs / Apple TVs | `vm-media` | TCP 8096 and 8901 |
 
-- **From IOT:** dropped and logged (`FW-IOT-DROP`, `FW-IOT-IN`) now.
-- **From TRUSTED and SERVERS:** logged (`FW-OBS-*`) but not yet dropped. See
-  [Enforcing the firewall](#enforcing-the-firewall).
+`TV_DEVICES` is populated from IoT reservations with the `tv` or `apple_tv`
+role. TuliProx currently embeds the media VM's IP address in its playlists,
+which is why direct TCP 8901 access is needed.
 
-The IOT zone also has these controls:
+**Traffic to the router itself** is restricted to DHCP, multicast mDNS for its
+repeater, management from authorised admin hosts, and the internal web-proxy
+path from `vm-gw`. The router is not a DNS resolver. Its management services
+also have source-address restrictions independent of the firewall.
 
-| Control | How |
+Expected denials include UPnP/NAT-PMP probes, unicast mDNS addressed to the
+router, unsuccessful public-IP hairpin attempts and direct access to
+unapproved server ports. Only add an exception when a required feature is
+actually affected.
+
+### IoT controls
+
+- **Wireless isolation:** access-list rules and a bridge horizon prevent IoT
+  Wi-Fi clients from reaching one another. The wired Reolink hub on `ether4`
+  is exempt from the Wi-Fi horizon. Review both mechanisms before introducing
+  an accessory that requires local peer or hub access.
+- **DNS:** DHCP advertises AdGuard. IoT DNS queries to other servers on
+  UDP/TCP 53 are redirected there; TCP 853 is blocked. This is not a general
+  block on DNS-over-HTTPS.
+- **Scanner quarantine:** RouterOS identifies rapid port scans and temporarily
+  blocks their source via `iot-scanners`.
+- **Discovery:** RouterOS repeats multicast mDNS between TRUSTED and IOT;
+  discovery does not override firewall permissions.
+
+## DNS and services
+
+- **AdGuard Home → Unbound:** DNS for internal clients. Local service records
+  resolve to `vm-gw`, where **Caddy** terminates HTTPS and reverse-proxies
+  applications. The service record definitions live in
+  [`records.nix`](../nix/modules/dns/records.nix).
+- **Tailscale:** `vm-gw` advertises the server subnet; the tailnet's split DNS
+  sends `shakr.dev` to AdGuard. Direct connections may use UDP 41641.
+- **IoT DHCP:** a one-day lease on VLAN 40. Reserved addresses use
+  `192.168.40.2–99`, with dynamic addresses in `192.168.40.100–199`.
+  Reservations and device roles belong in the gitignored
+  `infra/router/site.private.auto.tfvars`.
+- **NFS:** `vm-storage` shares media with `vm-media` (read/write) and `vm-gw`
+  (read-only). NixOS export permissions and an nftables guard limit access;
+  applying export changes reloads rather than restarts NFS.
+- **Router logging:** syslog goes to `vm-monitoring` and Loki. See
+  [Monitoring](#monitoring-and-troubleshooting).
+
+## Configuration ownership
+
+| Managed by | Configuration |
 | --- | --- |
-| DHCP | server `iot`, authoritative, 1-day leases; reservations .2–.99 from `site.private.auto.tfvars`, pool .100–.199 |
-| Client isolation | access-list entries on `wifi1`/`wifi2` plus a shared bridge horizon: IoT Wi-Fi clients cannot reach each other. The hub on ether4 has no horizon and still reaches its Wi-Fi camera |
-| DNS | handed out as AdGuard; port 53 to any other resolver is redirected to AdGuard; TCP 853 is dropped |
-| Port scanners | 21 ports in 3 s quarantines the source for a day |
-| Discovery | the router repeats mDNS between `bridge` and `vlan40-iot`, so AirPlay and vendor apps find devices across zones |
+| **OpenTofu** (`infra/router/`) | Managed bridge VLAN entries, VLAN 40 interfaces and ports, IoT DHCP and reservations, trusted virtual Wi-Fi, firewall/NAT, DNS settings, logging, NTP, IPv6 and MAC access services |
+| **NixOS / Colmena** (`nix/`) | DNS and proxy applications, NFS exports and guards, Home Assistant and monitoring |
+| **SOPS / mise** (`secrets/env.yaml`) | Router API credential, trusted Wi-Fi passphrase and router-backup password |
+| **Private local variables** (`site.private.auto.tfvars`) | Trusted SSID name and IoT MAC/IP inventory |
+| **Manual RouterOS** | Bootstrap and account management, IP services, existing IoT radio SSIDs and country, VLAN 20, VLAN 1 DHCP and the remaining default bridge ports |
 
-No IoT device is a HomeKit or Matter accessory, so isolation costs nothing
-locally. If one ever needs a local hub (an Apple TV or Echo), add an
-access-list exemption for it before the per-radio entries and drop the
-horizon.
+The manual boundary is intentional:
 
-## Making a change
+- [`bootstrap.rsc`](../infra/router/bootstrap.rsc) establishes the router-local
+  CA, HTTPS API and `tofu` account; OpenTofu must not manage its own access.
+- [`services.rsc`](../infra/router/services.rsc) defines IP service exposure;
+  provider 1.99.1 cannot reliably import/read these services.
+- [`users.rsc`](../infra/router/users.rsc) documents operator-managed accounts;
+  account mistakes cannot be automatically rolled back through Netwatch.
+- Existing IoT SSIDs and their security profiles remain outside OpenTofu to
+  avoid exposing passwords through the provider's Wi-Fi security attributes.
+- VLAN 20 and VLAN 1 DHCP remain in the established RouterOS configuration;
+  they do not need adoption to operate correctly.
 
-Device-mode `home` disables the scheduler, so the dead-man switch is a
-**netwatch** entry on an address that never answers. It runs its
-down-script after `start-delay` unless removed, on the router itself.
+`local.iot_tag = "phase4"` is **a live RouterOS comment identifier**, not a
+deployment flag. Changing it would modify existing IoT access-list entries
+and disconnect wireless clients. Do not rename it for cosmetic reasons.
 
-1. Write the inverse of the change as an `.rsc` script. Wrap each step in
-   `:do { … } on-error={ … }` and select by comment or name, ignoring dynamic
-   entries (`!dynamic`). Upload it and check it parses:
-   `scp rollback.rsc router:` then
-   `/import file-name=rollback.rsc verbose=yes dry-run`.
-2. Arm the dead-man:
+## Operations
 
-   ```
-   /tool netwatch add host=192.0.2.1 type=icmp interval=20s timeout=1s start-delay=10m \
+### Change the router safely
+
+Use a router-local rollback for any change that could interrupt access or
+network services. RouterOS `home` device-mode disables the scheduler, so the
+rollback uses **Netwatch**, not a laptop timer.
+
+1. Back up the current state and write an `.rsc` script that reverses the
+   intended change. Select stable object names/comments and avoid dynamic
+   entries.
+2. Upload the script as `rollback.rsc`, check it parses with
+   `/import file-name=rollback.rsc verbose=yes dry-run`, then arm Netwatch:
+
+   ```routeros
+   /tool netwatch add host=192.0.2.1 type=icmp interval=20s timeout=1s start-delay=20m \
        comment="deadman: auto-rollback" \
        down-script="/import file-name=rollback.rsc; /tool netwatch remove [find comment~\"^deadman\"]"
    ```
 
-3. `make router-plan`, review it, then `make router-apply`. It applies only
-   that saved plan (mode 600: it holds secrets), and refuses one that
-   destroys or replaces anything unless run with `ALLOW_DESTROY=1`.
-4. Check: Wi-Fi and internet on both SSIDs, DNS, `ssh router`, `ssh pve`,
-   Home Assistant, `router.shakr.dev`, and 44/44 Prometheus targets with no
-   alerts.
-5. If every check passes, disarm with
-   `/tool netwatch remove [find comment~"^deadman"]` and delete the script.
+   Verify that it is armed, that the script has the required permissions and
+   that the timeout exceeds the testing window.
+3. Run `make router-plan`; examine the saved plan, including replacements and
+   deletions. Run `make router-apply` only when the plan is understood.
+4. Verify management, both Wi-Fi networks, DNS, remote access, Home Assistant,
+   media playback and monitoring. Check for newly blocked legitimate flows.
+5. Disarm Netwatch **only after** successful checks. Remove temporary router
+   files and run [`backup-state.sh`](../infra/router/backup-state.sh).
 
-Netwatch scripts lack the `policy` right, so a dead-man **cannot undo account
-changes**. [`users.rsc`](../infra/router/users.rsc) and the `tofu` address
-are operator steps, verified one at a time.
+`router-apply` uses the previously saved plan and rejects resource destruction
+or replacement without `ALLOW_DESTROY=1`. Saved plans and state contain
+secrets; handle them as private files. Extending a dead-man timer requires
+arming its replacement **before** removing the old one. Netwatch cannot
+reliably undo account and credential changes; verify those separately.
+If the main default-deny policy must be disabled, use
+[`rollback/enforce.rsc`](../infra/router/rollback/enforce.rsc), set
+`local.firewall_enforce = false` in [`locals.tf`](../infra/router/locals.tf)
+and reconcile OpenTofu state with a reviewed plan.
 
-### Routine tasks
+### Common changes
 
-| Task | How |
+| Task | Where to start |
 | --- | --- |
-| Add or move an IoT device | add a reservation to `site.private.auto.tfvars` (role `tv` or `apple_tv` for AirPlay and media access), plan, apply, reconnect the device |
-| Point Home Assistant at an IoT device | Reconfigure the integration with the 192.168.40.x address. If the dialog times out, stop the container and edit the host in `/srv/appdata/home-assistant/config/.storage/core.config_entries` on vm-apps (back it up first) |
-| Rotate the trusted passphrase | new value in `secrets/env.yaml` (`sops set --value-stdin`), then as `shakir`: `/interface wifi security set [find name=trusted] passphrase=…`. OpenTofu ignores the passphrase after creation because the `tofu` account can only read it masked |
-| Rotate the `tofu` password | generate it into `secrets/env.yaml` (`sops set --value-stdin`), then send `/user set [find name=tofu] password=…` over `ssh -T router` stdin, so it never appears on a command line or in the router log. REST sessions opened with the old password keep working for up to 10 minutes |
-| Change an IoT SSID or its password | by hand on `wifi1`/`wifi2`: every IoT device has to re-join |
+| Add an IoT device | Add its reservation and role to `site.private.auto.tfvars`, plan/apply, then update any application integration that uses its address |
+| Allow a new service | Inspect actual drops; add the narrowest required rule to [`firewall.tf`](../infra/router/firewall.tf), including its position in the ordered chain |
+| Add a network zone | Define addressing, VLAN membership, DHCP/DNS and explicit ingress/egress policy together; validate trunk membership and rollback before applying |
+| Add an admin device | Update `local.admin_hosts`, restricted IP services and DHCP reservation together; verify a separate recovery path first |
+| Change trusted Wi-Fi credentials | Update SOPS, prepare a router-local rollback, update the trusted security profile via admin SSH, then reconnect and verify clients |
+| Change IoT Wi-Fi credentials | Use the manual radio profiles and plan for all IoT clients to reconnect |
+| Rotate the `tofu` API credential | Update SOPS and the router account via admin SSH stdin; verify new API access and expiry of older authenticated sessions |
 
-### Enforcing the firewall
+Pass secret values over stdin and avoid writing them in process arguments,
+logs or documentation. SOPS holds `TF_VAR_routeros_password`,
+`TF_VAR_trusted_wifi_passphrase` and `ROUTER_BACKUP_PASSWORD`. The trusted
+Wi-Fi passphrase is intentionally ignored for subsequent OpenTofu updates
+because the automation account reads it masked;
+updating SOPS alone does **not** rotate the live SSID.
 
-Observation of TRUSTED and SERVERS started 2026-10-18 13:08 BST.
+## Monitoring and troubleshooting
 
-1. Review with `infra/router/review-observations.sh 48`, or in Grafana with
-   `{job="router-syslog"} |= "FW-OBS"`.
-2. For every legitimate flow, add an accept rule (scoped to its source,
-   destination and port). Known harmless flows:
-   - Tailscale probing the router for NAT-PMP/UPnP (UDP 5351, 1900);
-   - Tailscale hairpin attempts to the public address;
-   - an iPhone's direct Tailscale path to vm-gw (UDP 41641), which falls back
-     to a relay.
-3. Set `firewall_enforce = true` in [`locals.tf`](../infra/router/locals.tf).
-   Plan, then apply under the dead-man with
-   [`rollback/enforce.rsc`](../infra/router/rollback/enforce.rsc) armed. It
-   returns the router to observe mode.
-4. Keep reviewing with `PREFIX=FW-DROP` for a few days.
+Router syslog is received on `vm-monitoring:1514/udp` and retained in Loki
+for 30 days. The relevant labels and prefixes are:
 
-## Recovery
-
-| If… | Then |
+| Purpose | Where to look |
 | --- | --- |
-| a change cuts access | wait for the dead-man |
-| the house Wi-Fi is down | phone hotspot on the laptop, `tailscale up` (vm-gw advertises 192.168.20.0/24 and is the exit node): `ssh vm-monitoring`, and `https://router.shakr.dev` as `shakir` (WebFig, full admin, with a Terminal). Only while away from the house Wi-Fi, because with Tailscale up at home the laptop reaches the servers through vm-gw instead of as .74. This path needs the router's WAN and VLAN 20 to work |
-| the workstation is lost | **MAC-WinBox** from any computer on TRUSTED as `shakir` (password in the password manager). It works at layer 2, regardless of addresses and firewall rules. Then add the new address to `admin_hosts`, `services.rsc` and a pinned lease |
-| the configuration is broken beyond that | restore the latest `.backup` from the router's flash (password: `ROUTER_BACKUP_PASSWORD`) |
-| nothing else works | physical reset and Netinstall |
+| Default-deny firewall drops | `infra/router/review-observations.sh 24` |
+| IoT firewall drops | Grafana Explore: `{job="router-syslog"} \|= "FW-IOT"` |
+| Raw router denials | Grafana Explore: `{job="router-syslog"} \|= "FW-DROP"` |
+| Service health | Prometheus targets, Blackbox probes, systemd status and application logs |
 
-MAC-WinBox reachability is verified, but a password login over it has not
-been tested yet, so the factory `admin` account stays enabled.
+For a newly broken service, first confirm the client's VLAN and destination
+address, then match its traffic to a drop log. Distinguish blocked new
+connections from expected noise and stale conntrack replies. Verify the
+specific service works before widening an allow rule.
 
-## Accounts
+## Recovery and secrets
 
-| Account | Group | Login | Owner |
-| --- | --- | --- | --- |
-| `shakir` | full | SSH key `shakir@homelab-laptop` (`ssh router`); password for WinBox and WebFig | operator (`users.rsc`) |
-| `admin` | full | SSH key; password | factory account; disabled once MAC-WinBox recovery is tested (`users.rsc` step 4) |
-| `tofu` | iac | REST API over HTTPS from 192.168.1.74 | `bootstrap.rsc`; password in `secrets/env.yaml` |
+| Failure | Recovery path |
+| --- | --- |
+| A guarded router change cuts access | Let the verified Netwatch rollback run; do not disable it prematurely |
+| Trusted Wi-Fi fails but WAN and SERVERS work | Use a phone hotspot and Tailscale to reach `vm-monitoring` or the internal router WebFig endpoint through `vm-gw` |
+| The admin workstation is unavailable | Use MAC-WinBox from another TRUSTED device; a separate-device password login is **not yet verified** |
+| Router configuration must be restored | Use the encrypted RouterOS binary backup and `ROUTER_BACKUP_PASSWORD` from SOPS; restoring reboots the router |
+| No management path works | Physical console/reset and RouterOS recovery tools |
 
-## State, secrets and backups
+The factory administrator account is intentionally retained pending an
+independent MAC-WinBox recovery test. Do not disable it on the assumption that
+recovery has already been proven.
 
-- **State:** `infra/router/terraform.tfstate` is local, gitignored and mode
-  600. It contains the trusted passphrase, so treat it and its copies in
-  `~/.local/share/homelab/router-state/` as secrets. Back it up before any
-  `tofu state` command, and after every apply run
-  [`backup-state.sh`](../infra/router/backup-state.sh): it keeps an
-  age-encrypted copy in `vm-storage:~/backups/router-state/` (restore with
-  `age -d -i "$SOPS_AGE_KEY_FILE"`).
-- **Private inputs:** `site.private.auto.tfvars` holds the trusted SSID and
-  the IoT reservations (MAC addresses).
-- **Credentials:** the `tofu` password, the trusted passphrase and the router
-  backup password are in `secrets/env.yaml`, loaded by mise.
+**State and backups:**
 
-**Router backups:** one encrypted `.backup` on the router's flash, with a copy
-in `~/.local/share/homelab/router-backups/`, plus `.rsc` exports there that
-hide sensitive values. Replace both after any significant change:
+- `infra/router/terraform.tfstate`, its backups and saved plans contain
+  sensitive data (including the trusted Wi-Fi passphrase). Keep them
+  gitignored with restrictive permissions.
+- Run [`backup-state.sh`](../infra/router/backup-state.sh) after every router
+  apply. It stores an age-encrypted state copy on `vm-storage`, separate from
+  the NFS-shared media directory. Test decryption after changing age keys.
+- Keep a password-encrypted RouterOS `.backup` and an export after meaningful
+  changes. The encryption password is `ROUTER_BACKUP_PASSWORD` in SOPS.
+  Generate the binary backup on the router with its password sent over an
+  encrypted SSH session, then copy it off-router. For a redacted text export:
 
-```sh
-printf '/system backup save name=<name> encryption=aes-sha256 password="%s"\n' \
-  "$ROUTER_BACKUP_PASSWORD" | ssh -T router
-scp router:<name>.backup ~/.local/share/homelab/router-backups/
-ssh router /export > ~/.local/share/homelab/router-backups/<name>.rsc
-```
+  ```sh
+  ssh router /export > ~/.local/share/homelab/router-backups/router-current.rsc
+  ```
 
-Restoring a `.backup` needs `ROUTER_BACKUP_PASSWORD` and reboots the router.
+- Use `secrets/env.yaml` with SOPS/mise for credentials, never plaintext
+  secrets in committed Terraform variables or documentation.
 
-## Set by hand
+## Known limitations
 
-These are the source of truth for what OpenTofu does not manage. Each is
-manual on purpose.
+- **Proxmox host:** management firewall and SSH hardening are deferred; VM
+  backup schedules and off-site VM backup storage are not yet deployed.
+- **Unmanaged router objects:** VLAN 20 and VLAN 1 DHCP are intentionally
+  maintained outside OpenTofu for now.
+- **Media URLs:** TuliProx playlists currently refer directly to `vm-media`;
+  changing that requires regenerating clients' playlists and reviewing the
+  matching firewall rules.
 
-| Item | Source of truth | Why not OpenTofu |
-| --- | --- | --- |
-| IP services (SSH, WinBox, web, API) | [`services.rsc`](../infra/router/services.rsc), idempotent | `routeros_ip_service` (provider 1.99.1) cannot import and resolves services by name, which is ambiguous |
-| Accounts (`shakir`, `admin`) | [`users.rsc`](../infra/router/users.rsc), operator steps | `routeros_system_user` keeps passwords in state, and a dead-man cannot undo an account change, so a bad apply could lock the router |
-| CA, HTTPS certificate, `iac` group, `tofu` user | [`bootstrap.rsc`](../infra/router/bootstrap.rsc), once | OpenTofu must not own its own access; key material stays on the router |
-| IoT SSIDs and passwords (inline on `wifi1`/`wifi2`) | the router | `routeros_wifi` stores `security` as a non-sensitive map, so the passwords would land in state and plan output; changing them re-joins every IoT device |
-| Wi-Fi country `United Kingdom` | the router: `/interface wifi set [find default-name=wifi1 or default-name=wifi2] configuration.country="United Kingdom"` | part of the same radio objects |
-| VLAN 20 (bridge entry `*4`, `vlan20`, 192.168.20.1/24) | the router | not yet adopted; can move to OpenTofu (import-only, no change) |
-| VLAN 1 DHCP (server `defconf`, pool `default-dhcp`, network, the pinned 192.168.1.74 lease) | the router | not yet adopted; can move to OpenTofu (import-only, no change) |
-| Bridge, ports ether2, ether3, ether5 | the router (defconf) | the bridge object has many computed settings and carries every network; low value, high blast radius |
-
-## Router logs
-
-The router sends `info`, `warning`, `error` and `critical` to
-`vm-monitoring:1514/udp`
-([`router-syslog`](../nix/services/monitoring/router-syslog)), which stores
-them in Loki as `job="router-syslog"`. Only the router's VLAN 20 address may
-send.
-
-Loki keeps 30 days of logs: its compactor enforces `retention_period`.

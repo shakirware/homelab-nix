@@ -8,34 +8,57 @@ Six role-based NixOS VMs run networking, media, storage, home automation, person
 
 ## Architecture
 
-OpenTofu provisions the guests on one Proxmox server; NixOS modules define their configuration, and Colmena deploys changes over SSH. Each host combines shared defaults with a role-specific profile.
+OpenTofu provisions the guests on Proxmox and manages the MikroTik router's network policy; NixOS modules define VM configuration, and Colmena deploys changes over SSH. Each host combines shared defaults with a role-specific profile.
 
 ```mermaid
 flowchart TB
-    clients["LAN / Tailscale clients"]
+    subgraph clients["Clients"]
+        direction LR
+        trusted["Trusted LAN<br/>Computers · phones"]
+        iot["IoT LAN<br/>Smart devices · TVs"]
+        remote["Remote clients<br/>Tailscale"]
+    end
 
-    subgraph pve["Proxmox VE · single physical host"]
+    router["MikroTik hAP ax²<br/>VLANs 1 / 20 / 40 · Default-deny firewall"]
+
+    subgraph pve["Proxmox VE · Single physical host"]
         direction TB
+
         gw["vm-gw<br/>AdGuard · Unbound · Caddy<br/>Tailscale · Homepage"]
-        media["vm-media<br/>Jellyfin · media automation"]
-        apps["vm-apps<br/>Home Assistant · personal apps"]
-        sensitive["vm-sensitive<br/>Finance · notes · invoicing"]
-        storage["vm-storage<br/>mergerfs · NFS"]
-        monitoring["vm-monitoring<br/>Prometheus · Grafana<br/>Loki · Alertmanager"]
+
+        subgraph applications["Applications"]
+            direction LR
+            media["vm-media<br/>Jellyfin · Media automation"]
+            apps["vm-apps<br/>Home Assistant · Personal apps"]
+            sensitive["vm-sensitive<br/>Finance · Notes · Invoicing"]
+        end
+
+        subgraph infrastructure["Storage & observability"]
+            direction LR
+            storage["vm-storage<br/>mergerfs · NFS"]
+            monitoring["vm-monitoring<br/>Prometheus · Grafana<br/>Loki · Alertmanager"]
+        end
     end
 
     external["External heartbeat monitor"]
 
-    clients --> gw
-    gw -->|"Reverse proxy"| media
-    gw -->|"Reverse proxy"| apps
-    gw -->|"Reverse proxy"| sensitive
-    gw -->|"Reverse proxy"| monitoring
-    storage -->|"NFS"| media
-    monitoring -->|"Heartbeat"| external
+    trusted --> router
+    iot --> router
+    router -->|"DNS · HTTPS"| gw
+    remote -->|"Tailscale"| gw
+
+    gw -->|"Caddy"| media
+    gw -->|"Caddy"| apps
+    gw -->|"Caddy"| sensitive
+    gw -->|"Caddy"| monitoring
+
+    storage -->|"NFS · read-write"| media
+    storage -->|"NFS · read-only"| gw
+
+    monitoring -.->|"Heartbeat"| external
 ```
 
-*Simplified service architecture, not a full network topology.* The MikroTik router handles routing and VLAN policies; `vm-gw` handles internal DNS, reverse proxying and Tailscale access.
+*Simplified service architecture, not a full network topology.* MikroTik handles inter-VLAN routing and default-deny firewall policy; `vm-gw` handles DNS, reverse proxying and Tailscale access.
 
 | VM | Role | Representative services |
 | --- | --- | --- |
@@ -64,12 +87,25 @@ All six VMs also import the shared Node Exporter and Promtail modules via the [b
 
 </details>
 
+## Network
+
+The MikroTik separates personal devices, NixOS servers and IoT equipment into three zones:
+
+| Zone | VLAN | Devices |
+| --- | --- | --- |
+| TRUSTED | 1 | Personal devices and Proxmox management |
+| SERVERS | 20 | NixOS VMs |
+| IOT | 40 | Smart-home devices, TVs and the Reolink hub |
+
+New cross-zone connections are denied unless a firewall rule explicitly permits them. IoT clients also have dedicated DNS policy and Wi-Fi client isolation. Router configuration lives primarily in [`infra/router/`](infra/router); the [network guide](docs/network.md) covers allowed traffic, manual settings, safe changes and recovery.
+
 ## Interesting implementations
 
 This is my own infrastructure rather than a reusable installer but several components may be useful independently:
 
 | Area | Implementation | Why it's worth a look |
 | --- | --- | --- |
+| Network segmentation | [`infra/router/`](infra/router) | VLANs, zone firewall, RouterOS OpenTofu and router-local rollback |
 | Provisioning and deployment | [`infra/proxmox/vms.tf`](infra/proxmox/vms.tf) · [`flake.nix`](flake.nix) | Proxmox VM definitions alongside six NixOS configurations and a Colmena hive |
 | Role-based modules | [`nix/profiles/`](nix/profiles) | Shared defaults separated from application-specific roles |
 | Service discovery | [`records.nix`](nix/modules/dns/records.nix) | Common DNS and reverse-proxy host definitions |
@@ -80,7 +116,7 @@ This is my own infrastructure rather than a reusable installer but several compo
 
 ## Observability
 
-Prometheus scrapes NixOS and Proxmox metrics; Blackbox Exporter checks HTTP service availability; and Promtail forwards host logs to Loki. Alertmanager sends Telegram notifications. A separate, health-gated external heartbeat helps detect failures in the local monitoring and alerting pipeline.
+Prometheus scrapes NixOS and Proxmox metrics; Blackbox Exporter checks HTTP service availability; and Promtail forwards host logs to Loki. RouterOS syslog provides firewall and network events. Alertmanager sends Telegram notifications. A separate, health-gated external heartbeat helps detect failures in the local monitoring and alerting pipeline.
 
 ![Grafana dashboard showing homelab infrastructure health](docs/assets/monitoring.webp)
 
@@ -93,12 +129,13 @@ See the [monitoring modules](nix/services/monitoring) for exporters, probes, ale
 ├── flake.nix       # NixOS hosts, Colmena hive, Proxmox template
 ├── infra/
 │   ├── proxmox/    # OpenTofu: Proxmox VMs
-│   └── router/     # OpenTofu: MikroTik router
+│   └── router/     # OpenTofu: MikroTik network
 ├── nix/
 │   ├── hosts/      # Per-VM settings
 │   ├── profiles/   # Shared defaults and role-specific composition
 │   ├── modules/    # Reusable NixOS options
 │   └── services/   # Applications and observability
+├── docs/           # Network guide and dashboard screenshots
 ├── secrets/        # Encrypted SOPS files
 ├── templates/      # Proxmox NixOS template definition
 ├── Makefile        # Provisioning and deployment shortcuts
@@ -129,13 +166,17 @@ nix build .#proxmox-template
 make plan
 make apply            # Modifies Proxmox resources
 
+# Review and apply router changes (requires a checked rollback for access changes)
+make router-plan
+make router-apply
+
 # Reconfigure an individual guest or all guests
 make deploy-gw
 make deploy-monitoring
 make deploy-all       # Changes running NixOS systems
 ```
 
-Provisioning requires OpenTofu and Proxmox credentials; deployments require working Colmena SSH access and appropriate SOPS decryption keys. Do not run these commands unchanged against your own environment. See the [`Makefile`](Makefile) for other targets.
+Provisioning requires OpenTofu and Proxmox credentials; access-affecting router changes require a [rollback procedure](docs/network.md#operations); deployments require working Colmena SSH access and appropriate SOPS decryption keys. Do not run these commands unchanged against your own environment. See the [`Makefile`](Makefile) for other targets.
 
 </details>
 
@@ -158,8 +199,8 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 
 ## Trade-offs
 
-- **Storage redundancy.** mergerfs combines multiple drives into a single storage pool without providing data redundancy. Independent backups and tested recovery procedures remain essential, even with redundant storage.
-- **Infrastructure outside Git.** The MikroTik router is managed with OpenTofu ([`infra/router`](infra/router), see [docs/network.md](docs/network.md)) apart from its IP services, accounts, VLAN 20 and the IoT SSIDs; the underlying Proxmox host setup is still managed manually.
+- **Storage resilience.** mergerfs combines drives without redundancy or parity. Scheduled Proxmox VM backups and off-site backups are not yet deployed; hardware loss can mean data loss.
+- **Management boundaries.** OpenTofu manages most MikroTik settings, but bootstrap, accounts and selected existing settings are manual. Proxmox host configuration and hardening are also separate.
 - **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
 
 ## Roadmap
