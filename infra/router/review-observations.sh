@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Summarise the router's firewall observations (FW-OBS-* / FW-DROP-*) from
-# Loki: every distinct unmatched flow with its count, busiest first. Source
-# ports are ignored so repeated connections collapse into one row.
+# Summarise the router's unmatched traffic from Loki: every distinct flow
+# with its count, busiest first. Source ports are ignored so repeated
+# connections collapse into one row.
 #
-#   infra/router/review-observations.sh            # last 48 hours
-#   infra/router/review-observations.sh 72         # last 72 hours
-#   PREFIX=FW-DROP infra/router/review-observations.sh 24   # after enforcement
+#   infra/router/review-observations.sh                  # FW-DROP, last 48 hours
+#   infra/router/review-observations.sh 24               # last 24 hours
+#   PREFIX=FW-OBS infra/router/review-observations.sh    # while in observe mode
 #
-# Each row is either a legitimate flow that needs an accept rule in
-# firewall.tf before enforcement, or traffic the final deny should drop.
+# A legitimate flow gets a narrow accept rule in firewall.tf; anything else is
+# what the default deny is for.
 set -euo pipefail
 
 hours="${1:-48}"
-prefix="${PREFIX:-FW-OBS}"
+prefix="${PREFIX:-FW-DROP}"
 loki_host="${LOKI_HOST:-vm-monitoring}"
 
 # RouterOS line: "<prefix> <chain>: in:<if> out:<if>, connection-state:new

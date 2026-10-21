@@ -15,8 +15,9 @@
 # 2. REST API over HTTPS, reachable only from the admin workstation.
 /ip service set www-ssl certificate=router-https address=192.168.1.74/32 tls-version=only-1.2 disabled=no
 
-# 3. A least-privilege group for OpenTofu: API access with read/write and the
-#    "policy" right it needs to manage users; no interactive login rights.
+# 3. A least-privilege group for OpenTofu: REST API with read/write and no
+#    interactive login rights. "policy" dates from when OpenTofu managed
+#    users; accounts are now operator-owned (users.rsc).
 /user group add name=iac comment="OpenTofu (infra/router)" \
     policy=read,write,policy,test,api,rest-api,!local,!telnet,!ssh,!ftp,!reboot,!winbox,!password,!web,!sniff,!sensitive,!romon
 

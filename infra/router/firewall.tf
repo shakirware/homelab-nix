@@ -106,9 +106,9 @@ locals {
     { key = "fw_trusted_dns_udp", action = "accept", in_interface_list = "TRUSTED", dst_address = local.ips.gw, protocol = "udp", dst_port = "53", comment = "zones: TRUSTED -> AdGuard DNS" },
     { key = "fw_trusted_gw_tcp", action = "accept", in_interface_list = "TRUSTED", dst_address = local.ips.gw, protocol = "tcp", dst_port = "53,80,443", comment = "zones: TRUSTED -> AdGuard DNS and Caddy" },
     { key = "fw_trusted_ping", action = "accept", in_interface_list = "TRUSTED", out_interface_list = "SERVERS", protocol = "icmp", comment = "zones: TRUSTED -> ping servers" },
-    # Seen in the 2026-10-18 to 10-21 observation: HTTP/3 to Caddy, apps using
-    # vm-media's own address (Jellyfin, and TuliProx, whose playlists carry it),
-    # and Tailscale's direct path.
+    # Trusted devices also need HTTP/3 to Caddy, vm-media's own address
+    # (Jellyfin apps, and TuliProx, whose playlists carry it) and Tailscale's
+    # direct path to vm-gw.
     { key = "fw_trusted_gw_quic", action = "accept", in_interface_list = "TRUSTED", dst_address = local.ips.gw, protocol = "udp", dst_port = "443", comment = "zones: TRUSTED -> Caddy HTTP/3" },
     { key = "fw_trusted_jellyfin", action = "accept", in_interface_list = "TRUSTED", dst_address = local.ips.media, protocol = "tcp", dst_port = "8096,8901", comment = "zones: TRUSTED -> Jellyfin and TuliProx direct" },
     { key = "fw_trusted_tailscale", action = "accept", in_interface_list = "TRUSTED", dst_address = local.ips.gw, protocol = "udp", dst_port = "41641", comment = "zones: TRUSTED -> Tailscale direct to vm-gw" },
@@ -132,7 +132,7 @@ locals {
     { key = "fw_iot_log", action = "log", in_interface_list = "IOT", log_prefix = "FW-IOT-DROP", comment = "zones: log IOT -> internal" },
     { key = "fw_iot_drop", action = "drop", in_interface_list = "IOT", comment = "zones: drop IOT -> internal" },
 
-    # No rate limit: observation must not under-count.
+    # Not rate-limited, so every unmatched flow is logged.
     { key = "fw_log", action = "log", log_prefix = local.firewall_enforce ? "FW-DROP-FWD" : "FW-OBS-FWD", comment = "zones: log unmatched forward" },
     ], local.firewall_enforce ? [
     { key = "fw_drop", action = "drop", comment = "zones: drop unmatched forward" },
