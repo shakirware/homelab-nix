@@ -122,6 +122,37 @@ vms = {
     }]
   }
 
+  # Self-hosted CI runner on the isolated VLAN 30 (infra/router/ci.tf). Low
+  # CPU weight: production VMs (1024) win under contention.
+  vm-ci = {
+    vmid            = 107
+    cores           = 4
+    memory          = 8192
+    disk_size_gb    = 50
+    cpu_units       = 50
+    machine         = "q35"
+    boot_order      = ["virtio0"]
+    keyboard_layout = "en-us"
+    scsi_hardware   = "virtio-scsi-single"
+    serial_console  = false
+    cloud_init_user = "shakir"
+    cloud_init_network = {
+      address = "192.168.30.10/24"
+      gateway = "192.168.30.1"
+      dns     = ["1.1.1.1", "9.9.9.9"]
+    }
+    # Hands freed blocks back to the thin pool (fstrim in nix/hosts/vm-ci).
+    root_discard = "on"
+    # No startup order: setting one needs Sys.Modify on /, which the tofu
+    # token deliberately lacks, and nothing depends on vm-ci at boot.
+    extra_disks = []
+    nics = [{
+      bridge  = "vmbr0"
+      mac     = "bc:24:11:c8:de:fa"
+      vlan_id = 30
+    }]
+  }
+
   vm-monitoring = {
     vmid           = 106
     cores          = 2
