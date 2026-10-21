@@ -191,8 +191,14 @@ let
     if ${busy}; then echo "job running; skipping"; exit 0; fi
     ${docker} container prune -f --filter until=24h
     ${docker} image prune -af --filter until=168h --filter label!=homelab.ci.keep=true
+    # Runner images from earlier deploys (the label only protects the current one).
+    ${docker} images --filter label=homelab.ci.keep=true --format '{{.Repository}}:{{.Tag}}' |
+      grep -vxF ${imageTag} | xargs -r ${docker} rmi
     ${docker} builder prune -af --filter until=168h
     ${docker} volume prune -af
+    # Builders setup-buildx-action left behind when a job was cancelled.
+    ${docker} ps -aq --filter name=buildx_buildkit_ | xargs -r ${docker} rm -fv
+    ${docker} volume ls -q --filter name=buildx_buildkit_ | xargs -r ${docker} volume rm
     ${docker} network prune -f
     for dir in ${home}/toolcache-* ${home}/cache-*; do
       if [ "$(du -sm "$dir" | cut -f1)" -gt 5120 ]; then
