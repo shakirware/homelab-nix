@@ -99,6 +99,13 @@ let
               - "sensitive.${baseDomain}:${toString nodePort}"
               - "${ips.monitoring}:${toString nodePort}"
 
+      # Its own job so the media and NFS rules on job="node" never see it.
+      - job_name: "node-ci"
+        static_configs:
+          - targets: [ "${ips.ci}:${toString nodePort}" ]
+            labels:
+              host: "vm-ci"
+
       - job_name: "node-proxmox"
         static_configs:
           - targets: [ "${ips.proxmox}:${toString nodePort}" ]
