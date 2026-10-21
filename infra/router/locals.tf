@@ -22,7 +22,7 @@ locals {
 
   # false: unmatched traffic from TRUSTED and SERVERS is only logged (FW-OBS-*).
   # true: it is dropped (FW-DROP-*). See docs/network.md before changing.
-  firewall_enforce = false
+  firewall_enforce = true
 
   # Router-side comment prefix on the 26 IoT objects. Kept: changing it edits
   # the IoT access-list entries, which disconnects every IoT Wi-Fi client.
