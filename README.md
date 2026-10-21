@@ -27,24 +27,7 @@ OpenTofu provisions the guests on Proxmox and manages the MikroTik router's netw
 | [`vm-monitoring`](nix/hosts/vm-monitoring/default.nix) | Metrics, logs, probes, alerting | Prometheus, Grafana, Loki, Alertmanager |
 | [`vm-ci`](nix/hosts/vm-ci/default.nix) | Isolated CI | Three ephemeral GitHub Actions runners, rootless Docker |
 
-<details>
-<summary>Full service inventory</summary>
-
-This lists the service modules configured for each role.
-
-| VM | Configured services and components |
-| --- | --- |
-| `vm-gw` | AdGuard, Unbound, Caddy, Tailscale, Homepage; NFS client |
-| `vm-media` | Jellyfin, Seerr, Tracearr, Sonarr, Radarr, Prowlarr, FlareSolverr, Shelfmark, ReadMeABook, Grimmory, Audiobookshelf, Gluetun, qBittorrent, Profilarr, Cleanuparr, TuliProx, Pinchflat, NetV; NFS client and mount probe |
-| `vm-storage` | mergerfs, NFS server |
-| `vm-apps` | Home Assistant, Obsidian Livesync, Yamtrack |
-| `vm-sensitive` | Actual Budget, Standard Notes, InvoicePlane |
-| `vm-monitoring` | Prometheus, Grafana, Alertmanager, Loki, Proxmox Exporter, Blackbox Exporter, external health-gated heartbeat |
-| `vm-ci` | Ephemeral GitHub Actions runners, rootless Docker, disk and image clean-up |
-
-Every VM imports the shared Node Exporter and Promtail modules via the [base profile](nix/profiles/base/default.nix); `vm-ci` keeps its logs local because Loki is not reachable from VLAN 30.
-
-</details>
+Each [host](nix/hosts) combines the base profile with role [profiles](nix/profiles), which group [service modules](nix/services), and individual service modules where needed. Every VM imports the shared Node Exporter and Promtail modules via the [base profile](nix/profiles/base/default.nix); `vm-ci` keeps its logs local because Loki is not reachable from VLAN 30.
 
 ## Network
 
@@ -54,10 +37,10 @@ The MikroTik separates personal devices, NixOS servers, CI and IoT equipment int
 | --- | --- | --- |
 | TRUSTED | 1 | Personal devices and Proxmox management |
 | SERVERS | 20 | NixOS VMs |
-| CI | 30 | `vm-ci`, internet only |
+| CI | 30 | `vm-ci`; egress to the internet only |
 | IOT | 40 | Smart-home devices, TVs and the Reolink hub |
 
-New cross-zone connections are denied unless a firewall rule explicitly permits them. IoT clients also have dedicated DNS policy and Wi-Fi client isolation. Router configuration lives primarily in [`infra/router/`](infra/router); the [network guide](docs/network.md) covers allowed traffic, manual settings, safe changes and recovery.
+New cross-zone connections are denied unless a firewall rule explicitly permits them. IoT clients also have dedicated DNS policy and Wi-Fi client isolation. Router configuration lives primarily in [`infra/router/`](infra/router); the [network guide](docs/network.md) covers allowed traffic, configuration ownership and change safety.
 
 ## Interesting implementations
 
@@ -70,7 +53,7 @@ This is my own infrastructure rather than a reusable installer but several compo
 | Role-based modules | [`nix/profiles/`](nix/profiles) | Shared defaults separated from application-specific roles |
 | Service discovery | [`records.nix`](nix/modules/dns/records.nix) | Common DNS and reverse-proxy host definitions |
 | Runtime secrets | [`templates.nix`](nix/modules/secrets/templates.nix) | sops-nix secrets rendered into environment files with dependent service restarts |
-| Self-hosted CI | [`ci-runner/default.nix`](nix/services/ci-runner/default.nix) | Ephemeral runners in containers under rootless Docker, on a VLAN that reaches only the internet |
+| Self-hosted CI | [`ci-runner/default.nix`](nix/services/ci-runner/default.nix) | Ephemeral runners in containers under rootless Docker, on a VLAN that can only open connections to the internet |
 | Monitoring the monitor | [`heartbeat/default.nix`](nix/services/monitoring/heartbeat/default.nix) | A systemd timer only sends an external heartbeat when local alerting checks pass |
 | Storage and passthrough | [`mergerfs/default.nix`](nix/services/mergerfs/default.nix) · [`pci.tf`](infra/proxmox/pci.tf) | Pooled media storage and Intel iGPU passthrough to the media VM |
 | Home Assistant configuration | [`home-assistant/default.nix`](nix/services/home-assistant/default.nix) | Declarative configuration validated before activation |
@@ -137,7 +120,7 @@ make deploy-monitoring
 make deploy-all       # Changes running NixOS systems
 ```
 
-Provisioning requires OpenTofu and Proxmox credentials; access-affecting router changes require a [rollback procedure](docs/network.md#operations); deployments require working Colmena SSH access and appropriate SOPS decryption keys. Do not run these commands unchanged against your own environment. See the [`Makefile`](Makefile) for other targets.
+Provisioning requires OpenTofu and Proxmox credentials; access-affecting router changes require a [router-local rollback](docs/network.md#change-safety); deployments require working Colmena SSH access and appropriate SOPS decryption keys. Do not run these commands unchanged against your own environment. See the [`Makefile`](Makefile) for other targets.
 
 </details>
 
@@ -162,13 +145,14 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 
 - **Storage resilience.** mergerfs combines drives without redundancy or parity. Scheduled Proxmox VM backups and off-site backups are not yet deployed; hardware loss can mean data loss.
 - **Management boundaries.** OpenTofu manages most MikroTik settings, but bootstrap, accounts and selected existing settings are manual. Proxmox host configuration and hardening are also separate.
+- **Shared CI host.** Self-hosted runners save hosted CI minutes but share the single host's CPU with production; a low scheduling priority favours production workloads during CPU contention, at the cost of slower CI.
 - **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
 
 ## Roadmap
 
-- [ ] Wait for HDD prices to come back down to Earth, add storage redundancy and set up automated off-site backups with tested restores.
+- [ ] Add storage redundancy and automated off-site backups with tested restores.
 - [ ] Deploy Immich for photo management once the storage and backup setup is ready.
-- [ ] Pick up a reasonably priced second-hand duplex ADF scanner and deploy Paperless-ngx.
+- [ ] Deploy Paperless-ngx for document management.
 - [ ] Deploy Vaultwarden for password management and evaluate Copyparty for file sharing.
 - [ ] Add automated Nix/OpenTofu checks.
 
