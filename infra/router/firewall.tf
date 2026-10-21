@@ -86,6 +86,9 @@ resource "routeros_ip_firewall_filter" "defconf" {
 
 locals {
   input_rules = concat([
+    # Before the ADMIN accept, so a CI host spoofing the workstation's
+    # address cannot open router management. Ping the gateway still works.
+    { key = "in_ci_drop", action = "drop", in_interface_list = "CI", connection_state = null, log = true, log_prefix = "FW-CI-IN", comment = "ci30: no router access from CI" },
     { key = "in_dhcp_trusted", action = "accept", protocol = "udp", dst_port = "67", in_interface_list = "TRUSTED", comment = "zones: DHCP for TRUSTED" },
     { key = "in_admin", action = "accept", protocol = "tcp", dst_port = "22,80,443,8291", src_address_list = "ADMIN", comment = "zones: router management from ADMIN hosts" },
     { key = "in_gw_web", action = "accept", protocol = "tcp", dst_port = "80", src_address = local.ips.gw, comment = "zones: router web UI for vm-gw (router.shakr.dev)" },
@@ -100,6 +103,16 @@ locals {
   ] : [])
 
   forward_rules = concat([
+    # CI first: internet only, and only the workstation (SSH) and
+    # vm-monitoring (node exporter) may open connections into it. The
+    # in_interface_list matches stop other zones spoofing those sources.
+    { key = "fw_ci_spoof", action = "drop", in_interface_list = "CI", src_address = "!${local.ci.cidr}", log = true, log_prefix = "FW-CI-SPOOF", comment = "ci30: drop spoofed sources from CI" },
+    { key = "fw_ci_blocked", action = "drop", in_interface_list = "CI", dst_address_list = "CI_BLOCKED", log = true, log_prefix = "FW-CI-DROP", comment = "ci30: CI -> private ranges" },
+    { key = "fw_ci_internal", action = "drop", in_interface_list = "CI", out_interface_list = "!WAN", log = true, log_prefix = "FW-CI-DROP", comment = "ci30: CI -> internal zones" },
+    { key = "fw_ci_wan", action = "accept", in_interface_list = "CI", out_interface_list = "WAN", comment = "ci30: CI -> internet" },
+    { key = "fw_ci_ssh", action = "accept", in_interface_list = "TRUSTED", src_address_list = "ADMIN", dst_address = local.ci.host, protocol = "tcp", dst_port = "22", comment = "ci30: ADMIN -> vm-ci SSH" },
+    { key = "fw_ci_metrics", action = "accept", in_interface_list = "SERVERS", src_address = local.ips.monitoring, dst_address = local.ci.host, protocol = "tcp", dst_port = "9100", comment = "ci30: vm-monitoring -> vm-ci node exporter" },
+    { key = "fw_ci_in_drop", action = "drop", out_interface_list = "CI", log = true, log_prefix = "FW-CI-IN", comment = "ci30: nothing else into CI" },
     { key = "fw_trusted_wan", action = "accept", in_interface_list = "TRUSTED", out_interface_list = "WAN", comment = "zones: TRUSTED -> internet" },
     { key = "fw_servers_wan", action = "accept", in_interface_list = "SERVERS", out_interface_list = "WAN", comment = "zones: SERVERS -> internet" },
     { key = "fw_admin_servers", action = "accept", src_address_list = "ADMIN", out_interface_list = "SERVERS", comment = "zones: ADMIN hosts -> SERVERS" },
@@ -172,6 +185,8 @@ resource "routeros_ip_firewall_filter" "zones" {
     routeros_interface_list_member.iot,
     routeros_ip_firewall_addr_list.admin,
     routeros_ip_firewall_addr_list.tv_devices,
+    routeros_interface_list_member.ci,
+    routeros_ip_firewall_addr_list.ci_blocked,
   ]
 }
 
