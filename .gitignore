@@ -1,8 +1,8 @@
-infra/.terraform/
-infra/terraform.tfvars
-infra/terraform.tfstate
-infra/terraform.tfstate.backup
-infra/terraform.tfstate.*.backup
+infra/proxmox/.terraform/
+infra/proxmox/terraform.tfvars
+infra/proxmox/terraform.tfstate
+infra/proxmox/terraform.tfstate.backup
+infra/proxmox/terraform.tfstate.*.backup
 infra/router/.terraform/
 infra/router/terraform.tfstate*
 infra/router/*.tfplan
