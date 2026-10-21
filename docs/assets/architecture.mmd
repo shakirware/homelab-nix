@@ -8,7 +8,7 @@ flowchart TB
         remote["Remote clients<br/>Tailscale"]
     end
 
-    router["MikroTik hAP ax²<br/>VLANs 1 / 20 / 40 · Default-deny firewall"]
+    router["MikroTik hAP ax²<br/>VLANs 1 / 20 / 30 / 40 · Default-deny firewall"]
 
     subgraph pve["Proxmox VE · Single physical host"]
         direction TB
@@ -27,9 +27,12 @@ flowchart TB
             storage["vm-storage<br/>mergerfs · NFS"]
             monitoring["vm-monitoring<br/>Prometheus · Grafana<br/>Loki · Alertmanager"]
         end
+
+        ci["vm-ci<br/>GitHub Actions runners<br/>Isolated VLAN 30"]
     end
 
     external["External heartbeat monitor"]
+    github["GitHub Actions"]
 
     trusted --> router
     iot --> router
@@ -45,3 +48,4 @@ flowchart TB
     storage -->|"NFS · read-only"| gw
 
     monitoring -.->|"Heartbeat"| external
+    ci -.->|"Internet only"| github

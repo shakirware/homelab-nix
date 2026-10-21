@@ -2,7 +2,7 @@
 
 **A declarative NixOS homelab on Proxmox, provisioned with OpenTofu and deployed with Colmena.**
 
-Six role-based NixOS VMs run networking, media, storage, home automation, personal applications and observability. Host configuration lives in a single Nix flake, with Podman and native NixOS services, sops-nix for secrets and Renovate for dependency updates.
+Seven role-based NixOS VMs run networking, media, storage, home automation, personal applications, observability and CI. Host configuration lives in a single Nix flake, with Podman and native NixOS services, sops-nix for secrets and Renovate for dependency updates.
 
 ![Homepage dashboard showing self-hosted services and status widgets](docs/assets/homepage.webp)
 
@@ -25,6 +25,7 @@ OpenTofu provisions the guests on Proxmox and manages the MikroTik router's netw
 | [`vm-apps`](nix/hosts/vm-apps/default.nix) | Home automation and personal apps | Home Assistant, Obsidian Livesync, Yamtrack |
 | [`vm-sensitive`](nix/hosts/vm-sensitive/default.nix) | Personal and financial apps | Actual Budget, Standard Notes, InvoicePlane |
 | [`vm-monitoring`](nix/hosts/vm-monitoring/default.nix) | Metrics, logs, probes, alerting | Prometheus, Grafana, Loki, Alertmanager |
+| [`vm-ci`](nix/hosts/vm-ci/default.nix) | Isolated CI | Three ephemeral GitHub Actions runners, rootless Docker |
 
 <details>
 <summary>Full service inventory</summary>
@@ -39,19 +40,21 @@ This lists the service modules configured for each role.
 | `vm-apps` | Home Assistant, Obsidian Livesync, Yamtrack |
 | `vm-sensitive` | Actual Budget, Standard Notes, InvoicePlane |
 | `vm-monitoring` | Prometheus, Grafana, Alertmanager, Loki, Proxmox Exporter, Blackbox Exporter, external health-gated heartbeat |
+| `vm-ci` | Ephemeral GitHub Actions runners, rootless Docker, disk and image clean-up |
 
-All six VMs also import the shared Node Exporter and Promtail modules via the [base profile](nix/profiles/base/default.nix).
+Every VM imports the shared Node Exporter and Promtail modules via the [base profile](nix/profiles/base/default.nix); `vm-ci` keeps its logs local because Loki is not reachable from VLAN 30.
 
 </details>
 
 ## Network
 
-The MikroTik separates personal devices, NixOS servers and IoT equipment into three zones:
+The MikroTik separates personal devices, NixOS servers, CI and IoT equipment into four zones:
 
 | Zone | VLAN | Devices |
 | --- | --- | --- |
 | TRUSTED | 1 | Personal devices and Proxmox management |
 | SERVERS | 20 | NixOS VMs |
+| CI | 30 | `vm-ci`, internet only |
 | IOT | 40 | Smart-home devices, TVs and the Reolink hub |
 
 New cross-zone connections are denied unless a firewall rule explicitly permits them. IoT clients also have dedicated DNS policy and Wi-Fi client isolation. Router configuration lives primarily in [`infra/router/`](infra/router); the [network guide](docs/network.md) covers allowed traffic, manual settings, safe changes and recovery.
@@ -63,10 +66,11 @@ This is my own infrastructure rather than a reusable installer but several compo
 | Area | Implementation | Why it's worth a look |
 | --- | --- | --- |
 | Network segmentation | [`infra/router/`](infra/router) | VLANs, zone firewall, RouterOS OpenTofu and router-local rollback |
-| Provisioning and deployment | [`infra/proxmox/vms.tf`](infra/proxmox/vms.tf) · [`flake.nix`](flake.nix) | Proxmox VM definitions alongside six NixOS configurations and a Colmena hive |
+| Provisioning and deployment | [`infra/proxmox/vms.tf`](infra/proxmox/vms.tf) · [`flake.nix`](flake.nix) | Proxmox VM definitions alongside seven NixOS configurations and a Colmena hive |
 | Role-based modules | [`nix/profiles/`](nix/profiles) | Shared defaults separated from application-specific roles |
 | Service discovery | [`records.nix`](nix/modules/dns/records.nix) | Common DNS and reverse-proxy host definitions |
 | Runtime secrets | [`templates.nix`](nix/modules/secrets/templates.nix) | sops-nix secrets rendered into environment files with dependent service restarts |
+| Self-hosted CI | [`ci-runner/default.nix`](nix/services/ci-runner/default.nix) | Ephemeral runners in containers under rootless Docker, on a VLAN that reaches only the internet |
 | Monitoring the monitor | [`heartbeat/default.nix`](nix/services/monitoring/heartbeat/default.nix) | A systemd timer only sends an external heartbeat when local alerting checks pass |
 | Storage and passthrough | [`mergerfs/default.nix`](nix/services/mergerfs/default.nix) · [`pci.tf`](infra/proxmox/pci.tf) | Pooled media storage and Intel iGPU passthrough to the media VM |
 | Home Assistant configuration | [`home-assistant/default.nix`](nix/services/home-assistant/default.nix) | Declarative configuration validated before activation |
