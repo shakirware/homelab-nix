@@ -20,6 +20,16 @@ locals {
     ports     = ["wifi1", "wifi2", "ether4"] # the IoT SSIDs and the Reolink hub
   }
 
+  # Internet-only network for a future self-hosted CI runner. Static
+  # addressing: no DHCP, DNS or NTP from the router.
+  ci = {
+    vlan_id   = 30
+    interface = "vlan30-ci"
+    gateway   = "192.168.30.1"
+    cidr      = "192.168.30.0/24"
+    host      = "192.168.30.10" # vm-ci
+  }
+
   # false: unmatched traffic from TRUSTED and SERVERS is only logged (FW-OBS-*).
   # true: it is dropped (FW-DROP-*). See docs/network.md before changing.
   firewall_enforce = true
