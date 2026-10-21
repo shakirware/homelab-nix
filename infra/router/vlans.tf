@@ -1,5 +1,5 @@
 # Bridge VLANs. VLAN 20 (SERVERS, tagged to the Proxmox trunk on ether5) is
-# still set by hand; VLAN 40 never goes to the trunk.
+# set by hand; VLAN 40 never goes to the trunk.
 
 resource "routeros_interface_bridge_vlan" "trusted" {
   bridge   = "bridge"
