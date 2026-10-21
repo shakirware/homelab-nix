@@ -10,53 +10,10 @@ Six role-based NixOS VMs run networking, media, storage, home automation, person
 
 OpenTofu provisions the guests on Proxmox and manages the MikroTik router's network policy; NixOS modules define VM configuration, and Colmena deploys changes over SSH. Each host combines shared defaults with a role-specific profile.
 
-```mermaid
-flowchart TB
-    subgraph clients["Clients"]
-        direction LR
-        trusted["Trusted LAN<br/>Computers · phones"]
-        iot["IoT LAN<br/>Smart devices · TVs"]
-        remote["Remote clients<br/>Tailscale"]
-    end
-
-    router["MikroTik hAP ax²<br/>VLANs 1 / 20 / 40 · Default-deny firewall"]
-
-    subgraph pve["Proxmox VE · Single physical host"]
-        direction TB
-
-        gw["vm-gw<br/>AdGuard · Unbound · Caddy<br/>Tailscale · Homepage"]
-
-        subgraph applications["Applications"]
-            direction LR
-            media["vm-media<br/>Jellyfin · Media automation"]
-            apps["vm-apps<br/>Home Assistant · Personal apps"]
-            sensitive["vm-sensitive<br/>Finance · Notes · Invoicing"]
-        end
-
-        subgraph infrastructure["Storage & observability"]
-            direction LR
-            storage["vm-storage<br/>mergerfs · NFS"]
-            monitoring["vm-monitoring<br/>Prometheus · Grafana<br/>Loki · Alertmanager"]
-        end
-    end
-
-    external["External heartbeat monitor"]
-
-    trusted --> router
-    iot --> router
-    router -->|"DNS · HTTPS"| gw
-    remote -->|"Tailscale"| gw
-
-    gw -->|"Caddy"| media
-    gw -->|"Caddy"| apps
-    gw -->|"Caddy"| sensitive
-    gw -->|"Caddy"| monitoring
-
-    storage -->|"NFS · read-write"| media
-    storage -->|"NFS · read-only"| gw
-
-    monitoring -.->|"Heartbeat"| external
-```
+<!-- Diagram source: docs/assets/architecture.mmd -->
+<p align="center">
+  <img src="docs/assets/architecture.svg" alt="Homelab network and service architecture">
+</p>
 
 *Simplified service architecture, not a full network topology.* MikroTik handles inter-VLAN routing and default-deny firewall policy; `vm-gw` handles DNS, reverse proxying and Tailscale access.
 
