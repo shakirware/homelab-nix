@@ -1,0 +1,47 @@
+%% Source of architecture.svg. Mermaid Live exports omit the viewBox;
+%% add one (and a width/height) or GitHub shows the diagram cropped.
+flowchart TB
+    subgraph clients["Clients"]
+        direction LR
+        trusted["Trusted LAN<br/>Computers · phones"]
+        iot["IoT LAN<br/>Smart devices · TVs"]
+        remote["Remote clients<br/>Tailscale"]
+    end
+
+    router["MikroTik hAP ax²<br/>VLANs 1 / 20 / 40 · Default-deny firewall"]
+
+    subgraph pve["Proxmox VE · Single physical host"]
+        direction TB
+
+        gw["vm-gw<br/>AdGuard · Unbound · Caddy<br/>Tailscale · Homepage"]
+
+        subgraph applications["Applications"]
+            direction LR
+            media["vm-media<br/>Jellyfin · Media automation"]
+            apps["vm-apps<br/>Home Assistant · Personal apps"]
+            sensitive["vm-sensitive<br/>Finance · Notes · Invoicing"]
+        end
+
+        subgraph infrastructure["Storage & observability"]
+            direction LR
+            storage["vm-storage<br/>mergerfs · NFS"]
+            monitoring["vm-monitoring<br/>Prometheus · Grafana<br/>Loki · Alertmanager"]
+        end
+    end
+
+    external["External heartbeat monitor"]
+
+    trusted --> router
+    iot --> router
+    router -->|"DNS · HTTPS"| gw
+    remote -->|"Tailscale"| gw
+
+    gw -->|"Caddy"| media
+    gw -->|"Caddy"| apps
+    gw -->|"Caddy"| sensitive
+    gw -->|"Caddy"| monitoring
+
+    storage -->|"NFS · read-write"| media
+    storage -->|"NFS · read-only"| gw
+
+    monitoring -.->|"Heartbeat"| external
