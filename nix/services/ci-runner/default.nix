@@ -24,6 +24,10 @@ let
   # two jobs never install into the same directory at once.
   workDir = n: "${home}/runner-work-${toString n}";
   toolCache = n: "${home}/toolcache-${toString n}";
+  # The container's ~/.cache, kept between jobs: uv uses it by default on a
+  # self-hosted runner, and pnpm is pointed at it, so neither downloads its
+  # cache from GitHub. Per runner, like the tool cache.
+  cacheDir = n: "${home}/cache-${toString n}";
   dockerSock = "/run/user/${toString uid}/docker.sock";
   dockerEnv = {
     DOCKER_HOST = "unix://${dockerSock}";
@@ -96,7 +100,9 @@ let
       set -euo pipefail
       PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.curl pkgs.jq ]}
       rm -rf --one-file-system ${workDir n}
-      install -d -o ${user} -g ${user} -m 0750 ${workDir n} ${toolCache n}
+      for dir in ${workDir n} ${toolCache n} ${cacheDir n}; do
+        install -d -o ${user} -g ${user} -m 0750 "$dir"
+      done
 
       pat=$(cat ${config.sops.secrets.github_runner_pat.path})
       case "$pat" in
@@ -135,13 +141,14 @@ let
         --user 0 -e RUNNER_ALLOW_RUNASROOT=1 -e RUNNER_MANUALLY_TRAP_SIG=1 \
         -e RUNNER_REPO=${repo} -e RUNNER_NAME=${name n} \
         -e RUNNER_LABELS=${labels} -e RUNNER_WORKDIR=${workDir n} \
-        -e RUNNER_TOOL_CACHE=${toolCache n} -e AGENT_TOOLSDIRECTORY=${
-          toolCache n
-        } \
+        -e RUNNER_TOOL_CACHE=${toolCache n} \
+        -e AGENT_TOOLSDIRECTORY=${toolCache n} \
         -e COMPOSE_PROJECT_NAME=${name n} \
+        -e npm_config_store_dir=/root/.cache/pnpm-store \
         -e DOCKER_HOST=unix:///var/run/docker.sock \
         -v ${dockerSock}:/var/run/docker.sock \
         -v ${workDir n}:${workDir n} -v ${toolCache n}:${toolCache n} \
+        -v ${cacheDir n}:/root/.cache \
         --entrypoint /usr/local/bin/ci-entrypoint ${imageTag} <&3
     '';
 
@@ -187,7 +194,7 @@ let
     ${docker} builder prune -af --filter until=168h
     ${docker} volume prune -af
     ${docker} network prune -f
-    for dir in ${home}/toolcache-*; do
+    for dir in ${home}/toolcache-* ${home}/cache-*; do
       if [ "$(du -sm "$dir" | cut -f1)" -gt 5120 ]; then
         echo "$dir over 5 GiB; clearing"
         find "$dir" -mindepth 1 -delete
