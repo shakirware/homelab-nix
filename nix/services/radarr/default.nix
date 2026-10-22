@@ -15,6 +15,11 @@ in {
       PUID = puid;
       PGID = pgid;
       TZ = tz;
+      # Host headers Radarr answers to (loopback and its own hostname are
+      # always allowed): Caddy, and vm-media's IP, which Prowlarr, Seerr,
+      # Cleanuparr, Profilarr and Homepage use.
+      RADARR__SERVER__ALLOWEDHOSTS =
+        "radarr.${config.homelab.baseDomain},${config.homelab.ips.media}";
     };
 
     volumes = [
