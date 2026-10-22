@@ -6,6 +6,10 @@ let
 
   vpnNet = "vpn-net";
 
+  # Host port for Gluetun's control server; 8000 is taken by neTV.
+  controlHostPort = 8001;
+  gwIp = config.homelab.ips.gw;
+
   podmanBin = "${pkgs.podman}/bin/podman";
   curlBin = "${pkgs.curl}/bin/curl";
 
@@ -34,9 +38,25 @@ let
   '';
 in {
   sops.secrets."gluetun/wireguard_config" = { };
+  sops.secrets."gluetun/control_api_key" = { };
 
   sops.templates."gluetun-wg0.conf" = {
     content = config.sops.placeholder."gluetun/wireguard_config";
+    owner = "root";
+    group = "root";
+    mode = "0400";
+    restartUnits = [ "podman-gluetun.service" ];
+  };
+
+  # Control server auth: Homepage's gluetun widget only needs the public IP.
+  sops.templates."gluetun-auth.toml" = {
+    content = ''
+      [[roles]]
+      name = "homepage"
+      routes = ["GET /v1/publicip/ip"]
+      auth = "apikey"
+      apikey = "${config.sops.placeholder."gluetun/control_api_key"}"
+    '';
     owner = "root";
     group = "root";
     mode = "0400";
@@ -64,8 +84,15 @@ in {
     image = "qmcgaw/gluetun:v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027";
     autoStart = true;
 
-    extraOptions =
-      [ "--network=${vpnNet}" "--cap-add=NET_ADMIN" "--device=/dev/net/tun" ];
+    # IPv6 is disabled in the shared namespace so every consumer leaves by the
+    # same IPv4 address: Cloudflare binds FlareSolverr's cf_clearance cookie to
+    # the solving IP.  The WireGuard config carries IPv4 addresses only.
+    extraOptions = [
+      "--network=${vpnNet}"
+      "--cap-add=NET_ADMIN"
+      "--device=/dev/net/tun"
+      "--sysctl=net.ipv6.conf.all.disable_ipv6=1"
+    ];
 
     ports = [
       "${bindIp}:8191:8191" # flaresolverr
@@ -74,6 +101,7 @@ in {
       "${bindIp}:6881:6881" # torrent TCP
       "${bindIp}:6881:6881/udp" # torrent UDP
       "${bindIp}:8901:8901" # iptv proxy
+      "${bindIp}:${toString controlHostPort}:8000" # control server (Homepage)
     ];
 
     environment = {
@@ -81,17 +109,17 @@ in {
 
       VPN_SERVICE_PROVIDER = "mullvad";
       VPN_TYPE = "wireguard";
-
-      IPV6 = "off";
+      WIREGUARD_ALLOWED_IPS = "0.0.0.0/0";
 
       FIREWALL_OUTBOUND_SUBNETS = "192.168.0.0/16";
 
-      FIREWALL_INPUT_PORTS = "8080,9696,6881,8901,8191";
+      FIREWALL_INPUT_PORTS = "8080,9696,6881,8901,8191,8000";
     };
 
     volumes = [
       "/srv/appdata/gluetun:/gluetun"
       "${config.sops.templates."gluetun-wg0.conf".path}:/gluetun/wireguard/wg0.conf:ro"
+      "${config.sops.templates."gluetun-auth.toml".path}:/gluetun/auth/config.toml:ro"
     ];
   };
 
@@ -142,6 +170,30 @@ in {
   };
 
   networking.firewall.allowedTCPPorts =
-    lib.mkAfter [ 8080 9696 6881 8901 8191 ];
+    lib.mkAfter [ 8080 9696 6881 8901 8191 controlHostPort ];
   networking.firewall.allowedUDPPorts = lib.mkAfter [ 6881 ];
+
+  # Only vm-gw (Homepage) may reach the control server.  The published port is
+  # DNATed, so the forward chain matches the pre-DNAT port via conntrack.
+  networking.nftables.tables."gluetun-control-guard" = {
+    family = "inet";
+    content = ''
+      chain input {
+        type filter hook input priority -50; policy accept;
+        tcp dport ${toString controlHostPort} jump gluetun_control_guard
+      }
+
+      chain forward {
+        type filter hook forward priority -50; policy accept;
+        ct status dnat ct original proto-dst ${toString controlHostPort} jump gluetun_control_guard
+      }
+
+      chain gluetun_control_guard {
+        ct state established,related accept
+        iifname "lo" accept
+        ip saddr ${gwIp} accept
+        drop
+      }
+    '';
+  };
 }
