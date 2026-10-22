@@ -24,7 +24,7 @@ in {
   networking.enableIPv6 = false;
 
   # Loki is not reachable from VLAN 30; logs stay in the local journal.
-  systemd.services.promtail.enable = lib.mkForce false;
+  services.alloy.enable = lib.mkForce false;
   services.journald.extraConfig = "SystemMaxUse=1G";
 
   # SSH from the admin workstation only (the router enforces the same).

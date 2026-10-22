@@ -302,7 +302,7 @@ let
       - name: systemd
         rules:
           - alert: SystemdUnitFailedCritical
-            expr: node_systemd_unit_state{state="failed",name=~"(sshd|systemd-networkd|tailscaled|unbound|adguardhome|caddy|promtail|prometheus-node-exporter|qemu-guest-agent|gluetun-vpn-check)\\.service"} == 1
+            expr: node_systemd_unit_state{state="failed",name=~"(sshd|systemd-networkd|tailscaled|unbound|adguardhome|caddy|alloy|prometheus-node-exporter|qemu-guest-agent|gluetun-vpn-check)\\.service"} == 1
             for: 2m
             labels:
               severity: critical

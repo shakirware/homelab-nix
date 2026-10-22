@@ -27,7 +27,7 @@ OpenTofu provisions the guests on Proxmox and manages the MikroTik router's netw
 | [`vm-monitoring`](nix/hosts/vm-monitoring/default.nix) | Metrics, logs, probes, alerting | Prometheus, Grafana, Loki, Alertmanager |
 | [`vm-ci`](nix/hosts/vm-ci/default.nix) | Isolated CI | Three ephemeral GitHub Actions runners, rootless Docker |
 
-Each [host](nix/hosts) combines the base profile with role [profiles](nix/profiles), which group [service modules](nix/services), and individual service modules where needed. Every VM imports the shared Node Exporter and Promtail modules via the [base profile](nix/profiles/base/default.nix); `vm-ci` keeps its logs local because Loki is not reachable from VLAN 30.
+Each [host](nix/hosts) combines the base profile with role [profiles](nix/profiles), which group [service modules](nix/services), and individual service modules where needed. Every VM imports the shared Node Exporter and Alloy modules via the [base profile](nix/profiles/base/default.nix); `vm-ci` keeps its logs local because Loki is not reachable from VLAN 30.
 
 ## Network
 
@@ -60,7 +60,7 @@ This is my own infrastructure rather than a reusable installer but several compo
 
 ## Observability
 
-Prometheus scrapes NixOS and Proxmox metrics; Blackbox Exporter checks HTTP service availability; and Promtail forwards host logs to Loki. RouterOS syslog provides firewall and network events. Alertmanager sends Telegram notifications. A separate, health-gated external heartbeat helps detect failures in the local monitoring and alerting pipeline.
+Prometheus scrapes NixOS and Proxmox metrics; Blackbox Exporter checks HTTP service availability; and Grafana Alloy forwards host logs to Loki. RouterOS syslog provides firewall and network events. Alertmanager sends Telegram notifications. A separate, health-gated external heartbeat helps detect failures in the local monitoring and alerting pipeline.
 
 ![Grafana dashboard showing homelab infrastructure health](docs/assets/monitoring.webp)
 

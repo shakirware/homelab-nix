@@ -1,55 +1,51 @@
 { config, lib, pkgs, ... }:
 
 # Receives the MikroTik router's remote syslog (firewall decisions, logins,
-# system events) and ships it to the local Loki. A separate Promtail instance
-# from the per-host journal shipper, so only vm-monitoring listens.
+# system events) and ships it to the local Loki. Runs inside the host's Alloy
+# instance as an extra config file, so only vm-monitoring listens.
 
 let
   ips = config.homelab.ips;
   port = 1514;
   lokiPushUrl = "http://127.0.0.1:3100/loki/api/v1/push";
-
-  cfg = pkgs.writeText "router-syslog.yaml" ''
-    server:
-      http_listen_port: 0
-      grpc_listen_port: 0
-
-    positions:
-      filename: /var/lib/router-syslog/positions.yaml
-
-    clients:
-      - url: ${lokiPushUrl}
-
-    scrape_configs:
-      - job_name: router-syslog
-        syslog:
-          listen_address: 0.0.0.0:${toString port}
-          listen_protocol: udp
-          syslog_format: rfc3164
-          labels:
-            job: router-syslog
-            host: router
-        relabel_configs:
-          - source_labels: ['__syslog_message_severity']
-            target_label: 'level'
-          - source_labels: ['__syslog_message_app_name']
-            target_label: 'topic'
-  '';
 in {
-  systemd.services.router-syslog = {
-    description = "Receive router syslog and ship it to Loki";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" "podman-loki.service" ];
-    wants = [ "network-online.target" ];
+  environment.etc."alloy/router-syslog.alloy".text = ''
+    loki.write "router_syslog" {
+      endpoint {
+        url = "${lokiPushUrl}"
+      }
+    }
 
-    serviceConfig = {
-      ExecStart = "${pkgs.promtail}/bin/promtail -config.file=${cfg}";
-      DynamicUser = true;
-      StateDirectory = "router-syslog";
-      Restart = "on-failure";
-      RestartSec = "3s";
-    };
-  };
+    loki.relabel "router_syslog" {
+      forward_to = []
+
+      rule {
+        source_labels = ["__syslog_message_severity"]
+        target_label  = "level"
+      }
+
+      rule {
+        source_labels = ["__syslog_message_app_name"]
+        target_label  = "topic"
+      }
+    }
+
+    loki.source.syslog "router" {
+      listener {
+        address       = "0.0.0.0:${toString port}"
+        protocol      = "udp"
+        syslog_format = "rfc3164"
+        labels        = {
+          job  = "router-syslog",
+          host = "router",
+        }
+      }
+      relabel_rules = loki.relabel.router_syslog.rules
+      forward_to    = [loki.write.router_syslog.receiver]
+    }
+  '';
+
+  systemd.services.alloy.after = [ "podman-loki.service" ];
 
   networking.firewall.allowedUDPPorts = lib.mkAfter [ port ];
 
