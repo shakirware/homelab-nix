@@ -21,7 +21,7 @@
     ../../modules/secrets/templates.nix
 
     ../../services/monitoring/node-exporter
-    ../../services/monitoring/promtail
+    ../../services/monitoring/alloy
   ];
 
   services.qemuGuest.enable = true;
