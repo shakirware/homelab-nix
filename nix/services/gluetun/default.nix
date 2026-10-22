@@ -110,8 +110,8 @@ in {
       VPN_SERVICE_PROVIDER = "mullvad";
       VPN_TYPE = "wireguard";
       WIREGUARD_ALLOWED_IPS = "0.0.0.0/0";
-      # Nearby servers for speed.
-      SERVER_COUNTRIES = "UK";
+      # Nearby, and unlike the UK, not geoblocked by indexers such as EZTV.
+      SERVER_COUNTRIES = "Netherlands";
 
       FIREWALL_OUTBOUND_SUBNETS = "192.168.0.0/16";
 
