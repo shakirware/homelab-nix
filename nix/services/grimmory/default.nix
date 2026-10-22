@@ -53,7 +53,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.grimmory-db = {
-    image = "lscr.io/linuxserver/mariadb:11.8.8@sha256:cb61ec331e80b2ad1c9c5837238eaec91a356bbd952d8a0f58f5054e0e79fdf5";
+    image = "lscr.io/linuxserver/mariadb:11.8.9@sha256:dfd0f601cedf95381781c1b9b27424c608a78ddd97faa484da678873240f65e6";
     autoStart = true;
 
     environment = {
