@@ -32,14 +32,18 @@
       "allowedVersions": "<13"
     },
     {
+      "description": "linuxserver arr images are pinned to version-X.Y.Z.BUILD tags",
       "matchPackageNames": [
         "lscr.io/linuxserver/prowlarr",
-        "lscr.io/linuxserver/qbittorrent",
         "lscr.io/linuxserver/radarr",
         "lscr.io/linuxserver/sonarr"
       ],
-      "extractVersion": "^version-(?<version>.*)$",
-      "versioning": "loose"
+      "versioning": "regex:^version-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)$"
+    },
+    {
+      "description": "qBittorrent tags carry the libtorrent line (version-5.3.0_v2.1.2); stay on the current line",
+      "matchPackageNames": ["lscr.io/linuxserver/qbittorrent"],
+      "versioning": "regex:^version-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:_v(?<compatibility>\\d+\\.\\d+)\\.\\d+)?(?:-r(?<build>\\d+))?$"
     }
   ]
 }
