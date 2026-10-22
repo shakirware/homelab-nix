@@ -18,7 +18,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.cleanuparr = {
-    image = "ghcr.io/cleanuparr/cleanuparr:2.10.5@sha256:c7cd53ad559a67147637de3d825f66ef6e6a5498490b73f49c6e4d72f13bed76";
+    image = "ghcr.io/cleanuparr/cleanuparr:2.10.12@sha256:d0212e4c66bd0522e23c5e5da5d3006bd5ff0e0de1e3ecfcf892e039d55721e2";
     autoStart = true;
 
     environment = {
