@@ -20,7 +20,7 @@ let
   secretsTemplateName = "home-assistant-secrets.yaml";
   secretsFile = config.sops.templates.${secretsTemplateName}.path;
 
-  homeAssistantImage = "ghcr.io/home-assistant/home-assistant:2026.9.0@sha256:372d991e58882a1d8c68c07e9aa3f3b509276e695355f73ccdb03baa70407293";
+  homeAssistantImage = "ghcr.io/home-assistant/home-assistant:2026.10.2@sha256:33afb0659d786213264c2211f8d91c5fe87461c56eba6a3a546eb05fc71e89f4";
 
   homeAssistantHost = "homeassistant.${config.homelab.baseDomain}";
   gwIp = config.homelab.ips.gw;
