@@ -170,6 +170,15 @@
                 - level: good
                   when: lt
                   value: 10
+    - Bazarr:
+        icon: mdi-subtitles
+        href: https://@BAZARR_HOST@
+        description: Subtitles for Sonarr and Radarr
+        siteMonitor: https://@BAZARR_HOST@
+        widget:
+          type: bazarr
+          url: http://@MEDIA_IP@:6767
+          key: {{HOMEPAGE_VAR_BAZARR_KEY}}
     - Prowlarr:
         icon: mdi-magnify-scan
         href: https://@PROWLARR_HOST@
