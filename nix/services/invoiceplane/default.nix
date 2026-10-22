@@ -150,7 +150,7 @@ in {
 
   virtualisation.oci-containers.containers.invoiceplane = {
     # Pin for reproducibility; move to newer tag after testing
-    image = "mhzawadi/invoiceplane:1.7.2.0@sha256:8562e55bfca019cc9e06db897551a60dd6497162d1a502c939e2333d9522af93";
+    image = "mhzawadi/invoiceplane:1.7.2.1@sha256:e1d7b0bd36f3d0c73fa513abe8d14fa3db04b4ebc665e7f2b718e5c72d6e1c9c";
     autoStart = true;
 
     environment = {
