@@ -32,6 +32,11 @@
       "allowedVersions": "<13"
     },
     {
+      "description": "Stay on Profilarr v1; v2 is a separate, incompatible image",
+      "matchPackageNames": ["santiagosayshey/profilarr"],
+      "allowedVersions": "<2"
+    },
+    {
       "description": "Standard Notes sidecars stay on the major lines its self-hosting compose file uses",
       "matchFileNames": ["nix/services/standardnotes/**"],
       "matchPackageNames": [
