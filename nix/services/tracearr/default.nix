@@ -187,4 +187,10 @@ in {
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ hostPort ];
 
+  # aardvark-dns on the gateway answers the containers' DNS (update checks,
+  # metadata lookups).  Matched by subnet: podmanN numbering isn't stable.
+  networking.firewall.extraInputRules = lib.mkAfter ''
+    ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept
+  '';
+
 }
