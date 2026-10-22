@@ -32,6 +32,7 @@ let
     audiobookshelf = "/healthcheck";
     sonarr = "/ping";
     radarr = "/ping";
+    bazarr = "/api/system/ping";
     prowlarr = "/ping";
     grimmory = "/api/v1/healthcheck";
     shelfmark = "/api/health";

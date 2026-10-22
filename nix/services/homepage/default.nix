@@ -30,6 +30,7 @@ let
   audiobookshelfHost = "audiobookshelf.${baseDomain}";
   sonarrHost = "sonarr.${baseDomain}";
   radarrHost = "radarr.${baseDomain}";
+  bazarrHost = "bazarr.${baseDomain}";
   prowlarrHost = "prowlarr.${baseDomain}";
   qbittorrentHost = "qbittorrent.${baseDomain}";
   iptvHost = "iptv.${baseDomain}";
@@ -79,6 +80,7 @@ let
 
     SONARR_HOST = sonarrHost;
     RADARR_HOST = radarrHost;
+    BAZARR_HOST = bazarrHost;
     PROWLARR_HOST = prowlarrHost;
     QBITTORRENT_HOST = qbittorrentHost;
     IPTV_HOST = iptvHost;

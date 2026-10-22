@@ -25,6 +25,7 @@ in {
     "profilarr.${base}" = ips.gw;
     "sonarr.${base}" = ips.gw;
     "radarr.${base}" = ips.gw;
+    "bazarr.${base}" = ips.gw;
     "prowlarr.${base}" = ips.gw;
     "qbittorrent.${base}" = ips.gw;
     "iptv.${base}" = ips.gw;
@@ -97,6 +98,10 @@ in {
     {
       host = "radarr.${base}";
       upstream = "${ips.media}:7878";
+    }
+    {
+      host = "bazarr.${base}";
+      upstream = "${ips.media}:6767";
     }
     {
       host = "prowlarr.${base}";

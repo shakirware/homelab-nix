@@ -13,6 +13,7 @@
 
     ../../services/sonarr
     ../../services/radarr
+    ../../services/bazarr
     ../../services/prowlarr
     ../../services/flaresolverr
 
