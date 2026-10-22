@@ -18,6 +18,12 @@ let
   mediaContainers = lib.attrNames (lib.filterAttrs
     (_: c: builtins.any seesMount c.volumes)
     config.virtualisation.oci-containers.containers);
+
+  # "container dest" pairs for those volumes, for the stale-handle check.
+  mediaBinds = lib.concatLists (lib.mapAttrsToList (name: c:
+    map (v: "${name} ${builtins.elemAt (lib.splitString ":" v) 1}")
+    (builtins.filter seesMount c.volumes))
+    config.virtualisation.oci-containers.containers);
 in {
   environment.systemPackages = [ pkgs.nfs-utils ];
 
@@ -69,27 +75,48 @@ in {
         };
       };
 
-      # The export is a mergerfs (FUSE) pool, so restarting mergerfs on
-      # vm-storage (e.g. a reboot) invalidates every handle clients hold and
-      # the mount answers ESTALE until it is remounted. Restarting the mount
-      # also restarts the containers that require it, which re-binds their
-      # volumes. Only ESTALE triggers this: a hung stat means the server is
-      # down, and a remount would not help.
+      # The export is a mergerfs (FUSE) pool, so restarting mergerfs or NFS on
+      # vm-storage can leave handles stale: on the host mount (seen after its
+      # 26.05 reboot) or only inside containers' bind mounts of subdirectories
+      # (seen after an nfs-server restart, while the host mount was fine).
+      # A stale host mount is remounted, which also restarts the containers
+      # that require it; a stale bind restarts just that container. Only
+      # ESTALE triggers this: a hung stat means the server is down, and a
+      # remount would not help.
       media-mount-stale = {
-        description = "Remount the NFS media mount if its handles went stale";
-        path = [ pkgs.coreutils pkgs.gnugrep pkgs.systemd ];
+        description = "Recover the NFS media mount and container binds from stale handles";
+        path = [ pkgs.coreutils pkgs.findutils pkgs.gnugrep pkgs.systemd pkgs.podman ];
         serviceConfig.Type = "oneshot";
         # /proc/self/mounts, not findmnt/mountpoint: those stat the path and
-        # fail on the very ESTALE this is looking for.
+        # fail on the very ESTALE this is looking for. stale() reads one entry
+        # because a stale bind can still answer stat from cache.
         script = ''
+          stale() {
+            out=$(timeout 10 find "$1" -mindepth 1 -maxdepth 1 -print -quit 2>&1 >/dev/null) && return 1
+            case "$out" in *"Stale file handle"*) return 0 ;; esac
+            return 1
+          }
+
           grep -q " ${mountPoint} nfs4 " /proc/self/mounts || exit 0
-          out=$(timeout 10 stat -c %i ${mountPoint} 2>&1) && exit 0
-          case "$out" in
-            *"Stale file handle"*)
-              echo "stale NFS handle on ${mountPoint}; restarting ${mountUnit}"
-              systemctl restart ${mountUnit}
-              ;;
-          esac
+          if stale ${mountPoint}; then
+            echo "stale NFS handle on ${mountPoint}; restarting ${mountUnit}"
+            systemctl restart ${mountUnit}
+            exit 0
+          fi
+
+          restarted=" "
+          while read -r c dest; do
+            case "$restarted" in *" $c "*) continue ;; esac
+            pid=$(podman inspect --format '{{.State.Pid}}' "$c" 2>/dev/null || echo 0)
+            [ "''${pid:-0}" -gt 0 ] || continue
+            if stale "/proc/$pid/root$dest"; then
+              echo "stale NFS handle on $dest in $c; restarting podman-$c"
+              systemctl restart "podman-$c.service"
+              restarted="$restarted$c "
+            fi
+          done <<'EOF'
+          ${lib.concatStringsSep "\n" mediaBinds}
+          EOF
         '';
       };
     };
