@@ -29,6 +29,9 @@ in {
   systemd.services.nfs-server.reloadTriggers = [ exports ];
 
   systemd.services.nfs-server.unitConfig.RequiresMountsFor = [ "/srv/media" ];
+  # Restarting the pool stops nfsd through the requirement above; this brings
+  # it back when the pool is mounted again, instead of leaving exports down.
+  systemd.services.nfs-server.wantedBy = [ "srv-media.mount" ];
   systemd.services.nfs-server.wants = [ "network-online.target" ];
   systemd.services.nfs-server.requires = [ "media-library-dirs.service" ];
   systemd.services.nfs-server.after =
