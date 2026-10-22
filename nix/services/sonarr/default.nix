@@ -8,7 +8,7 @@ let
   bindIp = "0.0.0.0";
 in {
   virtualisation.oci-containers.containers.sonarr = {
-    image = "lscr.io/linuxserver/sonarr:version-4.0.17.2952@sha256:02bc962946fef994e67a38152446df25c10a52f8583aefeeb6467f9dd44cab99";
+    image = "lscr.io/linuxserver/sonarr:version-4.0.20.3014@sha256:889dcc58c6aea859033985894b519b2e6b1e55d92527ed123f9f52e42ae7c97b";
     autoStart = true;
 
     environment = {
