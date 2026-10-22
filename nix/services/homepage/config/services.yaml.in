@@ -8,6 +8,8 @@
           type: jellyfin
           url: http://@MEDIA_IP@:8096
           key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
+          # Jellyfin 12 dropped /emby routes and ?api_key=; v2 uses the Authorization header.
+          version: 2
           showEpisodeNumber: true
           enableNowPlaying: true
           expandOneStreamToTwoRows: false
@@ -31,6 +33,20 @@
         href: https://@IPTV_HOST@
         description: Tuliprox IPTV (Xtream)
         siteMonitor: https://@IPTV_HOST@
+        widget:
+          type: customapi
+          url: http://@MEDIA_IP@:8901/api/v1/status
+          refreshInterval: 30000
+          mappings:
+            - field: active_users
+              label: Users
+              format: number
+            - field: active_user_connections
+              label: Streams
+              format: number
+            - field: version
+              label: Version
+              format: text
     - neTV:
         icon: mdi-television-classic
         href: https://@NETV_HOST@
