@@ -18,11 +18,20 @@
         href: https://@GRIMMORY_HOST@
         description: Ebook library and reader
         siteMonitor: https://@GRIMMORY_HOST@
+        widget:
+          type: booklore
+          url: http://@MEDIA_IP@:6060
+          username: {{HOMEPAGE_VAR_GRIMMORY_USER}}
+          password: {{HOMEPAGE_VAR_GRIMMORY_PASS}}
     - Audiobookshelf:
         icon: mdi-book-music
         href: https://@AUDIOBOOKSHELF_HOST@
         description: Audiobook library and player
         siteMonitor: https://@AUDIOBOOKSHELF_HOST@
+        widget:
+          type: audiobookshelf
+          url: http://@MEDIA_IP@:13378
+          key: {{HOMEPAGE_VAR_AUDIOBOOKSHELF_KEY}}
     - Pinchflat:
         icon: mdi-youtube
         href: https://@PINCHFLAT_HOST@
@@ -226,6 +235,15 @@
         href: https://@CLEANUPARR_HOST@
         description: Arr queue cleanup automation
         siteMonitor: https://@CLEANUPARR_HOST@
+    - Gluetun:
+        icon: mdi-vpn
+        description: Mullvad VPN for qBittorrent, Prowlarr and Tuliprox
+        widget:
+          type: gluetun
+          url: http://@MEDIA_IP@:8001
+          key: {{HOMEPAGE_VAR_GLUETUN_KEY}}
+          version: 2
+          fields: ["public_ip", "region", "country"]
 
 - Infrastructure:
     - Proxmox:
@@ -272,11 +290,25 @@
         href: https://@HOME_ASSISTANT_HOST@
         description: Smart home and Ring AI summaries
         siteMonitor: https://@HOME_ASSISTANT_HOST@
+        widget:
+          type: homeassistant
+          url: http://@APPS_IP@:8123
+          key: {{HOMEPAGE_VAR_HOME_ASSISTANT_KEY}}
+          fields: ["people_home", "lights_on", "switches_on"]
     - Obsidian Sync (CouchDB):
         icon: mdi-notebook
         href: https://@OBSIDIAN_SYNC_HOST@/_utils/
         description: CouchDB UI
         siteMonitor: https://@OBSIDIAN_SYNC_HOST@
+    - Tailscale:
+        icon: mdi-vpn
+        href: https://login.tailscale.com/admin/machines
+        description: Subnet router and exit node (vm-gw)
+        widget:
+          type: tailscale
+          deviceid: {{HOMEPAGE_VAR_TAILSCALE_DEVICE_ID}}
+          key: {{HOMEPAGE_VAR_TAILSCALE_KEY}}
+          fields: ["address", "last_seen", "expires", "update_available"]
 
 - Monitoring:
     - Grafana:
@@ -305,6 +337,12 @@
         href: https://@TRACEARR_HOST@
         description: Media activity & tracing
         siteMonitor: https://@TRACEARR_HOST@
+        widget:
+          type: tracearr
+          url: http://@MEDIA_IP@:3003
+          key: {{HOMEPAGE_VAR_TRACEARR_KEY}}
+          view: summary
+          fields: ["streams", "transcodes", "directplay", "bitrate"]
 
 - Personal:
     - Yamtrack:
