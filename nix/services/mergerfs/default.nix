@@ -82,6 +82,7 @@ in {
     wantedBy = [ "multi-user.target" ];
     after = [ "srv-diskA.mount" "srv-diskB.mount" "network-online.target" ];
     requires = [ "srv-diskA.mount" "srv-diskB.mount" ];
+    wants = [ "network-online.target" ];
   }];
 
 }
