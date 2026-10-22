@@ -18,6 +18,10 @@ in {
       # port, which Sonarr, Radarr, ReadMeABook, Shelfmark and Homepage use.
       PROWLARR__SERVER__ALLOWEDHOSTS =
         "prowlarr.${config.homelab.baseDomain},${config.homelab.ips.media}";
+      # FlareSolverr's cf_clearance cookie only works from the IP that solved
+      # the challenge, which is gluetun's IPv4 exit; over the tunnel's IPv6
+      # exit Cloudflare rejects it.
+      DOTNET_SYSTEM_NET_DISABLEIPV6 = "1";
     };
 
     volumes = [ "/srv/appdata/prowlarr:/config" ];
