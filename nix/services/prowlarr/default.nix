@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 let
   tz = "Europe/London";
@@ -13,6 +13,11 @@ in {
       PUID = puid;
       PGID = pgid;
       TZ = tz;
+      # Host headers Prowlarr answers to (loopback and its own hostname are
+      # always allowed): Caddy, and vm-media's IP via gluetun's published
+      # port, which Sonarr, Radarr, ReadMeABook, Shelfmark and Homepage use.
+      PROWLARR__SERVER__ALLOWEDHOSTS =
+        "prowlarr.${config.homelab.baseDomain},${config.homelab.ips.media}";
     };
 
     volumes = [ "/srv/appdata/prowlarr:/config" ];
