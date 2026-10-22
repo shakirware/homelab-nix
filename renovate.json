@@ -27,6 +27,11 @@
 
   "packageRules": [
     {
+      "description": "Keep InvoicePlane on the MariaDB 12.3 LTS line; 13.x is short-term",
+      "matchPackageNames": ["mariadb"],
+      "allowedVersions": "<13"
+    },
+    {
       "matchPackageNames": [
         "lscr.io/linuxserver/prowlarr",
         "lscr.io/linuxserver/qbittorrent",
