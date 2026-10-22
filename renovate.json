@@ -18,7 +18,7 @@
       "description": "Update digest-pinned container images declared in Nix modules",
       "managerFilePatterns": ["/(^|/)nix\\/.*\\.nix$/"],
       "matchStrings": [
-        "image\\s*=\\s*\"(?<depName>[^\"@]+):(?<currentValue>[^\"\\s@]+)@(?<currentDigest>sha256:[a-f0-9]{64})\""
+        "\"(?<depName>[a-z0-9][a-z0-9._/-]*):(?<currentValue>[^\"\\s@]+)@(?<currentDigest>sha256:[a-f0-9]{64})\""
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
@@ -32,6 +32,17 @@
       "allowedVersions": "<13"
     },
     {
+      "description": "Standard Notes sidecars stay on the major lines its self-hosting compose file uses",
+      "matchFileNames": ["nix/services/standardnotes/**"],
+      "matchPackageNames": [
+        "docker.io/library/mysql",
+        "docker.io/library/redis",
+        "docker.io/localstack/localstack"
+      ],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
       "description": "linuxserver arr images are pinned to version-X.Y.Z.BUILD tags",
       "matchPackageNames": [
         "lscr.io/linuxserver/prowlarr",
@@ -39,6 +50,11 @@
         "lscr.io/linuxserver/sonarr"
       ],
       "versioning": "regex:^version-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)$"
+    },
+    {
+      "description": "linuxserver Jellyfin only publishes 12.x as X.Y[.Z]ubuNNNN-lsN tags",
+      "matchPackageNames": ["lscr.io/linuxserver/jellyfin"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?ubu(?<compatibility>\\d+)-ls(?<build>\\d+)$"
     },
     {
       "description": "qBittorrent tags carry the libtorrent line (version-5.3.0_v2.1.2); stay on the current line",
