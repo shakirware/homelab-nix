@@ -68,7 +68,36 @@ in {
           ExecStart = "${pkgs.systemd}/bin/systemctl start --no-block ${mountUnit}";
         };
       };
+
+      # The export is a mergerfs (FUSE) pool, so restarting mergerfs on
+      # vm-storage (e.g. a reboot) invalidates every handle clients hold and
+      # the mount answers ESTALE until it is remounted. Restarting the mount
+      # also restarts the containers that require it, which re-binds their
+      # volumes. Only ESTALE triggers this: a hung stat means the server is
+      # down, and a remount would not help.
+      media-mount-stale = {
+        description = "Remount the NFS media mount if its handles went stale";
+        path = [ pkgs.coreutils pkgs.gnugrep pkgs.systemd ];
+        serviceConfig.Type = "oneshot";
+        # /proc/self/mounts, not findmnt/mountpoint: those stat the path and
+        # fail on the very ESTALE this is looking for.
+        script = ''
+          grep -q " ${mountPoint} nfs4 " /proc/self/mounts || exit 0
+          out=$(timeout 10 stat -c %i ${mountPoint} 2>&1) && exit 0
+          case "$out" in
+            *"Stale file handle"*)
+              echo "stale NFS handle on ${mountPoint}; restarting ${mountUnit}"
+              systemctl restart ${mountUnit}
+              ;;
+          esac
+        '';
+      };
     };
+
+  systemd.timers.media-mount-stale = {
+    wantedBy = [ "timers.target" ];
+    timerConfig.OnCalendar = "*:1/2";
+  };
 
   # Recovers from storage outages longer than the mount's own retry window.
   # OnCalendar rather than OnUnitActiveSec: runs skipped by the condition
