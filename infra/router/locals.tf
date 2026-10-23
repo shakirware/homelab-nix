@@ -20,7 +20,7 @@ locals {
     ports     = ["wifi1", "wifi2", "ether4"] # the IoT SSIDs and the Reolink hub
   }
 
-  # Internet-only network for a future self-hosted CI runner. Static
+  # Internet-only network for the self-hosted CI runners. Static
   # addressing: no DHCP, DNS or NTP from the router.
   ci = {
     vlan_id   = 30
@@ -28,6 +28,16 @@ locals {
     gateway   = "192.168.30.1"
     cidr      = "192.168.30.0/24"
     host      = "192.168.30.10" # vm-ci
+  }
+
+  # Internet-only network for the release runner, kept apart from CI so a
+  # CI job cannot reach it even on the same L2. Static addressing, as for CI.
+  release = {
+    vlan_id   = 31
+    interface = "vlan31-release"
+    gateway   = "192.168.31.1"
+    cidr      = "192.168.31.0/24"
+    host      = "192.168.31.10" # vm-release
   }
 
   # false: unmatched traffic from TRUSTED and SERVERS is only logged (FW-OBS-*).
