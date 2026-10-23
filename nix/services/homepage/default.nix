@@ -165,16 +165,14 @@ in {
 
     environmentFiles = [ config.sops.templates."homepage".path ];
 
-    volumes = [ "${cfgDir}:/app/config" "/srv:/srv:ro,rslave" ];
+    volumes = [ "${cfgDir}:/app/config" ];
 
     ports = [ "${listenHost}:${toString listenPort}:3000" ];
   };
 
   systemd.services.podman-homepage = {
-    after =
-      [ "homepage-config.service" "network-online.target" "srv-media.mount" ];
+    after = [ "homepage-config.service" "network-online.target" ];
     requires = [ "homepage-config.service" ];
-    unitConfig.RequiresMountsFor = [ "/srv/media" ];
     restartTriggers =
       [ settingsYaml widgetsRendered servicesRendered customCss ];
   };
