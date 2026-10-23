@@ -4,7 +4,7 @@
 
 Eight role-based NixOS VMs run networking, media, storage, home automation, personal applications, observability, CI and releases. Host configuration lives in a single Nix flake, with Podman and native NixOS services, sops-nix for secrets and Renovate for dependency updates.
 
-![Homepage dashboard showing self-hosted services and status widgets](docs/assets/homepage.webp)
+![Homepage dashboard showing media, requests and upcoming releases](docs/assets/homepage.webp)
 
 ## Architecture
 
