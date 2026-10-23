@@ -107,6 +107,13 @@ let
             labels:
               host: "vm-ci"
 
+      # Likewise for the release runner (VLAN 31, scraped by address).
+      - job_name: "node-release"
+        static_configs:
+          - targets: [ "${ips.release}:${toString nodePort}" ]
+            labels:
+              host: "vm-release"
+
       - job_name: "node-proxmox"
         static_configs:
           - targets: [ "${ips.proxmox}:${toString nodePort}" ]
