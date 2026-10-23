@@ -153,6 +153,36 @@ vms = {
     }]
   }
 
+  # Release runner: builds, publishes and deploys merged main for the release
+  # repository. Same low CPU weight as vm-ci; it is idle between releases.
+  vm-release = {
+    vmid            = 108
+    cores           = 3
+    memory          = 5120
+    disk_size_gb    = 40
+    cpu_units       = 50
+    machine         = "q35"
+    boot_order      = ["virtio0"]
+    keyboard_layout = "en-us"
+    scsi_hardware   = "virtio-scsi-single"
+    serial_console  = false
+    cloud_init_user = "shakir"
+    cloud_init_network = {
+      address = "192.168.31.10/24"
+      gateway = "192.168.31.1"
+      dns     = ["1.1.1.1", "9.9.9.9"]
+    }
+    # Hands freed blocks back to the thin pool (fstrim in nix/hosts/vm-release).
+    root_discard = "on"
+    # No startup order, for the same reason as vm-ci.
+    extra_disks = []
+    nics = [{
+      bridge  = "vmbr0"
+      mac     = "bc:24:11:5c:b6:a1"
+      vlan_id = 31
+    }]
+  }
+
   vm-monitoring = {
     vmid           = 106
     cores          = 2
