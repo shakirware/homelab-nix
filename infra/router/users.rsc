@@ -25,3 +25,9 @@
 #
 # Undo: /user set admin disabled=no (as shakir), or log in as admin and
 # /user remove shakir.
+#
+# Homepage's mikrotik widget (vm-gw) reads /rest with a read-only account bound
+# to vm-gw's address. Its password is HOMEPAGE_VAR_MIKROTIK_PASS in
+# secrets/vm-gw.yaml. REST also needs the api policy (still read-only):
+#      /user group add name=homepage policy=read,rest-api,api comment="Homepage widget"
+#      /user add name=homepage group=homepage address=192.168.20.2/32 password=<secret>

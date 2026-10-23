@@ -349,6 +349,14 @@
         href: https://@ROUTER_HOST@
         description: Gateway admin
         siteMonitor: https://@ROUTER_HOST@
+        widget:
+          type: mikrotik
+          # REST over plain HTTP: the router's www service and firewall admit only
+          # vm-gw on port 80, and the homepage user is read-only, bound to vm-gw.
+          url: http://@ROUTER_IP@
+          username: homepage
+          password: {{HOMEPAGE_VAR_MIKROTIK_PASS}}
+          fields: ["uptime", "cpuLoad", "memoryUsed", "numberOfLeases"]
     - Home Assistant:
         icon: mdi-home-assistant
         href: https://@HOME_ASSISTANT_HOST@
