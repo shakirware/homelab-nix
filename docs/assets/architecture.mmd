@@ -8,7 +8,7 @@ flowchart TB
         remote["Remote clients<br/>Tailscale"]
     end
 
-    router["MikroTik hAP ax²<br/>VLANs 1 / 20 / 30 / 40 · Default-deny firewall"]
+    router["MikroTik hAP ax²<br/>VLANs 1 / 20 / 30 / 31 / 40 · Default-deny firewall"]
 
     subgraph pve["Proxmox VE · Single physical host"]
         direction TB
@@ -29,6 +29,7 @@ flowchart TB
         end
 
         ci["vm-ci<br/>GitHub Actions runners<br/>Isolated VLAN 30"]
+        release["vm-release<br/>Release runner<br/>Isolated VLAN 31"]
     end
 
     external["External heartbeat monitor"]
@@ -49,3 +50,4 @@ flowchart TB
 
     monitoring -.->|"Heartbeat"| external
     ci -.->|"Internet only"| github
+    release -.->|"Internet only"| github

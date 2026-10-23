@@ -1,7 +1,7 @@
 # Network
 
-A MikroTik hAP ax² routes four network zones: trusted devices, servers, CI and
-IoT. RouterOS provides VLANs, Wi-Fi and a default-deny IPv4 firewall, while
+A MikroTik hAP ax² routes five network zones: trusted devices, servers, CI,
+releases and IoT. RouterOS provides VLANs, Wi-Fi and a default-deny IPv4 firewall, while
 `vm-gw` provides DNS, reverse proxying and remote access. Router configuration
 is managed primarily through [OpenTofu](../infra/router); guest services are
 configured with NixOS and deployed using Colmena.
@@ -16,11 +16,12 @@ behind them.
 | **TRUSTED** | 1 (untagged) | `192.168.1.0/24` | Personal devices and Proxmox management |
 | **SERVERS** | 20 | `192.168.20.0/24` | NixOS VMs and server-side services |
 | **CI** | 30 | `192.168.30.0/24` | Isolated self-hosted GitHub Actions runners |
+| **RELEASE** | 31 | `192.168.31.0/24` | The release runner, which holds production deploy access |
 | **IOT** | 40 | `192.168.40.0/24` | TVs, smart-home devices and the Reolink hub |
 | **WAN** | — | PPPoE | Internet uplink |
 
-The Proxmox uplink (`ether5`) carries VLAN 1 untagged and VLANs 20 and 30
-tagged; VLAN 40 does not extend to Proxmox. Keeping trusted management on the
+The Proxmox uplink (`ether5`) carries VLAN 1 untagged and VLANs 20, 30 and
+31 tagged; VLAN 40 does not extend to Proxmox. Keeping trusted management on the
 untagged VLAN provides a simpler recovery path. The Proxmox management and
 server-side interfaces use separate addresses with different routing roles.
 
@@ -28,11 +29,11 @@ IPv6 forwarding remains disabled pending a separate firewall policy.
 
 ## Firewall policy
 
-RouterOS interface lists (`TRUSTED`, `SERVERS`, `IOT`, `CI`) define security
+RouterOS interface lists (`TRUSTED`, `SERVERS`, `IOT`, `CI`, `RELEASE`) define security
 zones. Established and related connections are allowed, but **new connections
 are denied unless explicitly permitted**. The policy is defined in
-[`firewall.tf`](../infra/router/firewall.tf). Neither IOT nor CI belongs to the
-RouterOS `LAN` interface list.
+[`firewall.tf`](../infra/router/firewall.tf). None of IOT, CI and RELEASE belongs to
+the RouterOS `LAN` interface list.
 
 | Source → destination | Permitted new connections |
 | --- | --- |
@@ -47,6 +48,9 @@ RouterOS `LAN` interface list.
 | CI → internet | Outbound access, excluding private and CGNAT address ranges |
 | ADMIN → CI | SSH to `vm-ci` |
 | `vm-monitoring` → CI | Node Exporter metrics (TCP 9100) |
+| RELEASE → internet | Outbound access, excluding private and CGNAT address ranges |
+| ADMIN → RELEASE | SSH to `vm-release` |
+| `vm-monitoring` → RELEASE | Node Exporter metrics (TCP 9100) |
 
 Direct service access is limited to the ports the clients actually need:
 
@@ -97,6 +101,19 @@ ephemeral GitHub Actions runners in Ubuntu containers using rootless Docker.
 Runner workspaces and test environments are isolated, and registration
 credentials are SOPS-encrypted and not exposed to CI jobs. CI logs stay local
 because the isolated VLAN cannot reach Loki.
+
+### Release network
+
+VLAN 31 holds `vm-release`, the only machine with production deploy access.
+It has the same policy as CI (internet only, SSH from the administrative
+workstation, metrics from `vm-monitoring`) under its own
+[`rel31:` rules](../infra/router/release.tf), and the two VLANs cannot reach
+each other.
+
+Its runner is registered to a separate private release repository rather
+than the application repository, so a pull request cannot schedule a job on it:
+GitHub only hands the runner jobs from that repository. Removing the VLAN uses
+[`rollback/rel31.rsc`](../infra/router/rollback/rel31.rsc).
 
 ## DNS and shared services
 
@@ -162,6 +179,7 @@ Blackbox Exporter independently check infrastructure and service health.
 | IoT denies | Grafana Explore, router syslog with `FW-IOT` |
 | Default-deny drops | Grafana Explore, router syslog with `FW-DROP` |
 | CI isolation drops | Router syslog with `FW-CI-*` |
+| Release isolation drops | Router syslog with `FW-REL-*` |
 | Service health | Prometheus targets, Blackbox probes and application logs |
 
 When troubleshooting a blocked connection, identify the source VLAN and
