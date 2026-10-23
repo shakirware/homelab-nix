@@ -78,11 +78,13 @@ data "routeros_ipv6_firewall" "first" {
   }
 }
 
-# Puts the CI rules just above the anchor, ahead of every defconf accept.
+# Puts the CI and release rules just above the anchor, ahead of every
+# defconf accept.
 resource "routeros_move_items" "ipv6_filter" {
   resource_path = "/ipv6/firewall/filter"
   sequence = concat(
     [for k in ["input", "from_ci", "to_ci"] : routeros_ipv6_firewall_filter.ci[k].id],
+    [for k in ["input", "from_release", "to_release"] : routeros_ipv6_firewall_filter.release[k].id],
     [data.routeros_ipv6_firewall.first.rules[0].id],
   )
 }
