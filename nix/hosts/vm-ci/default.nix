@@ -8,6 +8,18 @@ let
 in {
   imports = [ ../../profiles/base ../../services/ci-runner ];
 
+  # Untrusted tier: pull requests and branches, no secrets beyond the runner PAT.
+  homelab.ciRunner = {
+    repo = "shakirware/locum-shifts-aggregator";
+    labels = "vm-ci";
+    # Jobs barely use more than 2 cores each, so the 4 vCPUs pay off as
+    # parallel runners: 3 brought the benchmark workflow from 387s to 172s.
+    count = 3;
+    namePrefix = "vm-ci";
+    memoryHigh = "6G";
+    memoryMax = "6800M";
+  };
+
   # VLAN 30 is internet only: no AdGuard, no Loki, no IPv6 (infra/router/ci.tf).
   systemd.network.networks."10-lan" = {
     matchConfig.MACAddress = "bc:24:11:c8:de:fa";
