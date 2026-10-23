@@ -147,7 +147,7 @@ in {
     };
 
     tracearr = {
-      image = "ghcr.io/connorgallopo/tracearr:3.0.0@sha256:8fd7619cd0b71f5c977273ef74899893322b9e54604c13f48304f3331170e2f2";
+      image = "ghcr.io/connorgallopo/tracearr:3.1.1@sha256:d0fe66480953c51da9bf82c3909799e80a4d24165962c747e756be31fcd0fb8f";
       autoStart = true;
 
       environmentFiles = [ config.sops.templates.${envName}.path ];
