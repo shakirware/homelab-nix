@@ -53,3 +53,11 @@ creation_rules:
           - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
           - age1gar7gp50kdg2wr3hdk74k39y4lf4eza5h96hh5vazz26nnxd6auqud4hjn
           - age1w7kmsznunk39yzeau50hdk9e3erj32q8a7ct7nrr50yh0kzvu49skswpa2
+
+  - path_regex: secrets/vm-release\.yaml$
+    key_groups:
+      - age:
+          - age1jdx07dx6pdnc0zywgu29383e4mwjqd558xvky68f8h4fp6uw3d7shdz75j
+          - age12ad822t65y5svswfq09kjrk57z6eh8p3hzn0nhzaw2kpsfw5vy9qnnhntt
+          - age1gar7gp50kdg2wr3hdk74k39y4lf4eza5h96hh5vazz26nnxd6auqud4hjn
+          - age1tsq3ca0zwspttqgzvcy9jhaheuaewlk5llvpksga3yly7rwkf5hsgzer56

@@ -24,5 +24,9 @@
     # VLAN 30: internet only (infra/router/ci.tf).
     router_vlan30 = "192.168.30.1";
     ci = "192.168.30.10";
+
+    # VLAN 31: internet only, release runner (infra/router/release.tf).
+    router_vlan31 = "192.168.31.1";
+    release = "192.168.31.10";
   };
 }

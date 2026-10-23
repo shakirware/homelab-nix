@@ -61,6 +61,7 @@
         vm-monitoring =
           mkHost "vm-monitoring" ./nix/hosts/vm-monitoring/default.nix;
         vm-ci = mkHost "vm-ci" ./nix/hosts/vm-ci/default.nix;
+        vm-release = mkHost "vm-release" ./nix/hosts/vm-release/default.nix;
       };
 
       packages.${system} = {
@@ -142,6 +143,14 @@
           imports = [
             { networking.hostName = "vm-ci"; }
             ./nix/hosts/vm-ci/default.nix
+          ];
+        };
+
+        vm-release = {
+          deployment.targetHost = "vm-release";
+          imports = [
+            { networking.hostName = "vm-release"; }
+            ./nix/hosts/vm-release/default.nix
           ];
         };
       };
