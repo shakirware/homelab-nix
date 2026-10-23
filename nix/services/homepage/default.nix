@@ -52,6 +52,7 @@ let
   standardnotesHost = "notes.${baseDomain}";
   grafanaHost = "grafana.${baseDomain}";
   prometheusHost = "prometheus.${baseDomain}";
+  alertmanagerHost = "alertmanager.${baseDomain}";
 
   settingsYaml = ./config/settings.yaml;
   widgetsTpl = ./config/widgets.yaml.in;
@@ -104,6 +105,7 @@ let
     STANDARDNOTES_HOST = standardnotesHost;
     GRAFANA_HOST = grafanaHost;
     PROMETHEUS_HOST = prometheusHost;
+    ALERTMANAGER_HOST = alertmanagerHost;
   };
 
   keys = builtins.attrNames vars;

@@ -26,6 +26,10 @@ layout:
     tab: Home
     style: column
 
+  Upcoming:
+    tab: Home
+    style: column
+
   Infrastructure:
     tab: Home
     style: column

@@ -10,6 +10,7 @@
           key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
           # Jellyfin 12 dropped /emby routes and ?api_key=; v2 uses the Authorization header.
           version: 2
+          enableBlocks: true
           showEpisodeNumber: true
           enableNowPlaying: true
           expandOneStreamToTwoRows: false
@@ -117,7 +118,7 @@
           type: sonarr
           url: http://@MEDIA_IP@:8989
           key: {{HOMEPAGE_VAR_SONARR_KEY}}
-          enableQueue: false
+          enableQueue: true
           fields: ["wanted", "queued", "series"]
           highlight:
             queued:
@@ -254,6 +255,30 @@
           version: 2
           fields: ["public_ip", "region", "country"]
 
+- Upcoming:
+    - Calendar:
+        icon: mdi-calendar
+        widget:
+          type: calendar
+          view: agenda
+          maxEvents: 10
+          showTime: true
+          firstDayInWeek: monday
+          timezone: Europe/London
+          integrations:
+            - type: sonarr
+              service_group: Automation
+              service_name: Sonarr
+              color: teal
+              params:
+                unmonitored: false
+            - type: radarr
+              service_group: Automation
+              service_name: Radarr
+              color: amber
+              params:
+                unmonitored: false
+
 - Infrastructure:
     - Proxmox:
         icon: mdi-server
@@ -266,6 +291,36 @@
           username: {{HOMEPAGE_VAR_PROXMOX_TOKEN}}
           password: {{HOMEPAGE_VAR_PROXMOX_SECRET}}
           node: pve
+    - Storage:
+        icon: mdi-harddisk
+        href: https://@GRAFANA_HOST@
+        description: Disk usage per drive (mergerfs has no parity)
+        widget:
+          type: prometheusmetric
+          url: http://@MONITORING_IP@:9090
+          refreshInterval: 300000
+          metrics:
+            - label: Disk A
+              query: 100 * (1 - node_filesystem_avail_bytes{job="node",instance="storage.@BASE_DOMAIN@:9100",mountpoint="/srv/diskA"} / node_filesystem_size_bytes{job="node",instance="storage.@BASE_DOMAIN@:9100",mountpoint="/srv/diskA"})
+              format:
+                type: percent
+                options:
+                  maximumFractionDigits: 1
+            - label: Disk B
+              query: 100 * (1 - node_filesystem_avail_bytes{job="node",instance="storage.@BASE_DOMAIN@:9100",mountpoint="/srv/diskB"} / node_filesystem_size_bytes{job="node",instance="storage.@BASE_DOMAIN@:9100",mountpoint="/srv/diskB"})
+              format:
+                type: percent
+                options:
+                  maximumFractionDigits: 1
+            - label: Media free
+              query: node_filesystem_avail_bytes{job="node",instance="storage.@BASE_DOMAIN@:9100",mountpoint="/srv/media"}
+              format:
+                type: bytes
+            - label: Downloads free
+              query: node_filesystem_avail_bytes{job="node",instance="media.@BASE_DOMAIN@:9100",mountpoint="/srv/downloads"}
+              format:
+                type: bytes
+
     - AdGuard:
         icon: mdi-shield-check
         href: https://@ADGUARD_HOST@
@@ -341,6 +396,24 @@
           type: prometheus
           url: http://@MONITORING_IP@:9090
           fields: ["targets_up", "targets_down", "targets_total"]
+    - Alertmanager:
+        icon: mdi-bell-alert
+        href: https://@ALERTMANAGER_HOST@
+        description: Prometheus alerts (Watchdog excluded)
+        siteMonitor: https://@ALERTMANAGER_HOST@
+        widget:
+          type: prometheusmetric
+          url: http://@MONITORING_IP@:9090
+          refreshInterval: 60000
+          metrics:
+            - label: Firing
+              query: count(ALERTS{alertstate="firing",alertname!="Watchdog"}) or vector(0)
+              format:
+                type: number
+            - label: Pending
+              query: count(ALERTS{alertstate="pending"}) or vector(0)
+              format:
+                type: number
     - Tracearr:
         icon: mdi-chart-timeline-variant
         href: https://@TRACEARR_HOST@
