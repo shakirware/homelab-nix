@@ -33,7 +33,7 @@ let
 
   serverImage =
     "docker.io/standardnotes/server:0d82819cba9694bc9fb5a3fa53e2dbeda05d1242@sha256:6c1532b31dabf5b3e644fb2a458d3795f28138ac1ac5c4505a9fa1cea10524bb";
-  webImage = "docker.io/standardnotes/web:latest@sha256:46bf76e09592bfd4a191fbe3e3204a0c1afff74c97d0c40c1bc32f38811caea3";
+  webImage = "docker.io/standardnotes/web:latest@sha256:23b2ab15482a3d9fe6d3059fe148e0523d4661131f1551790fc3342e5cbe7587";
 
   localstackImage = "docker.io/localstack/localstack:3.8@sha256:b279c01f4cfb8f985a482e4014cabc1e2697b9d7a6c8c8db2e40f4d9f93687c7";
   mysqlImage = "docker.io/library/mysql:8@sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69";
