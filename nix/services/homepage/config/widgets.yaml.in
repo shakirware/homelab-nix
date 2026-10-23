@@ -6,7 +6,7 @@
     text: Homelab
 
 - resources:
-    label: Media Server
+    label: Gateway (vm-gw)
     cpu: true
     memory: true
 
@@ -18,8 +18,9 @@
 
 - openmeteo:
     label: London
-    latitude: 52.629285
-    longitude: 1.29849
+    # Coordinates come from SOPS (secrets/vm-gw.yaml); the repository is public.
+    latitude: {{HOMEPAGE_VAR_WEATHER_LAT}}
+    longitude: {{HOMEPAGE_VAR_WEATHER_LON}}
     timezone: Europe/London
     units: metric
     cache: 5
