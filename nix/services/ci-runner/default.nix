@@ -1,6 +1,6 @@
 { lib, pkgs, config, ... }:
 
-# Ephemeral GitHub Actions runners for one repository: each takes one job,
+# Ephemeral GitHub Actions runners for one repository (homelab.ciRunner): each takes one job,
 # deregisters and exits, and systemd starts a fresh one with an empty work
 # directory. Jobs run in an Ubuntu container (what setup-python, setup-node
 # and the other actions expect) under rootless Docker owned by the "ci" user,
@@ -9,16 +9,14 @@
 # ExecStartPre exchanges it for a one-hour registration token.
 
 let
-  repo = "shakirware/locum-shifts-aggregator";
-  labels = "vm-ci";
-  # Jobs barely use more than 2 cores each, so the 4 vCPUs pay off as parallel
-  # runners: 3 brought the benchmark workflow from 387s to 172s.
-  runners = lib.range 1 3;
+  cfg = config.homelab.ciRunner;
+  inherit (cfg) repo labels;
+  runners = lib.range 1 cfg.count;
 
   user = "ci";
   uid = 2000;
   home = "/var/lib/ci";
-  name = n: "vm-ci-${toString n}"; # GitHub runner and Compose project name
+  name = n: "${cfg.namePrefix}-${toString n}"; # GitHub runner and Compose project name
   container = n: "gha-runner-${toString n}";
   # Same paths inside and outside the container. One tool cache per runner, so
   # two jobs never install into the same directory at once.
@@ -64,7 +62,7 @@ let
     RUN apt-get update \
      && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
           build-essential make git curl ca-certificates jq unzip zstd xz-utils \
-          shellcheck python3 python3-venv lsb-release gh \
+          shellcheck python3 python3-venv lsb-release gh openssh-client \
      && rm -rf /var/lib/apt/lists/*
     # The image has buildx but not Compose; pinned by checksum.
     RUN curl -fsSLo /usr/local/lib/docker/cli-plugins/docker-compose \
@@ -107,7 +105,7 @@ let
       pat=$(cat ${config.sops.secrets.github_runner_pat.path})
       case "$pat" in
         github_pat_*) ;;
-        *) echo "github_runner_pat in secrets/vm-ci.yaml is not a fine-grained PAT" >&2; exit 1 ;;
+        *) echo "github_runner_pat in secrets/${config.networking.hostName}.yaml is not a fine-grained PAT" >&2; exit 1 ;;
       esac
       # Via curl --config on stdin, so the PAT is never in a process argument.
       printf 'header = "Authorization: Bearer %s"\n' "$pat" |
@@ -221,102 +219,133 @@ let
     df -h /
   '';
 in {
-  users.groups.${user}.gid = uid;
-  users.users.${user} = {
-    inherit uid home;
-    group = user;
-    isNormalUser = true; # gives the sub-UID/GID ranges rootless Docker needs
-    createHome = true;
-    linger = true; # its user manager (and Docker) start at boot
-    shell = "${pkgs.shadow}/bin/nologin";
-  };
-
-  virtualisation.docker.rootless = {
-    enable = true;
-    package = dockerPkg;
-    daemon.settings = {
-      log-driver = "json-file";
-      log-opts = {
-        max-size = "10m";
-        max-file = "3";
-      };
-      features.buildkit = true;
-      builder.gc = {
-        enabled = true;
-        defaultKeepStorage = "15GB";
-      };
+  options.homelab.ciRunner = {
+    repo = lib.mkOption {
+      type = lib.types.str;
+      description = "owner/name of the repository the runners register to.";
     };
-  };
-  # The module starts a daemon for every user; only "ci" needs one.
-  systemd.user.services.docker.unitConfig.ConditionUser = lib.mkForce user;
-
-  # Everything "ci" runs (Docker, the runners, job containers) shares one
-  # slice: a runaway build cannot starve sshd, node-exporter or the journal.
-  systemd.slices."user-${toString uid}" = {
-    overrideStrategy = "asDropin";
-    sliceConfig = {
-      MemoryHigh = "6G";
-      MemoryMax = "6800M";
-      CPUWeight = 50;
-      IOWeight = 50;
-      TasksMax = 8192;
+    labels = lib.mkOption {
+      type = lib.types.str;
+      description = "Comma-separated runner labels that workflows target.";
+    };
+    count = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 1;
+      description = "Parallel runners, each taking one job at a time.";
+    };
+    namePrefix = lib.mkOption {
+      type = lib.types.str;
+      default = config.networking.hostName;
+      description = "Runner names are <prefix>-<n>.";
+    };
+    memoryHigh = lib.mkOption {
+      type = lib.types.str;
+      description = "MemoryHigh for everything the ci user runs.";
+    };
+    memoryMax = lib.mkOption {
+      type = lib.types.str;
+      description = "MemoryMax for everything the ci user runs.";
     };
   };
 
-  sops.secrets.github_runner_pat = { }; # root:root 0400
+  config = {
+    users.groups.${user}.gid = uid;
+    users.users.${user} = {
+      inherit uid home;
+      group = user;
+      isNormalUser = true; # gives the sub-UID/GID ranges rootless Docker needs
+      createHome = true;
+      linger = true; # its user manager (and Docker) start at boot
+      shell = "${pkgs.shadow}/bin/nologin";
+    };
 
-  systemd.services = {
-    # Lets the slice above limit CPU and I/O as well as memory.
-    "user@".serviceConfig.Delegate = "cpu cpuset io memory pids";
+    virtualisation.docker.rootless = {
+      enable = true;
+      package = dockerPkg;
+      daemon.settings = {
+        log-driver = "json-file";
+        log-opts = {
+          max-size = "10m";
+          max-file = "3";
+        };
+        features.buildkit = true;
+        builder.gc = {
+          enabled = true;
+          defaultKeepStorage = "15GB";
+        };
+      };
+    };
+    # The module starts a daemon for every user; only "ci" needs one.
+    systemd.user.services.docker.unitConfig.ConditionUser = lib.mkForce user;
 
-    github-runner-image = {
-      description = "Build the GitHub Actions runner image";
-      requires = [ "user@${toString uid}.service" ];
-      after = [ "user@${toString uid}.service" "network-online.target" ];
-      wants = [ "network-online.target" ];
-      environment = dockerEnv;
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        User = user;
-        TimeoutStartSec = "20min";
-        ExecStart = ensureImage;
+    # Everything "ci" runs (Docker, the runners, job containers) shares one
+    # slice: a runaway build cannot starve sshd, node-exporter or the journal.
+    systemd.slices."user-${toString uid}" = {
+      overrideStrategy = "asDropin";
+      sliceConfig = {
+        MemoryHigh = cfg.memoryHigh;
+        MemoryMax = cfg.memoryMax;
+        CPUWeight = 50;
+        IOWeight = 50;
+        TasksMax = 8192;
       };
     };
 
-    ci-docker-gc = {
-      description = "Remove old CI images, build cache and volumes";
-      environment = dockerEnv;
-      serviceConfig = {
-        Type = "oneshot";
-        User = user;
-        ExecStart = gc;
+    sops.secrets.github_runner_pat = { }; # root:root 0400
+
+    systemd.services = {
+      # Lets the slice above limit CPU and I/O as well as memory.
+      "user@".serviceConfig.Delegate = "cpu cpuset io memory pids";
+
+      github-runner-image = {
+        description = "Build the GitHub Actions runner image";
+        requires = [ "user@${toString uid}.service" ];
+        after = [ "user@${toString uid}.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        environment = dockerEnv;
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          User = user;
+          TimeoutStartSec = "20min";
+          ExecStart = ensureImage;
+        };
+      };
+
+      ci-docker-gc = {
+        description = "Remove old CI images, build cache and volumes";
+        environment = dockerEnv;
+        serviceConfig = {
+          Type = "oneshot";
+          User = user;
+          ExecStart = gc;
+        };
+      };
+
+      ci-disk-guard = {
+        description = "Prune CI Docker data when the disk is nearly full";
+        environment = dockerEnv;
+        serviceConfig = {
+          Type = "oneshot";
+          User = user;
+          ExecStart = diskGuard;
+        };
+      };
+    } // lib.listToAttrs
+      (map (n: lib.nameValuePair "github-runner-${toString n}" (runnerService n))
+        runners);
+
+    systemd.timers.ci-docker-gc = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "04:00";
+        Persistent = true;
       };
     };
-
-    ci-disk-guard = {
-      description = "Prune CI Docker data when the disk is nearly full";
-      environment = dockerEnv;
-      serviceConfig = {
-        Type = "oneshot";
-        User = user;
-        ExecStart = diskGuard;
-      };
+    systemd.timers.ci-disk-guard = {
+      wantedBy = [ "timers.target" ];
+      timerConfig.OnUnitActiveSec = "10min";
+      timerConfig.OnBootSec = "10min";
     };
-  } // lib.listToAttrs
-    (map (n: lib.nameValuePair "github-runner-${toString n}" (runnerService n))
-      runners);
-
-  systemd.timers.ci-docker-gc = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "04:00";
-      Persistent = true;
-    };
-  };
-  systemd.timers.ci-disk-guard = {
-    wantedBy = [ "timers.target" ];
-    timerConfig.OnUnitActiveSec = "10min";
-    timerConfig.OnBootSec = "10min";
   };
 }
