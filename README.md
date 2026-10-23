@@ -2,7 +2,7 @@
 
 **A declarative NixOS homelab on Proxmox, provisioned with OpenTofu and deployed with Colmena.**
 
-Seven role-based NixOS VMs run networking, media, storage, home automation, personal applications, observability and CI. Host configuration lives in a single Nix flake, with Podman and native NixOS services, sops-nix for secrets and Renovate for dependency updates.
+Eight role-based NixOS VMs run networking, media, storage, home automation, personal applications, observability, CI and releases. Host configuration lives in a single Nix flake, with Podman and native NixOS services, sops-nix for secrets and Renovate for dependency updates.
 
 ![Homepage dashboard showing self-hosted services and status widgets](docs/assets/homepage.webp)
 
@@ -26,18 +26,20 @@ OpenTofu provisions the guests on Proxmox and manages the MikroTik router's netw
 | [`vm-sensitive`](nix/hosts/vm-sensitive/default.nix) | Personal and financial apps | Actual Budget, Standard Notes, InvoicePlane |
 | [`vm-monitoring`](nix/hosts/vm-monitoring/default.nix) | Metrics, logs, probes, alerting | Prometheus, Grafana, Loki, Alertmanager |
 | [`vm-ci`](nix/hosts/vm-ci/default.nix) | Isolated CI | Three ephemeral GitHub Actions runners, rootless Docker |
+| [`vm-release`](nix/hosts/vm-release/default.nix) | Isolated releases | One ephemeral runner for a separate release repository: builds, publishes and deploys production images |
 
-Each [host](nix/hosts) combines the base profile with role [profiles](nix/profiles), which group [service modules](nix/services), and individual service modules where needed. Every VM imports the shared Node Exporter and Alloy modules via the [base profile](nix/profiles/base/default.nix); `vm-ci` keeps its logs local because Loki is not reachable from VLAN 30.
+Each [host](nix/hosts) combines the base profile with role [profiles](nix/profiles), which group [service modules](nix/services), and individual service modules where needed. Every VM imports the shared Node Exporter and Alloy modules via the [base profile](nix/profiles/base/default.nix); `vm-ci` and `vm-release` keep their logs local because Loki is not reachable from VLANs 30 and 31.
 
 ## Network
 
-The MikroTik separates personal devices, NixOS servers, CI and IoT equipment into four zones:
+The MikroTik separates personal devices, NixOS servers, CI, releases and IoT equipment into five zones:
 
 | Zone | VLAN | Devices |
 | --- | --- | --- |
 | TRUSTED | 1 | Personal devices and Proxmox management |
 | SERVERS | 20 | NixOS VMs |
 | CI | 30 | `vm-ci`; egress to the internet only |
+| RELEASE | 31 | `vm-release`; egress to the internet only, separate from CI |
 | IOT | 40 | Smart-home devices, TVs and the Reolink hub |
 
 New cross-zone connections are denied unless a firewall rule explicitly permits them. IoT clients also have dedicated DNS policy and Wi-Fi client isolation. Router configuration lives primarily in [`infra/router/`](infra/router); the [network guide](docs/network.md) covers allowed traffic, configuration ownership and change safety.
@@ -49,11 +51,11 @@ This is my own infrastructure rather than a reusable installer but several compo
 | Area | Implementation | Why it's worth a look |
 | --- | --- | --- |
 | Network segmentation | [`infra/router/`](infra/router) | VLANs, zone firewall, RouterOS OpenTofu and router-local rollback |
-| Provisioning and deployment | [`infra/proxmox/vms.tf`](infra/proxmox/vms.tf) · [`flake.nix`](flake.nix) | Proxmox VM definitions alongside seven NixOS configurations and a Colmena hive |
+| Provisioning and deployment | [`infra/proxmox/vms.tf`](infra/proxmox/vms.tf) · [`flake.nix`](flake.nix) | Proxmox VM definitions alongside eight NixOS configurations and a Colmena hive |
 | Role-based modules | [`nix/profiles/`](nix/profiles) | Shared defaults separated from application-specific roles |
 | Service discovery | [`records.nix`](nix/modules/dns/records.nix) | Common DNS and reverse-proxy host definitions |
 | Runtime secrets | [`templates.nix`](nix/modules/secrets/templates.nix) | sops-nix secrets rendered into environment files with dependent service restarts |
-| Self-hosted CI | [`ci-runner/default.nix`](nix/services/ci-runner/default.nix) | Ephemeral runners in containers under rootless Docker, on a VLAN that can only open connections to the internet |
+| Self-hosted CI | [`ci-runner/default.nix`](nix/services/ci-runner/default.nix) | Ephemeral runners in containers under rootless Docker, on VLANs that can only open connections to the internet; pull requests and releases run on separate VMs |
 | Monitoring the monitor | [`heartbeat/default.nix`](nix/services/monitoring/heartbeat/default.nix) | A systemd timer only sends an external heartbeat when local alerting checks pass |
 | Storage and passthrough | [`mergerfs/default.nix`](nix/services/mergerfs/default.nix) · [`pci.tf`](infra/proxmox/pci.tf) | Pooled media storage and Intel iGPU passthrough to the media VM |
 | Home Assistant configuration | [`home-assistant/default.nix`](nix/services/home-assistant/default.nix) | Declarative configuration validated before activation |
@@ -145,7 +147,7 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 
 - **Storage resilience.** mergerfs combines drives without redundancy or parity. Scheduled Proxmox VM backups and off-site backups are not yet deployed; hardware loss can mean data loss.
 - **Management boundaries.** OpenTofu manages most MikroTik settings, but bootstrap, accounts and selected existing settings are manual. Proxmox host configuration and hardening are also separate.
-- **Shared CI host.** Self-hosted runners save hosted CI minutes but share the single host's CPU with production; a low scheduling priority favours production workloads during CPU contention, at the cost of slower CI.
+- **Shared CI host.** Self-hosted runners (`vm-ci` and `vm-release`) save hosted CI minutes but share the single host's CPU with production; a low scheduling priority favours production workloads during CPU contention, at the cost of slower CI.
 - **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
 
 ## Roadmap
