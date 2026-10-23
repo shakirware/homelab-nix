@@ -14,6 +14,7 @@ statusStyle: dot
 language: en-GB
 
 layout:
+  # Home holds the everyday groups; admin tools sit on their own tabs.
   Media:
     tab: Home
     style: column
@@ -22,20 +23,21 @@ layout:
     tab: Home
     style: column
 
-  Automation:
-    tab: Home
-    style: column
-
   Upcoming:
     tab: Home
     style: column
 
+  Automation:
+    tab: Downloads
+    style: row
+    columns: 4
+
   Infrastructure:
-    tab: Home
+    tab: System
     style: column
 
   Monitoring:
-    tab: Home
+    tab: System
     style: column
 
   Personal:

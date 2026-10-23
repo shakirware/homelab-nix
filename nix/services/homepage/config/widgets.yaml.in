@@ -5,17 +5,6 @@
     text_size: xl
     text: Homelab
 
-- resources:
-    label: Gateway (vm-gw)
-    cpu: true
-    memory: true
-
-- resources:
-    label: Storage
-    expanded: true
-    disk:
-      - /srv/media
-
 - openmeteo:
     label: London
     # Coordinates come from SOPS (secrets/vm-gw.yaml); the repository is public.
