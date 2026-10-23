@@ -294,7 +294,7 @@
     - Storage:
         icon: mdi-harddisk
         href: https://@GRAFANA_HOST@
-        description: Disk usage per drive (mergerfs has no parity)
+        description: Usage per drive
         widget:
           type: prometheusmetric
           url: http://@MONITORING_IP@:9090
