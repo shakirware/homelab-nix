@@ -47,6 +47,7 @@ let
   obsidianSyncHost = "obsidian-sync.${baseDomain}";
   homeAssistantHost = "homeassistant.${baseDomain}";
   yamtrackHost = "yamtrack.${baseDomain}";
+  kaneoHost = "kaneo.${baseDomain}";
   actualHost = "actual.${baseDomain}";
   invoiceHost = "invoice.${baseDomain}";
   standardnotesHost = "notes.${baseDomain}";
@@ -99,6 +100,7 @@ let
     OBSIDIAN_SYNC_HOST = obsidianSyncHost;
     HOME_ASSISTANT_HOST = homeAssistantHost;
     YAMTRACK_HOST = yamtrackHost;
+    KANEO_HOST = kaneoHost;
 
     ACTUAL_HOST = actualHost;
     INVOICE_HOST = invoiceHost;

@@ -33,6 +33,7 @@ in {
     "obsidian-sync.${base}" = ips.gw;
     "homeassistant.${base}" = ips.gw;
     "yamtrack.${base}" = ips.gw;
+    "kaneo.${base}" = ips.gw;
     "notes.${base}" = ips.gw;
     "notes-api.${base}" = ips.gw;
     "notes-files.${base}" = ips.gw;
@@ -134,6 +135,10 @@ in {
     {
       host = "yamtrack.${base}";
       upstream = "${ips.apps}:8000";
+    }
+    {
+      host = "kaneo.${base}";
+      upstream = "${ips.apps}:5173";
     }
     {
       host = "notes.${base}";

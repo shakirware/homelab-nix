@@ -28,6 +28,7 @@ let
     notes-api = "/healthcheck";
     notes-files = "/healthcheck";
     yamtrack = "/health/";
+    kaneo = "/api/health";
     seerr = "/api/v1/status";
     audiobookshelf = "/healthcheck";
     sonarr = "/ping";
