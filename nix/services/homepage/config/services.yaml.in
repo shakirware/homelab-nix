@@ -440,6 +440,11 @@
         href: https://@YAMTRACK_HOST@
         description: Books, movies and media tracking
         siteMonitor: https://@YAMTRACK_HOST@
+    - Kaneo:
+        icon: mdi-view-column
+        href: https://@KANEO_HOST@
+        description: Projects and tasks
+        siteMonitor: https://@KANEO_HOST@
 
     - Actual Budget:
         icon: mdi-cash-multiple
