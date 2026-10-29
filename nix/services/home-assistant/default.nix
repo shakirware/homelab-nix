@@ -270,4 +270,14 @@ in
       }
     '';
   };
+
+  homelab.backup = {
+    paths = [ cfgDir mediaDir backupDir ];
+    exclude = [
+      "${cfgDir}/home-assistant_v2.db"
+      "${cfgDir}/home-assistant.log*"
+      "${cfgDir}/.cache"
+    ];
+    sqlite = [ "${cfgDir}/home-assistant_v2.db" ];
+  };
 }

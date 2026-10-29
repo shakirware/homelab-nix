@@ -21,4 +21,14 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ 5055 ];
+
+  homelab.backup = {
+    paths = [ "/srv/appdata/seerr" ];
+    exclude = [
+      "/srv/appdata/seerr/cache"
+      "/srv/appdata/seerr/logs"
+      "/srv/appdata/seerr/db"
+    ];
+    sqlite = [ "/srv/appdata/seerr/db/db.sqlite3" ];
+  };
 }

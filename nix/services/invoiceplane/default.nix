@@ -214,4 +214,9 @@ in {
     };
   };
 
+  homelab.backup = {
+    paths = [ baseDir ];
+    exclude = [ dbDataDir "${baseDir}/runtime" ];
+    mysql = [{ container = "invoiceplane-db"; }];
+  };
 }

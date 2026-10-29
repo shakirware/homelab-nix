@@ -38,4 +38,9 @@ in {
     [ "network-online.target" "srv-media.mount" ];
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ 7878 ];
+
+  homelab.backup = {
+    paths = [ "/srv/appdata/radarr/config.xml" ];
+    sqlite = [ "/srv/appdata/radarr/radarr.db" ];
+  };
 }

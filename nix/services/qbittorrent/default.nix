@@ -29,4 +29,5 @@ in {
     requires = [ "podman-gluetun.service" "podman.service" ];
   };
 
+  homelab.backup.paths = [ "/srv/appdata/qbittorrent" ];
 }

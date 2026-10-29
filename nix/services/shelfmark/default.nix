@@ -46,4 +46,10 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+
+  homelab.backup = {
+    paths = [ "/srv/appdata/shelfmark" ];
+    exclude = [ "/srv/appdata/shelfmark/users.db" ];
+    sqlite = [ "/srv/appdata/shelfmark/users.db" ];
+  };
 }

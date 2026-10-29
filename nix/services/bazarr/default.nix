@@ -38,4 +38,9 @@ in {
     [ "network-online.target" "srv-media.mount" "podman-sonarr.service" "podman-radarr.service" ];
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ 6767 ];
+
+  homelab.backup = {
+    paths = [ "${appdataDir}/config" ];
+    sqlite = [ "${appdataDir}/db/bazarr.db" ];
+  };
 }

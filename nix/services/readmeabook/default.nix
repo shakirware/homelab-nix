@@ -48,4 +48,14 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+
+  homelab.backup = {
+    paths = [ "/srv/appdata/readmeabook/config" ];
+    postgres = [{
+      container = "readmeabook";
+      db = "readmeabook";
+      user = "postgres";
+      execUser = "postgres";
+    }];
+  };
 }

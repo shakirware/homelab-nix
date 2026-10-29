@@ -36,4 +36,8 @@ in {
     requires = [ "podman-gluetun.service" "podman.service" ];
   };
 
+  homelab.backup = {
+    paths = [ "/srv/appdata/prowlarr/config.xml" ];
+    sqlite = [ "/srv/appdata/prowlarr/prowlarr.db" ];
+  };
 }

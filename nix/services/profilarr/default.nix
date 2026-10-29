@@ -25,4 +25,14 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+
+  homelab.backup = {
+    paths = [ "/srv/appdata/profilarr" ];
+    exclude = [
+      "/srv/appdata/profilarr/backups"
+      "/srv/appdata/profilarr/log"
+      "/srv/appdata/profilarr/profilarr.db"
+    ];
+    sqlite = [ "/srv/appdata/profilarr/profilarr.db" ];
+  };
 }

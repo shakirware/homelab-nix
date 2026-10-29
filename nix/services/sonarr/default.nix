@@ -33,4 +33,9 @@ in {
     [ "network-online.target" "srv-media.mount" ];
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ 8989 ];
+
+  homelab.backup = {
+    paths = [ "/srv/appdata/sonarr/config.xml" ];
+    sqlite = [ "/srv/appdata/sonarr/sonarr.db" ];
+  };
 }

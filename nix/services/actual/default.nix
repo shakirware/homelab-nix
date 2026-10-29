@@ -45,4 +45,14 @@ in {
       }
     '';
   };
+
+  # Budget files are SQLite; back up consistent copies, not the live files.
+  homelab.backup = {
+    paths = [ appdataDir ];
+    exclude = [ "${appdataDir}/**/*.sqlite" ];
+    sqlite = [
+      "${appdataDir}/server-files/*.sqlite"
+      "${appdataDir}/user-files/*.sqlite"
+    ];
+  };
 }

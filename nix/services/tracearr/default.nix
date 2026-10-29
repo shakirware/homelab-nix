@@ -193,4 +193,9 @@ in {
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept
   '';
 
+  homelab.backup.postgres = [{
+    container = "tracearr-db";
+    db = "tracearr";
+    user = "tracearr";
+  }];
 }

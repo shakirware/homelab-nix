@@ -284,4 +284,9 @@ in {
       }
     '';
   };
+
+  homelab.backup = {
+    paths = [ uploadsDir "${baseDir}/data" ];
+    mysql = [{ container = "db_self_hosted"; }];
+  };
 }

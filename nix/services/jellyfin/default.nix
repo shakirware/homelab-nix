@@ -41,4 +41,19 @@ in {
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ 8096 ];
   networking.firewall.allowedUDPPorts = lib.mkAfter [ 7359 ];
+
+  # Users, watch state and settings; metadata and caches are rebuilt by a
+  # library scan.
+  homelab.backup = {
+    paths = [ "/srv/appdata/jellyfin" ];
+    exclude = [
+      "/srv/appdata/jellyfin/cache"
+      "/srv/appdata/jellyfin/log"
+      "/srv/appdata/jellyfin/data/metadata"
+      "/srv/appdata/jellyfin/data/transcodes"
+      "/srv/appdata/jellyfin/data/data/introskipper"
+      "/srv/appdata/jellyfin/data/data/jellyfin.db"
+    ];
+    sqlite = [ "/srv/appdata/jellyfin/data/data/jellyfin.db" ];
+  };
 }

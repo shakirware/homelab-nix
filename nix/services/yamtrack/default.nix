@@ -166,4 +166,6 @@ in {
       }
     '';
   };
+
+  homelab.backup.sqlite = [ "${dbDir}/db.sqlite3" ];
 }

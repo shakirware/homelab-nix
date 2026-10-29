@@ -155,4 +155,11 @@ in {
     allowedUDPPorts = lib.mkAfter [ 53 ];
     allowedTCPPorts = lib.mkAfter [ 53 ];
   };
+
+  homelab.backup = {
+    # The book files live on vm-storage's pool, which root here cannot read
+    # through the NFS root squash; vm-storage backs them up locally.
+    paths = [ "/srv/appdata/grimmory/data" ];
+    mysql = [{ container = "grimmory-db"; }];
+  };
 }

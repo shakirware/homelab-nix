@@ -72,4 +72,11 @@ in {
       }
     '';
   };
+
+  # Downloads can be fetched again; keep the database and settings.
+  homelab.backup = {
+    paths = [ appdataDir ];
+    exclude = [ "${appdataDir}/db" "${appdataDir}/logs" ];
+    sqlite = [ "${appdataDir}/db/pinchflat.db" ];
+  };
 }

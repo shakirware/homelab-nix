@@ -31,4 +31,13 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+
+  homelab.backup = {
+    paths = [
+      "/srv/appdata/audiobookshelf/config"
+      "/srv/appdata/audiobookshelf/metadata"
+    ];
+    exclude = [ "/srv/appdata/audiobookshelf/config/absdatabase.sqlite" ];
+    sqlite = [ "/srv/appdata/audiobookshelf/config/absdatabase.sqlite" ];
+  };
 }

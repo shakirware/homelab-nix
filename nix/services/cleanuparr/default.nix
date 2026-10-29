@@ -61,4 +61,11 @@ in {
       }
     '';
   };
+
+  # events.db is an activity log and is left out.
+  homelab.backup = {
+    paths = [ appdataDir ];
+    exclude = [ "${appdataDir}/logs" "${appdataDir}/*.db" ];
+    sqlite = [ "${appdataDir}/cleanuparr.db" "${appdataDir}/users.db" ];
+  };
 }

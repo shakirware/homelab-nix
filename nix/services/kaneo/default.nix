@@ -177,4 +177,10 @@ in {
       }
     '';
   };
+
+  homelab.backup.postgres = [{
+    container = "kaneo-db";
+    db = "kaneo";
+    user = "kaneo";
+  }];
 }

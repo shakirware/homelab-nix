@@ -20,6 +20,8 @@
     ../../modules/secrets/host-secrets.nix
     ../../modules/secrets/templates.nix
 
+    ../../modules/backup
+
     ../../services/monitoring/node-exporter
     ../../services/monitoring/alloy
   ];

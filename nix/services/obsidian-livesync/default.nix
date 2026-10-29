@@ -113,4 +113,7 @@ in {
       }
     '';
   };
+
+  # CouchDB files are append-only, so a live copy is consistent enough.
+  homelab.backup.paths = [ dataDir localIniPath ];
 }
