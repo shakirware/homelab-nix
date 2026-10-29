@@ -2,6 +2,9 @@
 
 let
   port = 9100;
+
+  # Jobs publish homelab_* metrics here (mount probe, backups).
+  textfileDir = "/var/lib/prometheus-node-exporter-textfile";
   promIp = config.homelab.ips.monitoring;
 in {
   services.prometheus.exporters.node = {
@@ -9,7 +12,10 @@ in {
     port = port;
     listenAddress = "0.0.0.0";
     enabledCollectors = [ "systemd" ];
+    extraFlags = [ "--collector.textfile.directory=${textfileDir}" ];
   };
+
+  systemd.tmpfiles.rules = lib.mkAfter [ "d ${textfileDir} 0755 root root - -" ];
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
 

@@ -1,5 +1,5 @@
 { ... }:
 
 {
-  imports = [ ../../services/mergerfs ../../services/nfs-server ];
+  imports = [ ../../services/mergerfs ../../services/nfs-server ../../services/restic-server ];
 }

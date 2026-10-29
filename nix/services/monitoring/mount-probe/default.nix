@@ -70,11 +70,6 @@ let
     '';
   };
 in {
-  systemd.tmpfiles.rules = lib.mkAfter [ "d ${textfileDir} 0755 root root - -" ];
-
-  services.prometheus.exporters.node.extraFlags =
-    [ "--collector.textfile.directory=${textfileDir}" ];
-
   systemd.services.homelab-mount-probe = {
     description = "Probe NFS media paths on the host and inside containers";
     serviceConfig = {
