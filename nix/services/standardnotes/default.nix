@@ -37,7 +37,7 @@ let
 
   localstackImage = "docker.io/localstack/localstack:3.8@sha256:b279c01f4cfb8f985a482e4014cabc1e2697b9d7a6c8c8db2e40f4d9f93687c7";
   mysqlImage = "docker.io/library/mysql:8@sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69";
-  redisImage = "docker.io/library/redis:6.2-alpine@sha256:592b215e9287182f11ba9d7c229dc0ba312bb900a016ea65ae378b0127567319";
+  redisImage = "docker.io/library/redis:6.2-alpine@sha256:63d5174750e285bc3069c4519c53c8b6de6ebe70715140a6c9d21d6f04b77319";
 
   mysqlVol = "standardnotes-mysql";
   redisVol = "standardnotes-redis";
