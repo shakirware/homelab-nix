@@ -140,6 +140,44 @@ let
         static_configs:
           - targets: [ "127.0.0.1:${toString blackboxPort}" ]
 
+      - job_name: "blackbox-icmp"
+        metrics_path: /probe
+        params:
+          module: [ icmp ]
+        static_configs:
+          - targets: [ "${ips.router_vlan20}" ]
+            labels:
+              target: "router"
+          - targets: [ "1.1.1.1", "9.9.9.9" ]
+            labels:
+              target: "internet"
+        relabel_configs:
+          - source_labels: [ __address__ ]
+            target_label: __param_target
+          - source_labels: [ __param_target ]
+            target_label: instance
+          - target_label: __address__
+            replacement: 127.0.0.1:${toString blackboxPort}
+
+      - job_name: "blackbox-dns"
+        metrics_path: /probe
+        static_configs:
+          - targets: [ "${ips.gw}" ]
+            labels:
+              module: "dns_external"
+          - targets: [ "${ips.gw}" ]
+            labels:
+              module: "dns_internal"
+        relabel_configs:
+          - source_labels: [ __address__ ]
+            target_label: __param_target
+          - source_labels: [ module ]
+            target_label: __param_module
+          - source_labels: [ __param_target ]
+            target_label: instance
+          - target_label: __address__
+            replacement: 127.0.0.1:${toString blackboxPort}
+
       - job_name: "blackbox-http"
         metrics_path: /probe
         scrape_interval: 30s
@@ -327,6 +365,25 @@ let
               summary: "Container service failed"
               description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
 
+          # Everything the two rules above and the backup alerts don't cover.
+          - alert: SystemdUnitFailed
+            expr: node_systemd_unit_state{state="failed",name!~"(sshd|systemd-networkd|tailscaled|unbound|adguardhome|caddy|alloy|prometheus-node-exporter|qemu-guest-agent|gluetun-vpn-check)\\.service|podman-.*\\.service|restic-.*\\.service"} == 1
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Systemd unit failed"
+              description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
+
+          - alert: ContainerRestartLoop
+            expr: increase(node_systemd_service_restart_total{name=~"podman-.*\\.service"}[1h]) > 3
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Container restarting repeatedly"
+              description: "{{ $labels.instance }} {{ $labels.name }} restarted {{ $value | humanize }} times in the last hour."
+
           - alert: MediaMountDown
             expr: |
               node_systemd_unit_state{
@@ -388,6 +445,48 @@ let
             annotations:
               summary: "Alertmanager notification failures"
               description: "Alertmanager failed to deliver one or more notifications in the last 5m."
+
+          - alert: LokiIngestionStopped
+            expr: sum(rate(loki_distributor_lines_received_total{job="loki"}[30m])) == 0
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Loki is not receiving logs"
+              description: "Loki has received no log lines for 30m; check Alloy on the hosts and Loki on vm-monitoring."
+    EOF
+
+    cat > $out/network.yml <<'EOF'
+    groups:
+      - name: network
+        rules:
+          - alert: RouterUnreachable
+            expr: probe_success{job="blackbox-icmp",target="router"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Router unreachable"
+              description: "The MikroTik ({{ $labels.instance }}) does not answer ping from vm-monitoring."
+
+          # Both upstream resolvers' addresses failing means the WAN, not one site.
+          - alert: InternetDown
+            expr: max(probe_success{job="blackbox-icmp",target="internet"}) == 0
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Internet unreachable"
+              description: "Neither 1.1.1.1 nor 9.9.9.9 answers ping; the WAN link is probably down. This notification is delayed until it recovers."
+
+          - alert: DnsResolutionFailing
+            expr: probe_success{job="blackbox-dns"} == 0
+            for: 3m
+            labels:
+              severity: critical
+            annotations:
+              summary: "DNS resolution failing"
+              description: "AdGuard on {{ $labels.instance }} fails the {{ $labels.module }} lookup."
     EOF
 
     cat > $out/proxmox.yml <<'EOF'

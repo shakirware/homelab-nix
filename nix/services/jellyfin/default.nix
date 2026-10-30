@@ -28,6 +28,9 @@ in {
     ports = [ "${bindIp}:8096:8096" "${bindIp}:7359:7359/udp" ];
 
     extraOptions = [
+      # Podman's default 10 s ends in SIGKILL mid-shutdown (exit 137, unit
+      # failed, SQLite at risk); Jellyfin needs longer to stop cleanly.
+      "--stop-timeout=60"
       "--device=/dev/dri/renderD128:/dev/dri/renderD128"
       "--device=/dev/dri/card0:/dev/dri/card0"
     ];

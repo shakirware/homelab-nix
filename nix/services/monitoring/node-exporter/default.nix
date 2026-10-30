@@ -12,7 +12,11 @@ in {
     port = port;
     listenAddress = "0.0.0.0";
     enabledCollectors = [ "systemd" ];
-    extraFlags = [ "--collector.textfile.directory=${textfileDir}" ];
+    extraFlags = [
+      "--collector.textfile.directory=${textfileDir}"
+      # node_systemd_service_restart_total, for container restart loops.
+      "--collector.systemd.enable-restarts-metrics"
+    ];
   };
 
   systemd.tmpfiles.rules = lib.mkAfter [ "d ${textfileDir} 0755 root root - -" ];
