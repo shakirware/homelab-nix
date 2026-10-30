@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-# Copy the router's OpenTofu state off the laptop, age-encrypted to the
-# secrets/env.yaml recipients (the state holds the trusted Wi-Fi passphrase).
-# Run after every apply. Restore with:
+# Copy an OpenTofu stack's state off the laptop, age-encrypted to the
+# secrets/env.yaml recipients (the router state holds the trusted Wi-Fi
+# passphrase, the Proxmox state the VM layout). Shared by infra/router and
+# infra/proxmox (a symlink); the stack is the directory it is run from.
+# Run after every apply (the Makefile apply targets do). Restore with:
 #   age -d -i "$SOPS_AGE_KEY_FILE" <file> > terraform.tfstate
 set -euo pipefail
 
 cd "$(dirname "$0")"
+stack=$(basename "$PWD")
 host=${BACKUP_HOST:-vm-storage}
-dir=backups/router-state # under the remote home; not on an NFS export
+# Under the remote home, outside the NFS export; vm-storage's nightly restic
+# backup copies ~/backups to Backblaze B2.
+dir=backups/${stack}-state
 
 args=()
 while read -r r; do

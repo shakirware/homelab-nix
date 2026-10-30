@@ -144,11 +144,16 @@ If the server and the laptop are both lost, everything comes from the
 recovery kit (kept outside the homelab) and B2:
 
 1. On a new machine, install Nix, sops, age and restic; clone this repository.
-2. Put the sops age key from the recovery kit in `~/.config/sops/age/keys.txt`
-   and check `sops -d secrets/vm-storage.yaml` works.
+2. Put the sops admin age key from the recovery kit (public key `age12ad822…`,
+   normally `~/.config/mise/age.txt`) somewhere private, point
+   `SOPS_AGE_KEY_FILE` at it, and check `sops -d secrets/vm-storage.yaml` works.
+   (`~/.config/sops/age/keys.txt` on the laptop holds an unrelated key that is
+   not a recipient of anything.)
 3. Restore the Tofu state from B2: the `vm-storage` repository contains
    `/home/shakir/backups` with the age-encrypted state files
-   (`age -d -i ~/.config/sops/age/keys.txt <file> > terraform.tfstate`).
+   (`age -d -i "$SOPS_AGE_KEY_FILE" <file> > terraform.tfstate`): the
+   `router-state` and `proxmox-state` directories, written by
+   [`backup-state.sh`](../infra/router/backup-state.sh) after each apply.
 4. Rebuild Proxmox guests with OpenTofu and deploy with Colmena, updating host
    age keys as in [A whole VM](#a-whole-vm).
 5. Restore each VM's data from B2 as above, starting with `vm-sensitive`.
