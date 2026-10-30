@@ -36,6 +36,9 @@
       # mutable filtering state (filters, safe search, query log) is preserved.
       filtering = { rewrites = [ ]; };
 
+      # Same 30 days as Prometheus and Loki; the default 90 days reached 2.8 GB.
+      querylog.interval = "720h";
+
       filters = [
         {
           enabled = true;
