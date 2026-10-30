@@ -10,7 +10,7 @@ together, and how to restore.
 
 | Time | Where | Unit | What |
 | --- | --- | --- | --- |
-| 02:30–03:00 | `vm-apps`, `vm-media`, `vm-sensitive` | `restic-backups-local` | Dump databases, then back up to `rest:http://192.168.20.110:8000/<host>/` |
+| 02:30–03:00 | `vm-apps`, `vm-media`, `vm-sensitive` | `restic-backups-local` | Dump databases, then back up to `rest:https://192.168.20.110:8000/<host>/` |
 | 04:00 | `vm-storage` | `restic-backups-storage` | Book files and the encrypted Tofu state into `/srv/diskB/restic/vm-storage` |
 | ~04:30 | `vm-storage` | `restic-offsite` | Per repository: local `forget --prune`, `copy` to B2, B2 `forget --prune` |
 | Sun 06:00 | `vm-storage` | `restic-check` | `check --read-data-subset=5%` on every local and B2 repository |
@@ -23,7 +23,10 @@ together, and how to restore.
 - **Off-site.** Bucket `shakir-homelab-restic` (EU), one repository per host,
   each under the same password as its local repository. Caps & Alerts are set to
   $0 and deleted files are kept for 30 days by the bucket lifecycle rule.
-- **Encryption.** restic encrypts everything before it leaves the client. The
+- **Encryption.** restic encrypts everything before it leaves the client, and
+  clients reach the REST server over HTTPS with a private certificate
+  ([`tls.crt`](../nix/services/restic-server/tls.crt), valid to 2036) that they
+  trust via `RESTIC_CACERT`. The
   repository passwords, REST credentials and B2 key are in sops
   (`secrets/vm-*.yaml`, all copies in `secrets/vm-storage.yaml`).
 

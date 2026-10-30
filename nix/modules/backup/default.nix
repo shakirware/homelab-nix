@@ -124,7 +124,7 @@ in {
     systemd.tmpfiles.rules = lib.mkAfter [ "d /srv/backups 0700 root root - -" ];
 
     services.restic.backups.local = {
-      repository = "rest:http://${config.homelab.ips.storage}:8000/${host}/";
+      repository = "rest:https://${config.homelab.ips.storage}:8000/${host}/";
       passwordFile = config.sops.secrets."restic/repo_password".path;
       environmentFile = config.sops.templates.${envName}.path;
       initialize = true;
@@ -145,6 +145,10 @@ in {
         Persistent = true;
       };
     };
+
+    # The REST server's private certificate (nix/services/restic-server).
+    systemd.services.restic-backups-local.environment.RESTIC_CACERT =
+      "${../../services/restic-server/tls.crt}";
 
     systemd.services.restic-backups-local.serviceConfig = {
       Nice = 10;

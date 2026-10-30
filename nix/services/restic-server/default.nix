@@ -14,8 +14,20 @@ let
   clients = [ ips.apps ips.media ips.sensitive ];
 
   htpasswdName = "restic-htpasswd";
+
+  # Private self-signed certificate (IP and storage.<domain>, valid to 2036);
+  # clients trust exactly this file via RESTIC_CACERT (nix/modules/backup).
+  # The key is restic/tls_key in secrets/vm-storage.yaml.
+  tlsCert = ./tls.crt;
 in {
   sops.secrets."restic/htpasswd" = { };
+
+  sops.secrets."restic/tls_key" = {
+    owner = "restic";
+    group = "restic";
+    mode = "0400";
+    restartUnits = [ "restic-rest-server.service" ];
+  };
 
   sops.templates.${htpasswdName} = {
     content = config.sops.placeholder."restic/htpasswd";
@@ -34,6 +46,13 @@ in {
     appendOnly = true;
     privateRepos = true;
     htpasswd-file = config.sops.templates.${htpasswdName}.path;
+    extraFlags = [
+      "--tls"
+      "--tls-cert"
+      "${tlsCert}"
+      "--tls-key"
+      config.sops.secrets."restic/tls_key".path
+    ];
   };
 
   systemd.tmpfiles.rules = lib.mkAfter [ "d ${dataDir} 0700 restic restic - -" ];
