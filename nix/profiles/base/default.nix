@@ -21,6 +21,7 @@
     ../../modules/secrets/templates.nix
 
     ../../modules/backup
+    ../../modules/maintenance
 
     ../../services/monitoring/node-exporter
     ../../services/monitoring/alloy
