@@ -50,3 +50,14 @@ resource "routeros_wifi_access_list" "iot_isolation" {
   client_isolation = true
   comment          = "${local.iot_tag}: isolate IoT clients on ${each.key}"
 }
+
+# Apple TVs stay on the IoT network: rejected on the trusted SSID, so they
+# cannot fall back to VLAN 1 when the IoT network is unavailable.
+resource "routeros_wifi_access_list" "apple_tv_not_trusted" {
+  for_each = { for k, r in var.iot_reservations : k => r if r.role == "apple_tv" }
+
+  mac_address = upper(each.value.mac)
+  ssid_regexp = "^${var.trusted_ssid}$"
+  action      = "reject"
+  comment     = "${local.iot_tag}: ${each.key} (apple_tv): IoT Wi-Fi only"
+}
