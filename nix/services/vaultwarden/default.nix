@@ -17,8 +17,8 @@ in {
       ROCKET_ADDRESS = "0.0.0.0";
       ROCKET_PORT = port;
 
-      # Leave enabled for first account creation, then set to false.
-      SIGNUPS_ALLOWED = true;
+      # Re-enable briefly to add another account.
+      SIGNUPS_ALLOWED = false;
       # Invitations need SMTP, which is not configured.
       INVITATIONS_ALLOWED = false;
       SHOW_PASSWORD_HINT = false;
