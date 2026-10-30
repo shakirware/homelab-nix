@@ -17,7 +17,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.readmeabook = {
-    image = "ghcr.io/kikootwo/readmeabook:1.2.10@sha256:8499173e14a11b90b4b66679da6a5580d517b3d65613aa34d68b54fe43ce70a7";
+    image = "ghcr.io/kikootwo/readmeabook:1.2.10@sha256:80985d505a7d527f3ae2fd207cfa04a5590e6fd42c6feb95461889944f2d3267";
     autoStart = true;
 
     environment = {
