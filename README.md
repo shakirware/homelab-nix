@@ -23,7 +23,7 @@ OpenTofu provisions the guests on Proxmox and manages the MikroTik router's netw
 | [`vm-media`](nix/hosts/vm-media/default.nix) | Media and automation | Jellyfin, Sonarr, Radarr, qBittorrent, Audiobookshelf |
 | [`vm-storage`](nix/hosts/vm-storage/default.nix) | Shared bulk storage | mergerfs, NFS |
 | [`vm-apps`](nix/hosts/vm-apps/default.nix) | Home automation and personal apps | Home Assistant, Obsidian Livesync, Yamtrack, Kaneo |
-| [`vm-sensitive`](nix/hosts/vm-sensitive/default.nix) | Personal and financial apps | Actual Budget, Standard Notes, InvoicePlane, Vaultwarden |
+| [`vm-sensitive`](nix/hosts/vm-sensitive/default.nix) | Personal and financial apps | Actual Budget, Standard Notes, InvoicePlane |
 | [`vm-monitoring`](nix/hosts/vm-monitoring/default.nix) | Metrics, logs, probes, alerting | Prometheus, Grafana, Loki, Alertmanager |
 | [`vm-ci`](nix/hosts/vm-ci/default.nix) | Isolated CI | Three ephemeral GitHub Actions runners, rootless Docker |
 | [`vm-release`](nix/hosts/vm-release/default.nix) | Isolated releases | One ephemeral runner for a separate release repository: builds, publishes and deploys production images |
@@ -81,7 +81,7 @@ See the [monitoring modules](nix/services/monitoring) for exporters, probes, ale
 │   ├── profiles/   # Shared defaults and role-specific composition
 │   ├── modules/    # Reusable NixOS options
 │   └── services/   # Applications and observability
-├── docs/           # Network and backup guides, dashboard screenshots
+├── docs/           # Network guide and dashboard screenshots
 ├── secrets/        # Encrypted SOPS files
 ├── templates/      # Proxmox NixOS template definition
 ├── Makefile        # Provisioning and deployment shortcuts
@@ -145,19 +145,17 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 
 ## Trade-offs
 
-- **Storage resilience.** mergerfs combines drives without redundancy or parity, and media is not backed up. Application data is backed up nightly to `vm-storage` and Backblaze B2 ([backup guide](docs/backups.md)), but there are no whole-VM Proxmox backups; a disk failure can still lose media.
+- **Storage resilience.** mergerfs combines drives without redundancy or parity. Scheduled Proxmox VM backups and off-site backups are not yet deployed; hardware loss can mean data loss.
 - **Management boundaries.** OpenTofu manages most MikroTik settings, but bootstrap, accounts and selected existing settings are manual. Proxmox host configuration and hardening are also separate.
 - **Shared CI host.** Self-hosted runners (`vm-ci` and `vm-release`) save hosted CI minutes but share the single host's CPU with production; a low scheduling priority favours production workloads during CPU contention, at the cost of slower CI.
 - **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
 
 ## Roadmap
 
-- [x] Automated off-site backups of application data with tested restores ([backup guide](docs/backups.md)).
-- [ ] Add storage redundancy for the media pool.
+- [ ] Add storage redundancy and automated off-site backups with tested restores.
 - [ ] Deploy Immich for photo management once the storage and backup setup is ready.
 - [ ] Deploy Paperless-ngx for document management.
-- [x] Deploy Vaultwarden for password management.
-- [ ] Evaluate Copyparty for file sharing.
+- [ ] Deploy Vaultwarden for password management and evaluate Copyparty for file sharing.
 - [ ] Add automated Nix/OpenTofu checks.
 
 ## Feedback

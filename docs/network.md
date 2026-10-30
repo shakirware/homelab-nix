@@ -192,8 +192,7 @@ connections before broadening any allow rule.
 OpenTofu state and saved plans can contain secrets and are kept out of Git with
 restricted permissions. **Run** [`backup-state.sh`](../infra/router/backup-state.sh)
 **after each router apply** to store an age-encrypted copy of the state on
-`vm-storage`, outside the shared media directory, from where the nightly
-backup copies it to Backblaze B2 ([backup guide](backups.md)). RouterOS configuration is
+`vm-storage`, outside the shared media directory. RouterOS configuration is
 also preserved as a password-encrypted binary backup and a redacted export.
 
 ## Known limitations
