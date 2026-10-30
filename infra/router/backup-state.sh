@@ -23,3 +23,11 @@ name="terraform-${serial}-$(date +%Y%m%dT%H%M%S).tfstate.age"
 # shellcheck disable=SC2029 # dir and name are meant to expand locally
 ssh "$host" "umask 077; mkdir -p $dir && cat > $dir/$name" < <(age "${args[@]}" terraform.tfstate)
 echo "$host:$dir/$name (serial $serial, $((${#args[@]} / 2)) recipients)"
+
+# Gitignored variables (e.g. the router's SSID and IoT reservations).
+for vars in *.private.auto.tfvars; do
+  [ -e "$vars" ] || continue
+  # shellcheck disable=SC2029
+  ssh "$host" "umask 077; cat > $dir/$vars.age" < <(age "${args[@]}" "$vars")
+  echo "$host:$dir/$vars.age"
+done
