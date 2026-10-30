@@ -60,10 +60,9 @@ let
       };
     }) config.homelab.webHosts;
 
-  # Flip to true once a backup job exports the metrics described in
-  # backups.yml; until then the rules are shipped but not loaded, so nothing
-  # claims backups are healthy.
-  backupAlertsEnabled = false;
+  # Restic jobs (nix/modules/backup, nix/services/restic-offsite) export the
+  # metrics described in backups.yml. Set to false to ship the rules unloaded.
+  backupAlertsEnabled = true;
 
   prometheusYaml = pkgs.writeText "prometheus.yml" ''
     global:
@@ -673,11 +672,12 @@ let
               description: "{{ $labels.device }} has used {{ $value | humanizePercentage }} of rated endurance."
     EOF
 
-    # Metric contract for a future backup job (e.g. a node_exporter textfile
-    # written after each run):
+    # Metric contract for backup jobs (node_exporter textfile written after
+    # each run by nix/modules/backup/metrics.nix and restic-offsite):
     #   homelab_backup_last_success_timestamp_seconds{backup="<name>"}
     #   homelab_backup_last_run_success{backup="<name>"}   1 = ok, 0 = failed
     #   homelab_backup_max_age_seconds{backup="<name>"}    schedule + slack
+    #   homelab_backup_repo_bytes{repo="local-<host>"|"b2-<host>"}
     cat > $out/${if backupAlertsEnabled then "backups.yml" else "backups.yml.disabled"} <<'EOF'
     groups:
       - name: backups
@@ -689,7 +689,7 @@ let
               severity: critical
             annotations:
               summary: "Backup failed"
-              description: "Backup {{ $labels.backup }} last run failed."
+              description: "Backup {{ $labels.backup }} on {{ $labels.instance }} last run failed."
 
           - alert: BackupMissedOrStale
             expr: (time() - homelab_backup_last_success_timestamp_seconds) > on(instance, backup) homelab_backup_max_age_seconds
@@ -698,7 +698,26 @@ let
               severity: critical
             annotations:
               summary: "Backup overdue"
-              description: "Backup {{ $labels.backup }} last succeeded {{ $value | humanizeDuration }} ago (schedule missed)."
+              description: "Backup {{ $labels.backup }} on {{ $labels.instance }} last succeeded {{ $value | humanizeDuration }} ago (schedule missed)."
+
+          - alert: BackupCheckFailed
+            expr: node_systemd_unit_state{name="restic-check.service",state="failed"} == 1
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Backup integrity check failed"
+              description: "restic check found a problem in a local or B2 repository on {{ $labels.instance }}; see journalctl -u restic-check."
+
+          # Backblaze B2's free tier is 10 GB; caps at $0 refuse uploads beyond it.
+          - alert: BackupOffsiteNearlyFull
+            expr: sum(homelab_backup_repo_bytes{repo=~"b2-.*"}) > 8e9
+            for: 1h
+            labels:
+              severity: warning
+            annotations:
+              summary: "Off-site backups near the B2 free tier"
+              description: "B2 repositories hold {{ $value | humanize1024 }}B of the free 10 GB; trim retention or exclusions before uploads are refused."
 
           - alert: BackupMetricsMissing
             expr: absent(homelab_backup_last_success_timestamp_seconds)
