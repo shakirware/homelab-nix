@@ -30,7 +30,6 @@ let
           fail_if_not_ssl: true
           valid_status_codes: [ 200, 401 ]
 
-      # Router and WAN reachability.
       icmp:
         prober: icmp
         timeout: 5s
@@ -38,8 +37,7 @@ let
           preferred_ip_protocol: ip4
           ip_protocol_fallback: false
 
-      # Resolution through AdGuard on vm-gw: an external name exercises the
-      # Unbound upstream, an internal one the homelab rewrites.
+      # External name via Unbound, internal name via the AdGuard rewrites.
       dns_external:
         prober: dns
         timeout: 5s

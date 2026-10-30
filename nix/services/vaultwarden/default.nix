@@ -47,8 +47,6 @@ in {
     '';
   };
 
-  # The vault database via .backup; attachments, sends, icons cache and the
-  # RSA key used to sign logins as files.
   homelab.backup = {
     paths = [ dataDir ];
     exclude = [

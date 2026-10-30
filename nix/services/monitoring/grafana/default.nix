@@ -7,9 +7,7 @@ let
   port = 3000;
   dataDir = "/srv/appdata/grafana";
 
-  # Dashboards kept in the repo, provisioned read-only beside the hand-made
-  # ones in ${dataDir}/dashboards. Panels use the default (Prometheus)
-  # datasource.
+  # Provisioned read-only beside the hand-made dashboards.
   backupsDashboard = let
     stat = { id, title, expr, legend, x, y, w, h, fieldConfig }: {
       inherit id title fieldConfig;

@@ -56,8 +56,7 @@ in {
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
 
-  # Hooked before dstnat: Podman DNATs the published port, so the packet is
-  # forwarded to the container and never reaches the input hook.
+  # Before dstnat: Podman's DNAT bypasses the input hook.
   networking.nftables.tables."pinchflat-backend-guard" = {
     family = "inet";
     content = ''
@@ -75,7 +74,6 @@ in {
     '';
   };
 
-  # Downloads can be fetched again; keep the database and settings.
   homelab.backup = {
     paths = [ appdataDir ];
     exclude = [ "${appdataDir}/db" "${appdataDir}/logs" ];

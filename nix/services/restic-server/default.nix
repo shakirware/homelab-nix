@@ -3,8 +3,7 @@
 let
   port = 8000;
 
-  # On diskB itself, outside the mergerfs branches (/srv/disk*/data) and the
-  # NFS export (/srv/media).
+  # Outside the mergerfs branches and the NFS export.
   diskDir = "/srv/diskB";
   dataDir = "${diskDir}/restic";
 
@@ -15,9 +14,7 @@ let
 
   htpasswdName = "restic-htpasswd";
 
-  # Private self-signed certificate (IP and storage.<domain>, valid to 2036);
-  # clients trust exactly this file via RESTIC_CACERT (nix/modules/backup).
-  # The key is restic/tls_key in secrets/vm-storage.yaml.
+  # Self-signed, valid to 2036; clients trust it via RESTIC_CACERT.
   tlsCert = ./tls.crt;
 in {
   sops.secrets."restic/htpasswd" = { };
@@ -37,8 +34,7 @@ in {
     restartUnits = [ "restic-rest-server.service" ];
   };
 
-  # Append-only: clients can add snapshots but never forget or prune them.
-  # Retention and the off-site copy run locally on vm-storage instead.
+  # Append-only: clients can add snapshots but never remove them.
   services.restic.server = {
     enable = true;
     inherit dataDir;

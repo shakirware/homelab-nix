@@ -61,8 +61,7 @@ let
       };
     }) config.homelab.webHosts;
 
-  # Restic jobs (nix/modules/backup, nix/services/restic-offsite) export the
-  # metrics described in backups.yml. Set to false to ship the rules unloaded.
+  # Restic jobs export the metrics described in backups.yml.
   backupAlertsEnabled = true;
 
   prometheusYaml = pkgs.writeText "prometheus.yml" ''
@@ -470,7 +469,6 @@ let
               summary: "Router unreachable"
               description: "The MikroTik ({{ $labels.instance }}) does not answer ping from vm-monitoring."
 
-          # Both upstream resolvers' addresses failing means the WAN, not one site.
           - alert: InternetDown
             expr: max(probe_success{job="blackbox-icmp",target="internet"}) == 0
             for: 5m
@@ -809,7 +807,6 @@ let
               summary: "Backup integrity check failed"
               description: "restic check found a problem in a local or B2 repository on {{ $labels.instance }}; see journalctl -u restic-check."
 
-          # Backblaze B2's free tier is 10 GB; caps at $0 refuse uploads beyond it.
           - alert: BackupOffsiteNearlyFull
             expr: sum(homelab_backup_repo_bytes{repo=~"b2-.*"}) > 8e9
             for: 1h

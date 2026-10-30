@@ -29,8 +29,7 @@ in {
     ports = [ "${bindIp}:${toString port}:5006" ];
   };
 
-  # Hooked before dstnat: Podman DNATs the published port, so the packet is
-  # forwarded to the container and never reaches the input hook.
+  # Before dstnat: Podman's DNAT bypasses the input hook.
   networking.nftables.tables."actual-backend-guard" = {
     family = "inet";
     content = ''
@@ -48,7 +47,6 @@ in {
     '';
   };
 
-  # Budget files are SQLite; back up consistent copies, not the live files.
   homelab.backup = {
     paths = [ appdataDir ];
     exclude = [ "${appdataDir}/**/*.sqlite" ];

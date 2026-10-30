@@ -45,8 +45,7 @@ in {
   };
 
   # Reverse-proxy-only access from vm-gw
-  # Hooked before dstnat: Podman DNATs the published port, so the packet is
-  # forwarded to the container and never reaches the input hook.
+  # Before dstnat: Podman's DNAT bypasses the input hook.
   networking.nftables.tables."cleanuparr-backend-guard" = {
     family = "inet";
     content = ''

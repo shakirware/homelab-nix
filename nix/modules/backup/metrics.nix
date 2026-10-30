@@ -1,9 +1,7 @@
 { pkgs }:
 
-# ExecStopPost script publishing the backup metric contract checked by the
-# alerts in nix/services/monitoring/prometheus: the run status after every
-# attempt, the last-success time only on success so a stale backup ages
-# visibly. Needs root (prefix with "+" in services running as another user).
+# ExecStopPost script writing the backup metrics the Prometheus alerts read.
+# Needs root ("+" prefix in services running as another user).
 { file, backup, maxAgeSeconds }:
 
 let textfileDir = "/var/lib/prometheus-node-exporter-textfile";

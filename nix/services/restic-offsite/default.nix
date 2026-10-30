@@ -1,9 +1,7 @@
 { config, lib, pkgs, ... }:
 
-# Retention and the off-site copy for every restic repository on vm-storage.
-# The clients write append-only through nix/services/restic-server, so only
-# this host forgets and prunes. Each local repository is copied to its own
-# repository in the Backblaze B2 bucket, under the same password.
+# Retention and the Backblaze B2 copy for every restic repository; clients are
+# append-only, so only this host prunes.
 
 let
   repoRoot = "/srv/diskB/restic";
@@ -60,7 +58,6 @@ let
     exit "$failed"
   '';
 
-  # Runs as root after every attempt; reads the per-repository state above.
   publish = pkgs.writeShellScript "restic-offsite-metrics" ''
     set -euo pipefail
 
@@ -124,9 +121,7 @@ in {
     mode = "0400";
   };
 
-  # vm-storage's own data, into a local repository beside the clients'.
-  # Runs as restic (so every repository file stays restic-owned for the REST
-  # server) with read access to everything it backs up.
+  # Runs as restic so repository files stay readable by the REST server.
   services.restic.backups.storage = {
     user = "restic";
     repository = "${repoRoot}/vm-storage";
@@ -136,15 +131,12 @@ in {
     # Age-encrypted Tofu state copied here by infra/router/backup-state.sh.
     paths = [ "/home/shakir/backups" ];
 
-    # Book files, read from the mergerfs branches: vm-media cannot read them
-    # all through NFS root squash, and mergerfs checks permissions by uid, so
-    # CAP_DAC_READ_SEARCH only works on the underlying disks.
+    # Books from the disk branches: mergerfs ignores CAP_DAC_READ_SEARCH.
     dynamicFilesFrom = ''
       ls -d /srv/disk*/data/books 2>/dev/null || true
     '';
     extraBackupArgs = [ "--tag" "nightly" ];
 
-    # Retention runs in restic-offsite with the other repositories.
     pruneOpts = [ ];
 
     timerConfig = {
@@ -191,8 +183,7 @@ in {
     };
   };
 
-  # Weekly integrity check that reads back a sample of the data on both
-  # sides. A failure leaves the unit failed for the systemd alerts.
+  # Weekly read-back of a sample on both sides.
   systemd.services.restic-check = {
     description = "Verify restic repositories locally and on Backblaze B2";
     wants = [ "network-online.target" ];

@@ -1,9 +1,7 @@
 { config, lib, pkgs, ... }:
 
-# Nightly restic backup of this host's app data to the append-only REST
-# server on vm-storage (nix/services/restic-server). Service modules declare
-# what they need under homelab.backup; the job only exists on hosts where
-# something is declared. Retention and the off-site copy run on vm-storage.
+# Nightly restic backup to the append-only REST server on vm-storage. Service
+# modules declare what they need under homelab.backup.
 
 let
   cfg = config.homelab.backup;
@@ -11,7 +9,6 @@ let
   host = config.networking.hostName;
 
   dumpDir = "/srv/backups/dumps";
-  # Nightly, so alert once a run is a full day overdue (plus timer jitter).
   maxAgeSeconds = 26 * 3600;
 
   envName = "restic-backup.env";
@@ -21,7 +18,6 @@ let
   enabled = cfg.paths != [ ] || cfg.sqlite != [ ] || cfg.postgres != [ ]
     || cfg.mysql != [ ];
 
-  # Live database files are skipped; their dumps in dumpDir are backed up.
   dumpScript = pkgs.writeShellScript "restic-backup-dumps" ''
     set -euo pipefail
     umask 077
@@ -136,7 +132,7 @@ in {
       backupPrepareCommand = toString dumpScript;
       backupCleanupCommand = toString metricsScript;
 
-      # Append-only server: forget/prune happen on vm-storage.
+      # Append-only server: retention runs on vm-storage.
       pruneOpts = [ ];
 
       timerConfig = {
@@ -146,7 +142,6 @@ in {
       };
     };
 
-    # The REST server's private certificate (nix/services/restic-server).
     systemd.services.restic-backups-local.environment.RESTIC_CACERT =
       "${../../services/restic-server/tls.crt}";
 

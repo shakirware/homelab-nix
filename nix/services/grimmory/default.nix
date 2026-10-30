@@ -157,8 +157,7 @@ in {
   };
 
   homelab.backup = {
-    # The book files live on vm-storage's pool, which root here cannot read
-    # through the NFS root squash; vm-storage backs them up locally.
+    # Books are backed up on vm-storage; root squash blocks reading them here.
     paths = [ "/srv/appdata/grimmory/data" ];
     mysql = [{ container = "grimmory-db"; }];
   };

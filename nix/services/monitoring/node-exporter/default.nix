@@ -3,7 +3,6 @@
 let
   port = 9100;
 
-  # Jobs publish homelab_* metrics here (mount probe, backups).
   textfileDir = "/var/lib/prometheus-node-exporter-textfile";
   promIp = config.homelab.ips.monitoring;
 in {
@@ -14,7 +13,6 @@ in {
     enabledCollectors = [ "systemd" ];
     extraFlags = [
       "--collector.textfile.directory=${textfileDir}"
-      # node_systemd_service_restart_total, for container restart loops.
       "--collector.systemd.enable-restarts-metrics"
     ];
   };
