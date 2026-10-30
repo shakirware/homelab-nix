@@ -11,8 +11,6 @@ let
   host = config.networking.hostName;
 
   dumpDir = "/srv/backups/dumps";
-  textfileDir = "/var/lib/prometheus-node-exporter-textfile";
-
   # Nightly, so alert once a run is a full day overdue (plus timer jitter).
   maxAgeSeconds = 26 * 3600;
 
@@ -56,38 +54,11 @@ let
     '') cfg.mysql}
   '';
 
-  # Runs after every attempt (ExecStopPost): the run status always, the
-  # last-success timestamp only on success so a stale backup ages visibly.
-  metricsScript = pkgs.writeShellScript "restic-backup-metrics" ''
-    set -euo pipefail
-
-    write() {
-      tmp="$(mktemp "${textfileDir}/.$1.XXXXXX")"
-      cat > "$tmp"
-      chmod 0644 "$tmp"
-      mv -f "$tmp" "${textfileDir}/$1"
-    }
-
-    ok=0
-    [ "''${SERVICE_RESULT:-}" = success ] && ok=1
-
-    write homelab_backup_status.prom <<EOF
-    # HELP homelab_backup_last_run_success Whether the last backup run succeeded.
-    # TYPE homelab_backup_last_run_success gauge
-    homelab_backup_last_run_success{backup="restic-local"} $ok
-    # HELP homelab_backup_max_age_seconds Age after which the backup is overdue.
-    # TYPE homelab_backup_max_age_seconds gauge
-    homelab_backup_max_age_seconds{backup="restic-local"} ${toString maxAgeSeconds}
-    EOF
-
-    if [ "$ok" = 1 ]; then
-      write homelab_backup_success.prom <<EOF
-    # HELP homelab_backup_last_success_timestamp_seconds Time of the last successful backup.
-    # TYPE homelab_backup_last_success_timestamp_seconds gauge
-    homelab_backup_last_success_timestamp_seconds{backup="restic-local"} $(date +%s)
-    EOF
-    fi
-  '';
+  metricsScript = import ./metrics.nix { inherit pkgs; } {
+    file = "homelab_backup";
+    backup = "restic-local";
+    inherit maxAgeSeconds;
+  };
 in {
   options.homelab.backup = {
     paths = lib.mkOption {
