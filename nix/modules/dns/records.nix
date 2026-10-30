@@ -15,6 +15,7 @@ in {
     "adguard.${base}" = ips.gw;
     "homepage.${base}" = ips.gw;
     "actual.${base}" = ips.gw;
+    "vault.${base}" = ips.gw;
     "invoice.${base}" = ips.gw;
     "jellyfin.${base}" = ips.gw;
     "seerr.${base}" = ips.gw;
@@ -63,6 +64,10 @@ in {
     {
       host = "actual.${base}";
       upstream = "${ips.sensitive}:5006";
+    }
+    {
+      host = "vault.${base}";
+      upstream = "${ips.sensitive}:8222";
     }
     {
       host = "invoice.${base}";

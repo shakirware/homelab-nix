@@ -49,6 +49,7 @@ let
   yamtrackHost = "yamtrack.${baseDomain}";
   kaneoHost = "kaneo.${baseDomain}";
   actualHost = "actual.${baseDomain}";
+  vaultHost = "vault.${baseDomain}";
   invoiceHost = "invoice.${baseDomain}";
   standardnotesHost = "notes.${baseDomain}";
   grafanaHost = "grafana.${baseDomain}";
@@ -103,6 +104,7 @@ let
     KANEO_HOST = kaneoHost;
 
     ACTUAL_HOST = actualHost;
+    VAULT_HOST = vaultHost;
     INVOICE_HOST = invoiceHost;
     STANDARDNOTES_HOST = standardnotesHost;
     GRAFANA_HOST = grafanaHost;

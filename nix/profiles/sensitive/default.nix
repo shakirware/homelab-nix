@@ -12,5 +12,6 @@
     ../../services/actual
     ../../services/standardnotes
     ../../services/invoiceplane
+    ../../services/vaultwarden
   ];
 }

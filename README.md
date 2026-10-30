@@ -23,7 +23,7 @@ OpenTofu provisions the guests on Proxmox and manages the MikroTik router's netw
 | [`vm-media`](nix/hosts/vm-media/default.nix) | Media and automation | Jellyfin, Sonarr, Radarr, qBittorrent, Audiobookshelf |
 | [`vm-storage`](nix/hosts/vm-storage/default.nix) | Shared bulk storage | mergerfs, NFS |
 | [`vm-apps`](nix/hosts/vm-apps/default.nix) | Home automation and personal apps | Home Assistant, Obsidian Livesync, Yamtrack, Kaneo |
-| [`vm-sensitive`](nix/hosts/vm-sensitive/default.nix) | Personal and financial apps | Actual Budget, Standard Notes, InvoicePlane |
+| [`vm-sensitive`](nix/hosts/vm-sensitive/default.nix) | Personal and financial apps | Actual Budget, Standard Notes, InvoicePlane, Vaultwarden |
 | [`vm-monitoring`](nix/hosts/vm-monitoring/default.nix) | Metrics, logs, probes, alerting | Prometheus, Grafana, Loki, Alertmanager |
 | [`vm-ci`](nix/hosts/vm-ci/default.nix) | Isolated CI | Three ephemeral GitHub Actions runners, rootless Docker |
 | [`vm-release`](nix/hosts/vm-release/default.nix) | Isolated releases | One ephemeral runner for a separate release repository: builds, publishes and deploys production images |
@@ -156,7 +156,8 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 - [ ] Add storage redundancy for the media pool.
 - [ ] Deploy Immich for photo management once the storage and backup setup is ready.
 - [ ] Deploy Paperless-ngx for document management.
-- [ ] Deploy Vaultwarden for password management and evaluate Copyparty for file sharing.
+- [x] Deploy Vaultwarden for password management.
+- [ ] Evaluate Copyparty for file sharing.
 - [ ] Add automated Nix/OpenTofu checks.
 
 ## Feedback

@@ -39,7 +39,7 @@ when something is declared. Off-site handling lives in
 
 | Host | Data |
 | --- | --- |
-| `vm-sensitive` | Actual (budget files + SQLite), InvoicePlane (MariaDB + uploads), Standard Notes (MySQL + uploads) |
+| `vm-sensitive` | Actual (budget files + SQLite), InvoicePlane (MariaDB + uploads), Standard Notes (MySQL + uploads), Vaultwarden (SQLite, attachments, sends, RSA key) |
 | `vm-apps` | Kaneo (Postgres), Home Assistant (config, `.storage`, history DB), Obsidian LiveSync (CouchDB), Yamtrack (SQLite) |
 | `vm-media` | Sonarr, Radarr, Prowlarr, Bazarr, Jellyfin (users and watch state), Seerr, ReadMeABook (Postgres), Profilarr, Cleanuparr, Tracearr (Postgres), Grimmory (MariaDB), Audiobookshelf, Shelfmark, Pinchflat, qBittorrent |
 | `vm-storage` | Book library (from the disk branches), `~/backups` (age-encrypted Tofu state) |

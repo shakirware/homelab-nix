@@ -451,6 +451,11 @@
         href: https://@ACTUAL_HOST@
         description: Budgeting
         siteMonitor: https://@ACTUAL_HOST@
+    - Vaultwarden:
+        icon: mdi-shield-key
+        href: https://@VAULT_HOST@
+        description: Passwords
+        siteMonitor: https://@VAULT_HOST@
     - Standard Notes:
         icon: mdi-note-text
         href: https://@STANDARDNOTES_HOST@

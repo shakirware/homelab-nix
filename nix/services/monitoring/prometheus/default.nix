@@ -25,6 +25,7 @@ let
     jellyfin = "/health";
     homeassistant = "/manifest.json";
     actual = "/health";
+    vault = "/alive";
     notes-api = "/healthcheck";
     notes-files = "/healthcheck";
     yamtrack = "/health/";
