@@ -149,13 +149,15 @@ in {
 };
 
   # Only the gateway/reverse proxy may access Yamtrack directly.
+  # Hooked before dstnat: Podman DNATs the published port, so the packet is
+  # forwarded to the container and never reaches the input hook.
   networking.nftables.tables."yamtrack-backend-guard" = {
     family = "inet";
 
     content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        tcp dport ${toString port} jump yamtrack_guard
+      chain prerouting {
+        type filter hook prerouting priority -150; policy accept;
+        fib daddr type local tcp dport ${toString port} jump yamtrack_guard
       }
 
       chain yamtrack_guard {

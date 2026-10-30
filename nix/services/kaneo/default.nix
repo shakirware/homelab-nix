@@ -166,7 +166,7 @@ in {
     content = ''
       chain prerouting {
         type filter hook prerouting priority -150; policy accept;
-        tcp dport ${toString port} jump kaneo_guard
+        fib daddr type local tcp dport ${toString port} jump kaneo_guard
       }
 
       chain kaneo_guard {
