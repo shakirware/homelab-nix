@@ -11,6 +11,7 @@ plan: init
 apply: init
 	tofu -chdir=infra/proxmox apply
 	infra/proxmox/backup-state.sh
+	infra/proxmox/backup-host.sh
 
 router-init:
 	tofu -chdir=infra/router init
@@ -24,6 +25,7 @@ router-apply:
 		echo "plan destroys or replaces resources; review it, then ALLOW_DESTROY=1 make router-apply"; exit 1; fi
 	tofu -chdir=infra/router apply router.tfplan
 	infra/router/backup-state.sh
+	infra/router/backup-config.sh
 	@rm -f infra/router/router.tfplan
 
 deploy-storage:
