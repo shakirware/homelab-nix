@@ -6,7 +6,7 @@
 let
   repoRoot = "/srv/diskB/restic";
 
-  clients = [ "vm-apps" "vm-media" "vm-sensitive" ];
+  clients = [ "vm-apps" "vm-media" "vm-sensitive" "vm-gw" "vm-monitoring" ];
   repos = clients ++ [ "vm-storage" ];
 
   # Same policy on both sides, so copy never re-sends snapshots B2 dropped.

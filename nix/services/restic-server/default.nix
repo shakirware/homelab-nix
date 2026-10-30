@@ -10,7 +10,7 @@ let
   ips = config.homelab.ips;
 
   # One htpasswd user and private repo per client, named after the host.
-  clients = [ ips.apps ips.media ips.sensitive ];
+  clients = [ ips.apps ips.media ips.sensitive ips.gw ips.monitoring ];
 
   htpasswdName = "restic-htpasswd";
 

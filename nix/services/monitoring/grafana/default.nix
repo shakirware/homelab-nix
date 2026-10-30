@@ -188,4 +188,7 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+
+  # Hand-made dashboards live in grafana.db; plugins re-download.
+  homelab.backup.sqlite = [ "${dataDir}/grafana.db" ];
 }
