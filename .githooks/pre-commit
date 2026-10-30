@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Block commits that stage a secret. Enable with: git config core.hooksPath .githooks
+set -euo pipefail
+
+if command -v gitleaks >/dev/null; then
+  exec gitleaks git --pre-commit --staged --redact --no-banner
+fi
+exec nix run nixpkgs#gitleaks -- git --pre-commit --staged --redact --no-banner
