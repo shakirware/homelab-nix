@@ -96,8 +96,6 @@ automation:
             PM2.5: {{ states('sensor.core_300s_series_pm2_5') }} µg/m³
             Air purifier: {{ states('fan.core_300s_series') }}
             Purifier filter: {{ states('sensor.core_300s_series_filter_lifetime') }}%
-
-            Front door battery: {{ states('sensor.front_door_battery') }}%
           parse_mode: plain_text
 
   - id: comfort_capture_meacocool_start_temperature
@@ -189,30 +187,4 @@ automation:
             {% endif %}
 
             PM2.5: {{ states('sensor.core_300s_series_pm2_5') }} µg/m³
-          parse_mode: plain_text
-
-  - id: comfort_front_door_battery_daily_warning
-    alias: "Comfort: Front Door battery daily Telegram warning"
-    mode: single
-
-    triggers:
-      - trigger: time
-        at: "09:00:00"
-
-    conditions:
-      - condition: numeric_state
-        entity_id: sensor.front_door_battery
-        below: 25
-
-    actions:
-      - action: telegram_bot.send_message
-        data:
-          chat_id:
-            - -4936739997
-          message: |-
-            🔋 Front Door battery low
-
-            Doorbell battery is currently {{ states('sensor.front_door_battery') }}%.
-
-            Charge it when you get a chance.
           parse_mode: plain_text

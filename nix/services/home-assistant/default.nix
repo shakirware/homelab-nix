@@ -15,7 +15,6 @@ let
   mediaDir = "${cfgRoot}/media";
   backupDir = "${cfgRoot}/backups";
   packageDir = "${cfgDir}/packages";
-  snapshotDir = "${mediaDir}/doorbell";
 
   secretsTemplateName = "home-assistant-secrets.yaml";
   secretsFile = config.sops.templates.${secretsTemplateName}.path;
@@ -44,44 +43,12 @@ let
       external_url: "https://${homeAssistantHost}"
       internal_url: "https://${homeAssistantHost}"
       packages: !include_dir_named packages
-      allowlist_external_dirs:
-        - /media
 
     http:
       use_x_forwarded_for: true
       trusted_proxies:
         - ${gwIp}
 
-    shell_command:
-      extract_front_door_recording_frames: >-
-        sh -c 'set -eu;
-        rm -f /media/doorbell/front_door_frame_*.jpg;
-        ffmpeg -hide_banner -loglevel error -y
-        -i "$1"
-        -vf "fps=1/5,scale=1280:-1"
-        -frames:v 4
-        -q:v 2
-        /media/doorbell/front_door_frame_%02d.jpg;
-        test -s /media/doorbell/front_door_frame_01.jpg;
-        for n in 02 03 04; do
-          test -s /media/doorbell/front_door_frame_$n.jpg || cp /media/doorbell/front_door_frame_01.jpg /media/doorbell/front_door_frame_$n.jpg;
-        done'
-        _ "{{ video_url }}"
-
-      extract_downstairs_recording_frames: >-
-        sh -c 'set -eu;
-        rm -f /media/doorbell/downstairs_frame_*.jpg;
-        ffmpeg -hide_banner -loglevel error -y
-        -i "$1"
-        -vf "fps=1/5,scale=1280:-1"
-        -frames:v 4
-        -q:v 2
-        /media/doorbell/downstairs_frame_%02d.jpg;
-        test -s /media/doorbell/downstairs_frame_01.jpg;
-        for n in 02 03 04; do
-          test -s /media/doorbell/downstairs_frame_$n.jpg || cp /media/doorbell/downstairs_frame_01.jpg /media/doorbell/downstairs_frame_$n.jpg;
-        done'
-        _ "{{ video_url }}"
   '';
 
   validateConfig = pkgs.writeShellScript "home-assistant-validate-config" ''
@@ -100,14 +67,8 @@ let
       "$validation_root/config/scenes.yaml"
 
     ${pkgs.coreutils}/bin/install -m 0600 \
-      ${./config/packages/ring_ai_doorbell.yaml} \
-      "$validation_root/config/packages/ring_ai_doorbell.yaml"
-    ${pkgs.coreutils}/bin/install -m 0600 \
       ${./config/packages/home_comfort_alerts.yaml} \
       "$validation_root/config/packages/home_comfort_alerts.yaml"
-    ${pkgs.coreutils}/bin/install -m 0600 \
-      ${./config/packages/d10_robot_vacuum.yaml} \
-      "$validation_root/config/packages/d10_robot_vacuum.yaml"
     ${pkgs.coreutils}/bin/install -m 0600 \
       ${./config/packages/bin_collection_alerts.yaml} \
       "$validation_root/config/packages/bin_collection_alerts.yaml"
@@ -148,7 +109,6 @@ in
     "d ${mediaDir} 2775 ${config.homelab.ids.user} media - -"
     "d ${backupDir} 2770 ${config.homelab.ids.user} media - -"
     "d ${packageDir} 2775 ${config.homelab.ids.user} media - -"
-    "d ${snapshotDir} 2775 ${config.homelab.ids.user} media - -"
   ];
 
   # Activation runs before systemd stops or replaces the production container.
@@ -171,7 +131,7 @@ in
       RemainAfterExit = true;
     };
 
-    path = [ pkgs.coreutils ];
+    path = [ pkgs.coreutils pkgs.findutils ];
 
     script = ''
       set -euo pipefail
@@ -179,7 +139,7 @@ in
       install -d -m 2770 -o ${config.homelab.ids.user} -g media \
         ${cfgDir} ${backupDir}
       install -d -m 2775 -o ${config.homelab.ids.user} -g media \
-        ${packageDir} ${snapshotDir} ${mediaDir}
+        ${packageDir} ${mediaDir}
 
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${configuration} ${cfgDir}/configuration.yaml
@@ -190,14 +150,10 @@ in
       chmod 0664 \
         ${cfgDir}/automations.yaml ${cfgDir}/scripts.yaml ${cfgDir}/scenes.yaml
 
-      install -m 0664 -o ${config.homelab.ids.user} -g media \
-        ${./config/packages/ring_ai_doorbell.yaml} ${packageDir}/ring_ai_doorbell.yaml
+      find ${packageDir} -maxdepth 1 -type f -name '*.yaml' -delete
 
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${./config/packages/home_comfort_alerts.yaml} ${packageDir}/home_comfort_alerts.yaml
-
-      install -m 0664 -o ${config.homelab.ids.user} -g media \
-        ${./config/packages/d10_robot_vacuum.yaml} ${packageDir}/d10_robot_vacuum.yaml
 
       install -m 0664 -o ${config.homelab.ids.user} -g media \
         ${./config/packages/bin_collection_alerts.yaml} ${packageDir}/bin_collection_alerts.yaml
@@ -242,9 +198,7 @@ in
     wants = [ "network-online.target" ];
     restartTriggers = [
       configuration
-      ./config/packages/ring_ai_doorbell.yaml
       ./config/packages/home_comfort_alerts.yaml
-      ./config/packages/d10_robot_vacuum.yaml
       ./config/packages/bin_collection_alerts.yaml
       ./config/packages/washing_guard.yaml
     ];
