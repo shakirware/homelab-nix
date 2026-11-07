@@ -33,11 +33,11 @@ let
 
   serverImage =
     "docker.io/standardnotes/server:0d82819cba9694bc9fb5a3fa53e2dbeda05d1242@sha256:6c1532b31dabf5b3e644fb2a458d3795f28138ac1ac5c4505a9fa1cea10524bb";
-  webImage = "docker.io/standardnotes/web:latest@sha256:46bf76e09592bfd4a191fbe3e3204a0c1afff74c97d0c40c1bc32f38811caea3";
+  webImage = "docker.io/standardnotes/web:latest@sha256:0afdabde1dc6b2386019f7f1728945e2e2cd451c30c4bc2d9199667b796ab8f6";
 
   localstackImage = "docker.io/localstack/localstack:3.8@sha256:b279c01f4cfb8f985a482e4014cabc1e2697b9d7a6c8c8db2e40f4d9f93687c7";
-  mysqlImage = "docker.io/library/mysql:8@sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69";
-  redisImage = "docker.io/library/redis:6.2-alpine@sha256:592b215e9287182f11ba9d7c229dc0ba312bb900a016ea65ae378b0127567319";
+  mysqlImage = "docker.io/library/mysql:8@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902";
+  redisImage = "docker.io/library/redis:6.2-alpine@sha256:5e38c443bd83d7d5214648d5de0a7d47f72cbb5141c50dcabcfc40f191b5b369";
 
   mysqlVol = "standardnotes-mysql";
   redisVol = "standardnotes-redis";
