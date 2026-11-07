@@ -6,7 +6,7 @@ let
   pgid = "1001";
 in {
   virtualisation.oci-containers.containers.qbittorrent = {
-    image = "lscr.io/linuxserver/qbittorrent:version-5.3.0_v2.1.2@sha256:e887804fa9de4c60f5f0fb1f3a7e4febe40a8f69fe736f70c4e8589b1f868dab";
+    image = "lscr.io/linuxserver/qbittorrent:version-5.3.0_v2.1.2@sha256:05c1454f9a32967affc1f34f67f8cc0cc57dd805dca45489fe797095a6286556";
     autoStart = true;
 
     environment = {
