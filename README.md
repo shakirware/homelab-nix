@@ -57,7 +57,7 @@ This is my own infrastructure rather than a reusable installer but several compo
 | Runtime secrets | [`templates.nix`](nix/modules/secrets/templates.nix) | sops-nix secrets rendered into environment files with dependent service restarts |
 | Self-hosted CI | [`ci-runner/default.nix`](nix/services/ci-runner/default.nix) | Ephemeral runners in containers under rootless Docker, on VLANs that can only open connections to the internet; pull requests and releases run on separate VMs |
 | Monitoring the monitor | [`heartbeat/default.nix`](nix/services/monitoring/heartbeat/default.nix) | A systemd timer only sends an external heartbeat when local alerting checks pass |
-| Backup and recovery | [`backup/default.nix`](nix/modules/backup/default.nix) · [`restic-offsite/default.nix`](nix/services/restic-offsite/default.nix) | Nightly restic backups with database dumps to an append-only REST server, pruned and copied to Backblaze B2, with freshness alerts |
+| Backup and recovery | [`backup/default.nix`](nix/modules/backup/default.nix) · [`restic-offsite/default.nix`](nix/services/restic-offsite/default.nix) · [backup guide](docs/backups.md) | Nightly restic backups with database dumps to an append-only REST server, pruned and copied to Backblaze B2, with freshness alerts |
 | Storage and passthrough | [`mergerfs/default.nix`](nix/services/mergerfs/default.nix) · [`pci.tf`](infra/proxmox/pci.tf) | Pooled media storage and Intel iGPU passthrough to the media VM |
 | Home Assistant configuration | [`home-assistant/default.nix`](nix/services/home-assistant/default.nix) | Declarative configuration validated before activation |
 
@@ -82,7 +82,7 @@ See the [monitoring modules](nix/services/monitoring) for exporters, probes, ale
 │   ├── profiles/   # Shared defaults and role-specific composition
 │   ├── modules/    # Reusable NixOS options
 │   └── services/   # Applications and observability
-├── docs/           # Network guide and dashboard screenshots
+├── docs/           # Network and backup guides, dashboard screenshots
 ├── secrets/        # Encrypted SOPS files
 ├── templates/      # Proxmox NixOS template definition
 ├── Makefile        # Provisioning and deployment shortcuts
@@ -146,7 +146,7 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 
 ## Trade-offs
 
-- **Storage resilience.** mergerfs combines drives without redundancy or parity, and media is not backed up. Application data is backed up nightly to `vm-storage` and copied to Backblaze B2; VMs are rebuilt from this repository rather than restored from images. A disk failure can still lose media.
+- **Storage resilience.** mergerfs combines drives without redundancy or parity, and media is not backed up. Application data is backed up nightly to `vm-storage` and copied to Backblaze B2 ([backup guide](docs/backups.md)); VMs are rebuilt from this repository rather than restored from images. A disk failure can still lose media.
 - **Management boundaries.** OpenTofu manages most MikroTik settings, but bootstrap, accounts and selected existing settings are manual. Proxmox host configuration and hardening are also separate.
 - **Shared CI host.** Self-hosted runners (`vm-ci` and `vm-release`) save hosted CI minutes but share the single host's CPU with production; a low scheduling priority favours production workloads during CPU contention, at the cost of slower CI.
 - **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
