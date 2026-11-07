@@ -308,12 +308,20 @@ let
               description: "{{ $labels.instance }} swap usage >80% for 10m."
 
           - alert: HostOOMKills
-            expr: increase(node_vmstat_oom_kill[10m]) > 0
+            expr: increase(node_vmstat_oom_kill{instance!="media.${baseDomain}:${toString nodePort}"}[10m]) > 0
             labels:
               severity: critical
             annotations:
               summary: "OOM kills"
               description: "{{ $labels.instance }} has OOM kills in the last 10m."
+
+          - alert: HostOOMKills
+            expr: increase(node_vmstat_oom_kill{instance="media.${baseDomain}:${toString nodePort}"}[10m]) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "OOM kills"
+              description: "{{ $labels.instance }} has OOM kills in the last 10m; usually FlareSolverr hitting its container memory cap."
 
           - alert: HostFilesystemReadOnly
             expr: node_filesystem_readonly{fstype!~"tmpfs|overlay"} == 1
