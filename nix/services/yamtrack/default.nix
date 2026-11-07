@@ -59,7 +59,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.yamtrack-redis = {
-    image = "redis:8-alpine@sha256:0bf6577d7774e592b29d093e3ac9390eb91e13d72c21e506afce736de5e0eeb0";
+    image = "redis:8-alpine@sha256:71885d8cc6e42f2bc0aa2eb853bfc4be200b5108a46ac50e117ae1df0531fb80";
     autoStart = true;
 
     volumes = [
