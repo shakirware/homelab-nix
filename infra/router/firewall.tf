@@ -48,6 +48,14 @@ resource "routeros_ip_firewall_addr_list" "tv_devices" {
   comment = "${local.iot_tag}: ${each.key}"
 }
 
+resource "routeros_ip_firewall_addr_list" "reolink_hub" {
+  for_each = { for k, r in var.iot_reservations : k => r if r.role == "hub" }
+
+  list    = "REOLINK_HUB"
+  address = each.value.ip
+  comment = "${local.iot_tag}: ${each.key}"
+}
+
 # --- defconf rules, adopted unchanged -------------------------------------
 
 locals {
@@ -151,6 +159,7 @@ locals {
     # AirPlay receivers open PTP (319/320), timing (7000-7011) and dynamic
     # UDP ports back to the sender; never to the ADMIN hosts.
     { key = "fw_airplay_udp", action = "accept", src_address_list = "TV_DEVICES", out_interface_list = "TRUSTED", dst_address_list = "!ADMIN", protocol = "udp", dst_port = "319,320,7000-7011,49152-65535", log = true, log_prefix = "FW-AIRPLAY", comment = "zones: AirPlay receiver -> sender return (UDP)" },
+    { key = "fw_reolink_p2p", action = "accept", src_address_list = "REOLINK_HUB", in_interface_list = "IOT", out_interface_list = "TRUSTED", dst_address_list = "!ADMIN", protocol = "udp", dst_port = "1024-65535", log = true, log_prefix = "FW-REOLINK", comment = "zones: Reolink hub -> app P2P (UDP)" },
     { key = "fw_iot_log", action = "log", in_interface_list = "IOT", log_prefix = "FW-IOT-DROP", comment = "zones: log IOT -> internal" },
     { key = "fw_iot_drop", action = "drop", in_interface_list = "IOT", comment = "zones: drop IOT -> internal" },
 
@@ -194,6 +203,7 @@ resource "routeros_ip_firewall_filter" "zones" {
     routeros_interface_list_member.iot,
     routeros_ip_firewall_addr_list.admin,
     routeros_ip_firewall_addr_list.tv_devices,
+    routeros_ip_firewall_addr_list.reolink_hub,
     routeros_interface_list_member.ci,
     routeros_ip_firewall_addr_list.ci_blocked,
     routeros_interface_list_member.release,
