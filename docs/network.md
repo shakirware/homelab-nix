@@ -198,8 +198,8 @@ binary backup and a redacted export.
 
 ## Known limitations
 
-- **Proxmox management:** There is no host firewall; management access relies on
-  the router's zone firewall. SSH hardening is not yet fully implemented.
+- **Proxmox management:** There is no host firewall or SSH hardening;
+  management access relies on the router's zone firewall.
 - **Router configuration:** Some existing VLAN and DHCP settings remain outside
   OpenTofu. Independent router access recovery is not fully verified.
 - **Media clients:** TuliProx playlists currently contain a direct media-server
