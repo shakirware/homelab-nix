@@ -198,8 +198,7 @@ also preserved as a password-encrypted binary backup and a redacted export.
 ## Known limitations
 
 - **Proxmox management:** Host firewall and SSH hardening are not yet fully
-  implemented. Automated VM backup schedules and off-site backups are also
-  pending.
+  implemented.
 - **Router configuration:** Some existing VLAN and DHCP settings remain outside
   OpenTofu. Independent router access recovery is not fully verified.
 - **Media clients:** TuliProx playlists currently contain a direct media-server

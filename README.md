@@ -145,14 +145,15 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 
 ## Trade-offs
 
-- **Storage resilience.** mergerfs combines drives without redundancy or parity. Scheduled Proxmox VM backups and off-site backups are not yet deployed; hardware loss can mean data loss.
+- **Storage resilience.** mergerfs combines drives without redundancy or parity, and media is not backed up. Application data is backed up nightly to `vm-storage` and copied to Backblaze B2; VMs are rebuilt from this repository rather than restored from images. A disk failure can still lose media.
 - **Management boundaries.** OpenTofu manages most MikroTik settings, but bootstrap, accounts and selected existing settings are manual. Proxmox host configuration and hardening are also separate.
 - **Shared CI host.** Self-hosted runners (`vm-ci` and `vm-release`) save hosted CI minutes but share the single host's CPU with production; a low scheduling priority favours production workloads during CPU contention, at the cost of slower CI.
 - **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
 
 ## Roadmap
 
-- [ ] Add storage redundancy and automated off-site backups with tested restores.
+- [x] Add automated off-site backups with tested restores.
+- [ ] Add storage redundancy.
 - [ ] Deploy Immich for photo management once the storage and backup setup is ready.
 - [ ] Deploy Paperless-ngx for document management.
 - [ ] Deploy Vaultwarden for password management and evaluate Copyparty for file sharing.
