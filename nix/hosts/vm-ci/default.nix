@@ -16,8 +16,8 @@ in {
     # parallel runners: 3 brought the benchmark workflow from 387s to 172s.
     count = 3;
     namePrefix = "vm-ci";
-    memoryHigh = "6G";
-    memoryMax = "6800M";
+    memoryHigh = "4200M";
+    memoryMax = "4700M";
   };
 
   # VLAN 30 is internet only: no AdGuard, no Loki, no IPv6 (infra/router/ci.tf).

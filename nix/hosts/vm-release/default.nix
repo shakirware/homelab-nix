@@ -19,8 +19,8 @@ in {
     count = 1;
     namePrefix = "vm-release";
     # A Next.js production build needs most of this.
-    memoryHigh = "4G";
-    memoryMax = "4500M";
+    memoryHigh = "3G";
+    memoryMax = "3400M";
   };
 
   # VLAN 31 is internet only: no AdGuard, no Loki, no IPv6 (infra/router/release.tf).
