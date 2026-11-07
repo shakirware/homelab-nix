@@ -118,7 +118,7 @@ in {
     };
 
     kaneo = {
-      image = "ghcr.io/usekaneo/kaneo:2.48.0@sha256:e52b4d48bb5efd5cd9a113ce47ed49ea1fb9e9c1517fd73ea4dc1c7037666def";
+      image = "ghcr.io/usekaneo/kaneo:2.49.0@sha256:cd1826b1aba3ce736015cadf6f6c975d923aac00f4b6aaa7aedb29bc722dae49";
       autoStart = true;
 
       environmentFiles = [ config.sops.templates.${envName}.path ];
