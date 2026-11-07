@@ -84,6 +84,14 @@ in {
             matchers:
               - severity="none"
 
+      inhibit_rules:
+        - source_matchers:
+            - alertname="InstanceDown"
+            - job=~"node|node-proxmox"
+          target_matchers:
+            - alertname=~"ServiceProbeFailing|MountProbeMissing"
+          equal: [ "node" ]
+
       receivers:
         - name: "null"
 

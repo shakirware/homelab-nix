@@ -48,8 +48,25 @@ let
   # CouchDB requires auth on every path; a 401 still proves it is serving.
   authRequiredProbes = [ "obsidian-sync" ];
 
+  nodeByUpstreamIp = {
+    "127.0.0.1" = "gw.${baseDomain}:${toString nodePort}";
+    ${ips.gw} = "gw.${baseDomain}:${toString nodePort}";
+    ${ips.media} = "media.${baseDomain}:${toString nodePort}";
+    ${ips.storage} = "storage.${baseDomain}:${toString nodePort}";
+    ${ips.apps} = "apps.${baseDomain}:${toString nodePort}";
+    ${ips.sensitive} = "sensitive.${baseDomain}:${toString nodePort}";
+    ${ips.monitoring} = "${ips.monitoring}:${toString nodePort}";
+    ${ips.proxmox} = "${ips.proxmox}:${toString nodePort}";
+  };
+
+  upstreamIp = upstream:
+    lib.head (lib.splitString ":"
+      (lib.removePrefix "http://" (lib.removePrefix "https://" upstream)));
+
   probeTargets = map (h:
-    let name = lib.removeSuffix ".${baseDomain}" h.host;
+    let
+      name = lib.removeSuffix ".${baseDomain}" h.host;
+      node = nodeByUpstreamIp.${upstreamIp h.upstream} or null;
     in {
       targets = [ "https://${h.host}${probePaths.${name} or "/"}" ];
       labels = {
@@ -58,7 +75,7 @@ let
           "http_auth_required"
         else
           "http_2xx";
-      };
+      } // lib.optionalAttrs (node != null) { inherit node; };
     }) config.homelab.webHosts;
 
   # Restic jobs export the metrics described in backups.yml.
@@ -214,6 +231,7 @@ let
             for: 2m
             labels:
               severity: critical
+              node: "{{ $labels.instance }}"
             annotations:
               summary: "Instance down"
               description: "{{ $labels.job }} target {{ $labels.instance }} is not reachable."
@@ -653,6 +671,7 @@ let
             for: 10m
             labels:
               severity: warning
+              node: "media.${baseDomain}:${toString nodePort}"
             annotations:
               summary: "Mount probe metrics missing"
               description: "vm-media is not exporting mount-probe metrics."

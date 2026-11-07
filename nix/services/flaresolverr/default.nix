@@ -11,7 +11,11 @@ in {
     ports = [ ];
     volumes = [ ];
 
-    extraOptions = [ "--network=container:gluetun" ];
+    extraOptions = [
+      "--network=container:gluetun"
+      "--memory=1536m"
+      "--memory-swap=1536m"
+    ];
   };
 
   systemd.services.podman-flaresolverr = {
