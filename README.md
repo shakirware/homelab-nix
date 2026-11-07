@@ -21,9 +21,9 @@ OpenTofu provisions the guests on Proxmox and manages the MikroTik router's netw
 | --- | --- | --- |
 | [`vm-gw`](nix/hosts/vm-gw/default.nix) | DNS, ingress, remote access | AdGuard, Unbound, Caddy, Tailscale, Homepage |
 | [`vm-media`](nix/hosts/vm-media/default.nix) | Media and automation | Jellyfin, Sonarr, Radarr, qBittorrent, Audiobookshelf |
-| [`vm-storage`](nix/hosts/vm-storage/default.nix) | Shared bulk storage | mergerfs, NFS |
+| [`vm-storage`](nix/hosts/vm-storage/default.nix) | Shared bulk storage and backups | mergerfs, NFS, restic REST server, Backblaze B2 copy |
 | [`vm-apps`](nix/hosts/vm-apps/default.nix) | Home automation and personal apps | Home Assistant, Obsidian Livesync, Yamtrack, Kaneo |
-| [`vm-sensitive`](nix/hosts/vm-sensitive/default.nix) | Personal and financial apps | Actual Budget, Standard Notes, InvoicePlane |
+| [`vm-sensitive`](nix/hosts/vm-sensitive/default.nix) | Personal and financial apps | Actual Budget, Standard Notes, InvoicePlane, Vaultwarden |
 | [`vm-monitoring`](nix/hosts/vm-monitoring/default.nix) | Metrics, logs, probes, alerting | Prometheus, Grafana, Loki, Alertmanager |
 | [`vm-ci`](nix/hosts/vm-ci/default.nix) | Isolated CI | Three ephemeral GitHub Actions runners, rootless Docker |
 | [`vm-release`](nix/hosts/vm-release/default.nix) | Isolated releases | One ephemeral runner for a separate release repository: builds, publishes and deploys production images |
@@ -57,6 +57,7 @@ This is my own infrastructure rather than a reusable installer but several compo
 | Runtime secrets | [`templates.nix`](nix/modules/secrets/templates.nix) | sops-nix secrets rendered into environment files with dependent service restarts |
 | Self-hosted CI | [`ci-runner/default.nix`](nix/services/ci-runner/default.nix) | Ephemeral runners in containers under rootless Docker, on VLANs that can only open connections to the internet; pull requests and releases run on separate VMs |
 | Monitoring the monitor | [`heartbeat/default.nix`](nix/services/monitoring/heartbeat/default.nix) | A systemd timer only sends an external heartbeat when local alerting checks pass |
+| Backup and recovery | [`backup/default.nix`](nix/modules/backup/default.nix) · [`restic-offsite/default.nix`](nix/services/restic-offsite/default.nix) | Nightly restic backups with database dumps to an append-only REST server, pruned and copied to Backblaze B2, with freshness alerts |
 | Storage and passthrough | [`mergerfs/default.nix`](nix/services/mergerfs/default.nix) · [`pci.tf`](infra/proxmox/pci.tf) | Pooled media storage and Intel iGPU passthrough to the media VM |
 | Home Assistant configuration | [`home-assistant/default.nix`](nix/services/home-assistant/default.nix) | Declarative configuration validated before activation |
 
@@ -156,7 +157,8 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 - [ ] Add storage redundancy.
 - [ ] Deploy Immich for photo management once the storage and backup setup is ready.
 - [ ] Deploy Paperless-ngx for document management.
-- [ ] Deploy Vaultwarden for password management and evaluate Copyparty for file sharing.
+- [x] Deploy Vaultwarden for password management.
+- [ ] Evaluate Copyparty for file sharing.
 - [ ] Add automated Nix/OpenTofu checks.
 
 ## Feedback

@@ -190,10 +190,11 @@ connections before broadening any allow rule.
 ## State and backups
 
 OpenTofu state and saved plans can contain secrets and are kept out of Git with
-restricted permissions. **Run** [`backup-state.sh`](../infra/router/backup-state.sh)
-**after each router apply** to store an age-encrypted copy of the state on
-`vm-storage`, outside the shared media directory. RouterOS configuration is
-also preserved as a password-encrypted binary backup and a redacted export.
+restricted permissions. `make router-apply` runs
+[`backup-state.sh`](../infra/router/backup-state.sh) after each apply to store
+an age-encrypted copy of the state on `vm-storage`, outside the shared media
+directory, and preserves the RouterOS configuration as a password-encrypted
+binary backup and a redacted export.
 
 ## Known limitations
 
