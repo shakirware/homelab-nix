@@ -1,39 +1,54 @@
 %% Source of architecture.svg. Mermaid Live exports omit the viewBox;
 %% add one (and a width/height) or GitHub shows the diagram cropped.
 flowchart TB
+    management["Declarative management<br/>Git · OpenTofu · NixOS · Colmena<br/>sops-nix · Renovate"]
+
     subgraph clients["Clients"]
         direction LR
-        trusted["Trusted LAN<br/>Computers · phones"]
-        iot["IoT LAN<br/>Smart devices · TVs"]
-        remote["Remote clients<br/>Tailscale"]
+        trusted["Trusted LAN<br/>VLAN 1<br/>Computers, Phones"]
+        iot["IoT LAN<br/>VLAN 40<br/>Smart devices, TVs"]
+        remote["Remote clients"]
     end
 
-    router["MikroTik hAP ax²<br/>VLANs 1 / 20 / 30 / 31 / 40 · Default-deny firewall"]
+    router["Router<br/>MikroTik hAP ax²<br/>VLAN routing"]
 
     subgraph pve["Proxmox VE · Single physical host"]
         direction TB
 
-        gw["vm-gw<br/>AdGuard · Unbound · Caddy<br/>Tailscale · Homepage"]
+        subgraph production["VLAN 20 · Production services"]
+            direction TB
+            gw["vm-gw<br/>AdGuard · Unbound · Caddy<br/>Tailscale · Homepage"]
 
-        subgraph applications["Applications"]
-            direction LR
-            media["vm-media<br/>Jellyfin · Media automation"]
-            apps["vm-apps<br/>Home Assistant · Personal apps"]
-            sensitive["vm-sensitive<br/>Finance · Notes · Invoicing"]
+            subgraph applications["Applications"]
+                direction LR
+                media["vm-media<br/>Jellyfin · TuliProx · Media automation"]
+                apps["vm-apps<br/>Home Assistant · Personal apps"]
+                sensitive["vm-sensitive<br/>Finance · Notes · Invoicing"]
+            end
+
+            subgraph infrastructure["Storage & observability"]
+                direction LR
+                storage["vm-storage<br/>mergerfs · NFS · Restic"]
+                monitoring["vm-monitoring<br/>Prometheus · Grafana · Loki<br/>Probes · Alertmanager"]
+            end
         end
 
-        subgraph infrastructure["Storage & observability"]
-            direction LR
-            storage["vm-storage<br/>mergerfs · NFS"]
-            monitoring["vm-monitoring<br/>Prometheus · Grafana<br/>Loki · Alertmanager"]
+        subgraph ci_zone["VLAN 30 · Untrusted CI"]
+            ci["vm-ci<br/>3 ephemeral PR runners<br/>Internet-only outbound"]
         end
 
-        ci["vm-ci<br/>GitHub Actions runners<br/>Isolated VLAN 30"]
-        release["vm-release<br/>Release runner<br/>Isolated VLAN 31"]
+        subgraph release_zone["VLAN 31 · Trusted releases"]
+            release["vm-release<br/>1 ephemeral release runner<br/>Internet-only outbound"]
+        end
     end
 
-    external["External heartbeat monitor"]
-    github["GitHub Actions"]
+    github["GitHub Actions<br/>Separate PR / release repositories"]
+    b2["Backblaze B2<br/>Off-site backup target"]
+    telegram["Telegram alerts"]
+    heartbeat["External heartbeat monitor"]
+
+    management -.->|"Managed router configuration"| router
+    management -.->|"Provision & deploy VMs"| pve
 
     trusted --> router
     iot --> router
@@ -45,9 +60,14 @@ flowchart TB
     gw -->|"Caddy"| sensitive
     gw -->|"Caddy"| monitoring
 
-    storage -->|"NFS · read-write"| media
-    storage -->|"NFS · read-only"| gw
+    storage -->|"NFS · read/write"| media
 
-    monitoring -.->|"Heartbeat"| external
-    ci -.->|"Internet only"| github
-    release -.->|"Internet only"| github
+    apps -.->|"Selected data · Restic"| storage
+    storage -.->|"Scheduled Restic copy"| b2
+
+    router -.->|"Syslog"| monitoring
+    monitoring -.->|"Alerts"| telegram
+    monitoring -.->|"Health-gated heartbeat"| heartbeat
+
+    ci -.->|"PR checks"| github
+    release -.->|"Build · publish · deploy"| github
