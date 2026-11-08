@@ -124,8 +124,13 @@ GitHub only hands the runner jobs from that repository. Removing the VLAN uses
   internal names and direct connections where permitted by the firewall.
 - **IoT addressing:** DHCP and device reservations are defined through RouterOS
   and private OpenTofu variables, with device roles used by firewall rules.
-- **Shared storage:** `vm-storage` provides NFS access to `vm-media` (read/write)
-  and `vm-gw` (read-only), restricted by export permissions and a host firewall.
+- **Shared storage:** `vm-storage` exports an NFSv4 root at `/export` with two
+  bind-mounted children: `/media` (the mergerfs pool) for `vm-media`
+  (read/write) and `vm-gw` (read-only), and `/photos` (`/srv/diskA/photos`,
+  outside the pool) for `vm-apps` only (read/write, `sync`, all users squashed
+  to 1000:1001). Clients mount `192.168.20.110:/media` or `:/photos`. A client
+  without a child export gets permission denied, and a host firewall limits
+  port 2049 to the three clients.
 - **Router logs:** RouterOS forwards syslog to `vm-monitoring` for collection
   in Loki.
 
@@ -202,6 +207,11 @@ binary backup and a redacted export.
   management access relies on the router's zone firewall.
 - **Router configuration:** Some existing VLAN and DHCP settings remain outside
   OpenTofu. Independent router access recovery is not fully verified.
+- **Photos export:** `/export/photos` is a subdirectory of the `diskA`
+  filesystem exported with `no_subtree_check`. Root on `vm-apps` could forge
+  file handles for other `diskA` files (the media); `subtree_check` would close
+  this but breaks on the renames Immich does. Photos are not reachable from
+  `vm-media` or `vm-gw`.
 - **Media clients:** TuliProx playlists currently contain a direct media-server
   address; changing it requires updating playlists and the corresponding
   firewall policy.
