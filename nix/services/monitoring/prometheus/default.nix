@@ -300,13 +300,13 @@ let
               description: "{{ $labels.instance }} MemAvailable <5% for 5m."
 
           - alert: HostSwapUsageHigh
-            expr: ((node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / (node_memory_SwapTotal_bytes + 1)) > 0.80
+            expr: ((node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / (node_memory_SwapTotal_bytes + 1) > 0.80) and on(instance) ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10) or (rate(node_pressure_memory_waiting_seconds_total[5m]) > 0.10))
             for: 10m
             labels:
               severity: warning
             annotations:
-              summary: "High swap usage"
-              description: "{{ $labels.instance }} swap usage >80% for 10m."
+              summary: "High swap usage under memory pressure"
+              description: "{{ $labels.instance }} swap usage >80% with <10% memory available or tasks stalled on memory >10% of the time, for 10m."
 
           - alert: HostOOMKills
             expr: increase(node_vmstat_oom_kill{instance!="media.${baseDomain}:${toString nodePort}"}[10m]) > 0
