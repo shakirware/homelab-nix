@@ -9,7 +9,7 @@ let
         }
 
         request_body {
-          max_size 1GB
+          max_size ${h.maxBodySize}
         }
 
         tls {

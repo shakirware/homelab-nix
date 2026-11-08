@@ -30,6 +30,11 @@
           description =
             "If set, Caddy will handle CORS + OPTIONS preflight for this vhost.";
         };
+        maxBodySize = lib.mkOption {
+          type = lib.types.str;
+          default = "1GB";
+          description = "Largest request body Caddy accepts for this vhost.";
+        };
         upstreamTlsInsecure = lib.mkOption {
           type = lib.types.bool;
           default = false;

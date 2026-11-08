@@ -85,6 +85,19 @@
       "schedule": ["* 0-4 1 * *"]
     },
     {
+      "description": "Immich server and machine learning must run the same release",
+      "matchPackageNames": [
+        "ghcr.io/immich-app/immich-server",
+        "ghcr.io/immich-app/immich-machine-learning"
+      ],
+      "groupName": "immich"
+    },
+    {
+      "description": "Immich's Postgres image only changes when upstream's compose file does",
+      "matchPackageNames": ["ghcr.io/immich-app/postgres"],
+      "enabled": false
+    },
+    {
       "description": "Postgres majors need a dump/restore",
       "matchPackageNames": ["postgres"],
       "matchUpdateTypes": ["major"],

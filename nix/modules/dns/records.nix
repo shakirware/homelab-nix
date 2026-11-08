@@ -35,6 +35,7 @@ in {
     "homeassistant.${base}" = ips.gw;
     "yamtrack.${base}" = ips.gw;
     "kaneo.${base}" = ips.gw;
+    "immich.${base}" = ips.gw;
     "notes.${base}" = ips.gw;
     "notes-api.${base}" = ips.gw;
     "notes-files.${base}" = ips.gw;
@@ -144,6 +145,11 @@ in {
     {
       host = "kaneo.${base}";
       upstream = "${ips.apps}:5173";
+    }
+    {
+      host = "immich.${base}";
+      upstream = "${ips.apps}:2283";
+      maxBodySize = "50GB";
     }
     {
       host = "notes.${base}";
