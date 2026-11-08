@@ -3,6 +3,11 @@ let ips = config.homelab.ips;
 in {
   imports = [ ../../profiles/base ../../profiles/apps ];
 
+  homelab.nfsMount = {
+    mountPoint = "/srv/photos";
+    export = "/photos";
+  };
+
   systemd.network.networks."10-lan" = {
     matchConfig.MACAddress = "bc:24:11:ad:85:c4";
     networkConfig = {

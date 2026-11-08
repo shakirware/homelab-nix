@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  mediaRoot = "/srv/media";
+  mediaRoot = config.homelab.nfsMount.mountPoint;
   textfileDir = "/var/lib/prometheus-node-exporter-textfile";
 
   # Every container volume whose host source lives on the NFS media mount,
