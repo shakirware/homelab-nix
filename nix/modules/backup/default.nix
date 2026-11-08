@@ -36,7 +36,7 @@ let
 
     ${lib.concatMapStrings (p: ''
       ${podman} exec ${lib.optionalString (p.execUser != null) "-u ${p.execUser}"} ${p.container} \
-        pg_dump -U ${p.user} -d ${p.db} -Fc \
+        pg_dump -U ${p.user} -d ${p.db} -Fc ${lib.escapeShellArgs p.dumpArgs} \
         > ${dumpDir}/postgres/${p.container}-${p.db}.dump
     '') cfg.postgres}
 
@@ -87,6 +87,11 @@ in {
             default = null;
             description = "User to run pg_dump as inside the container.";
           };
+          dumpArgs = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = "Extra pg_dump arguments.";
+          };
         };
       });
       default = [ ];
@@ -127,7 +132,8 @@ in {
 
       paths = cfg.paths ++ [ dumpDir ];
       exclude = cfg.exclude ++ [ "*.db-wal" "*.db-shm" "*.sqlite-wal" "*.sqlite-shm" ];
-      extraBackupArgs = [ "--tag" "nightly" "--exclude-caches" ];
+      extraBackupArgs =
+        [ "--tag" "nightly" "--exclude-caches" "--compression" "max" ];
 
       backupPrepareCommand = toString dumpScript;
       backupCleanupCommand = toString metricsScript;
