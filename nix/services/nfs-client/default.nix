@@ -1,12 +1,10 @@
-{ lib, config, pkgs, ... }:
+{ lib, config, pkgs, utils, ... }:
 
 let
   server = config.homelab.ips.storage;
 
-  export = "/";
-
-  mountPoint = "/srv/media";
-  mountUnit = "srv-media.mount";
+  inherit (config.homelab.nfsMount) export mountPoint;
+  mountUnit = "${utils.escapeSystemdPath mountPoint}.mount";
 
   # Containers that can see the NFS mount: a volume source at, below or above
   # (e.g. "/srv:/srv:ro") the mount point. Derived from the container
@@ -25,6 +23,8 @@ let
     (builtins.filter seesMount c.volumes))
     config.virtualisation.oci-containers.containers);
 in {
+  imports = [ ./options.nix ];
+
   environment.systemPackages = [ pkgs.nfs-utils ];
 
   systemd.tmpfiles.rules =
