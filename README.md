@@ -145,12 +145,15 @@ The lab runs on a single server built mostly from second-hand components, balanc
 
 The current NIC limits deeper CPU C-states; a different NIC might reduce idle consumption.
 
-## Trade-offs
+## Roadmap
 
-- **Storage resilience.** mergerfs combines drives without redundancy or parity, and media is not backed up. Application data is backed up nightly to `vm-storage` and copied to Backblaze B2 ([backup guide](docs/backups.md)); VMs are rebuilt from this repository rather than restored from images. A disk failure can still lose media. Immich photos live on one disk with a local-only restic copy on the other: they survive a single disk failure but not the loss of the whole host.
-- **Management boundaries.** OpenTofu manages most MikroTik settings, but bootstrap, accounts and selected existing settings are manual. Proxmox host configuration and hardening are also separate.
-- **Shared CI host.** Self-hosted runners (`vm-ci` and `vm-release`) save hosted CI minutes but share the single host's CPU with production; a low scheduling priority favours production workloads during CPU contention, at the cost of slower CI.
-- **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
+- [x] Add automated off-site backups with tested restores.
+- [ ] Add storage redundancy.
+- [x] Deploy Immich for photo management once the storage and backup setup is ready.
+- [ ] Deploy Paperless-ngx for document management.
+- [x] Deploy Vaultwarden for password management.
+- [ ] Evaluate Copyparty for file sharing.
+- [ ] Add automated Nix/OpenTofu checks.
 
 ## Feedback
 
