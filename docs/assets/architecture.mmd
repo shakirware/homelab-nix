@@ -5,7 +5,7 @@ flowchart TB
 
     subgraph clients["Clients"]
         direction LR
-        trusted["Trusted LAN<br/>VLAN 1<br/>Computers, Phones"]
+        trusted["Trusted LAN<br/>VLAN 1<br/>Computers, phones"]
         iot["IoT LAN<br/>VLAN 40<br/>Smart devices, TVs"]
         remote["Remote clients"]
     end
@@ -17,18 +17,33 @@ flowchart TB
 
         subgraph production["VLAN 20 · Production services"]
             direction TB
+
             gw["vm-gw<br/>AdGuard · Unbound · Caddy<br/>Tailscale · Homepage"]
 
             subgraph applications["Applications"]
                 direction LR
                 media["vm-media<br/>Jellyfin · TuliProx · Media automation"]
-                apps["vm-apps<br/>Home Assistant · Personal apps"]
+                apps["vm-apps<br/>Immich · Home Assistant<br/>Personal apps"]
                 sensitive["vm-sensitive<br/>Finance · Notes · Invoicing"]
             end
 
             subgraph infrastructure["Storage & observability"]
                 direction LR
-                storage["vm-storage<br/>mergerfs · NFS · Restic"]
+
+                subgraph vmstorage["vm-storage · Local HDDs"]
+                    direction TB
+
+                    storage["NFSv4 · mergerfs · Restic"]
+
+                    diskA["diskA · Immich originals<br/>/srv/diskA/photos"]
+
+                    subgraph diskB["diskB · Encrypted Restic repositories"]
+                        direction LR
+                        photoBackup["Photo originals backup<br/>LOCAL ONLY"]
+                        infraBackup["Selected app data & DB dumps<br/>Includes Immich PostgreSQL"]
+                    end
+                end
+
                 monitoring["vm-monitoring<br/>Prometheus · Grafana · Loki<br/>Probes · Alertmanager"]
             end
         end
@@ -43,7 +58,7 @@ flowchart TB
     end
 
     github["GitHub Actions<br/>Separate PR / release repositories"]
-    b2["Backblaze B2<br/>Off-site backup target"]
+    b2["Backblaze B2 · Off-site<br/>Small app & database backups only"]
     telegram["Telegram alerts"]
     heartbeat["External heartbeat monitor"]
 
@@ -60,10 +75,12 @@ flowchart TB
     gw -->|"Caddy"| sensitive
     gw -->|"Caddy"| monitoring
 
-    storage -->|"NFS · read/write"| media
+    storage -->|"NFSv4 /media"| media
+    storage -->|"NFSv4 /media"| gw
+    storage -->|"NFSv4 /photos"| apps
 
-    apps -.->|"Selected data · Restic"| storage
-    storage -.->|"Scheduled Restic copy"| b2
+    diskA -.->|"Nightly Restic photo backup"| photoBackup
+    infraBackup -.->|"Scheduled copy"| b2
 
     router -.->|"Syslog"| monitoring
     monitoring -.->|"Alerts"| telegram
@@ -71,3 +88,11 @@ flowchart TB
 
     ci -.->|"PR checks"| github
     release -.->|"Build · publish · deploy"| github
+
+    classDef originals fill:#123b49,stroke:#3b9ca9,color:#ffffff;
+    classDef localBackup fill:#243b2a,stroke:#7ab783,color:#ffffff;
+    classDef offsiteBackup fill:#352849,stroke:#b6a1ef,color:#ffffff;
+
+    class diskA originals;
+    class photoBackup localBackup;
+    class infraBackup,b2 offsiteBackup;
