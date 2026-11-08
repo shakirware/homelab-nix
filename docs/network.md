@@ -122,6 +122,8 @@ GitHub only hands the runner jobs from that repository. Removing the VLAN uses
   Records are defined in [`records.nix`](../nix/modules/dns/records.nix).
 - **Remote access:** Tailscale advertises the server subnet, with split DNS for
   internal names and direct connections where permitted by the firewall.
+  Immich is reached the same way as the other services: through Caddy on
+  `vm-gw`, from the LAN or over Tailscale, and is not exposed to the internet.
 - **IoT addressing:** DHCP and device reservations are defined through RouterOS
   and private OpenTofu variables, with device roles used by firewall rules.
 - **Shared storage:** `vm-storage` exports an NFSv4 root at `/export` with two
@@ -157,40 +159,27 @@ wireless access.
 
 ## Change safety
 
-Router changes that could interrupt access use a **router-local dead-man
-rollback**. A reviewed RouterOS script can reverse the change if a Netwatch
-check is not disarmed after successful verification. Netwatch is used because
-RouterOS `home` device-mode disables the scheduler. Recovery scripts are in
-[`infra/router/rollback/`](../infra/router/rollback).
+Router changes that could interrupt access are protected by a **router-local
+dead-man rollback**: a reviewed RouterOS script reverses the change unless a
+Netwatch check is disarmed after the change is verified. Netwatch is used
+because RouterOS `home` device-mode disables the scheduler. Recovery scripts are
+in [`infra/router/rollback/`](../infra/router/rollback).
 
-The safe change sequence is to prepare and verify a rollback, review the saved
-OpenTofu plan, apply the change, check connectivity and services, then disarm
-the rollback. `make router-apply` uses a saved `make router-plan` result and
-rejects destruction or replacement unless `ALLOW_DESTROY=1` is explicitly set.
+Applies run from a saved OpenTofu plan, and the Makefile refuses plans that
+destroy or replace resources unless that is explicitly allowed. Account and
+credential changes sit outside this net, because a network rollback cannot
+reliably undo them. The trusted Wi-Fi passphrase is also rotated by hand: the
+automation account can only read the existing value in masked form.
 
-Account and credential changes need separate verification because a network
-rollback cannot reliably undo them. The trusted Wi-Fi passphrase also needs a
-manual rotation: the automation account can only read the existing value in
-masked form, so updating SOPS alone does not change the live SSID.
+## Monitoring
 
-## Monitoring and troubleshooting
-
-Router syslog is sent to `vm-monitoring` and retained in Loki. Prometheus and
-Blackbox Exporter independently check infrastructure and service health.
-
-| Signal | Where to look |
-| --- | --- |
-| Firewall observations | [`review-observations.sh`](../infra/router/review-observations.sh) |
-| IoT denies | Grafana Explore, router syslog with `FW-IOT` |
-| Default-deny drops | Grafana Explore, router syslog with `FW-DROP` |
-| CI isolation drops | Router syslog with `FW-CI-*` |
-| Release isolation drops | Router syslog with `FW-REL-*` |
-| Service health | Prometheus targets, Blackbox probes and application logs |
-
-When troubleshooting a blocked connection, identify the source VLAN and
-destination first, then correlate the traffic with firewall logs. Distinguish
-expected discovery traffic and transient failures from blocked legitimate
-connections before broadening any allow rule.
+Router syslog is sent to `vm-monitoring` and retained in Loki. Firewall rules
+log with zone prefixes (`FW-IOT`, `FW-DROP`, `FW-CI-*`, `FW-REL-*`), so denied
+traffic can be traced to its source zone, and
+[`review-observations.sh`](../infra/router/review-observations.sh) summarises
+those observations. Prometheus and Blackbox Exporter independently check
+infrastructure and service health, and the NFS mounts on `vm-media` and `vm-apps`
+are probed on the host and inside the containers that use them.
 
 ## State and backups
 
