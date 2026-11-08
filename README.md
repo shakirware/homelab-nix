@@ -59,6 +59,7 @@ This is my own infrastructure rather than a reusable installer but several compo
 | Monitoring the monitor | [`heartbeat/default.nix`](nix/services/monitoring/heartbeat/default.nix) | A systemd timer only sends an external heartbeat when local alerting checks pass |
 | Backup and recovery | [`backup/default.nix`](nix/modules/backup/default.nix) · [`restic-offsite/default.nix`](nix/services/restic-offsite/default.nix) · [backup guide](docs/backups.md) | Nightly restic backups with database dumps to an append-only REST server, pruned and copied to Backblaze B2, with freshness alerts |
 | Storage and passthrough | [`mergerfs/default.nix`](nix/services/mergerfs/default.nix) · [`pci.tf`](infra/proxmox/pci.tf) | Pooled media storage and Intel iGPU passthrough to the media VM |
+| Photo library | [`immich/default.nix`](nix/services/immich/default.nix) · [`nfs-server/default.nix`](nix/services/nfs-server/default.nix) · [`restic-photos/default.nix`](nix/services/restic-photos/default.nix) | Immich originals on their own NFSv4 export outside the media pool, visible only to `vm-apps`, with a local-only restic repository kept out of the B2 copy |
 | Home Assistant configuration | [`home-assistant/default.nix`](nix/services/home-assistant/default.nix) | Declarative configuration validated before activation |
 
 ## Observability
@@ -150,16 +151,6 @@ The current NIC limits deeper CPU C-states; a different NIC might reduce idle co
 - **Management boundaries.** OpenTofu manages most MikroTik settings, but bootstrap, accounts and selected existing settings are manual. Proxmox host configuration and hardening are also separate.
 - **Shared CI host.** Self-hosted runners (`vm-ci` and `vm-release`) save hosted CI minutes but share the single host's CPU with production; a low scheduling priority favours production workloads during CPU contention, at the cost of slower CI.
 - **This is site-specific.** Disk mappings, IP addresses, hardware passthrough, and secrets require adaptation.
-
-## Roadmap
-
-- [x] Add automated off-site backups with tested restores.
-- [ ] Add storage redundancy.
-- [ ] Deploy Immich for photo management once the storage and backup setup is ready.
-- [ ] Deploy Paperless-ngx for document management.
-- [x] Deploy Vaultwarden for password management.
-- [ ] Evaluate Copyparty for file sharing.
-- [ ] Add automated Nix/OpenTofu checks.
 
 ## Feedback
 
