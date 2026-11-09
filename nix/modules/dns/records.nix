@@ -35,6 +35,7 @@ in {
     "homeassistant.${base}" = ips.gw;
     "yamtrack.${base}" = ips.gw;
     "kaneo.${base}" = ips.gw;
+    "mealie.${base}" = ips.gw;
     "immich.${base}" = ips.gw;
     "notes.${base}" = ips.gw;
     "notes-api.${base}" = ips.gw;
@@ -145,6 +146,10 @@ in {
     {
       host = "kaneo.${base}";
       upstream = "${ips.apps}:5173";
+    }
+    {
+      host = "mealie.${base}";
+      upstream = "${ips.apps}:9000";
     }
     {
       host = "immich.${base}";
