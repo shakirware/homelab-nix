@@ -21,7 +21,7 @@ let
       /gluetun-entrypoint healthcheck >/dev/null
 
     # Compare the VPN exit IP with vm-media's normal WAN IP.
-    vpn_ip="$(${podmanBin} exec gluetun cat /tmp/gluetun/ip)"
+    vpn_ip="$(${podmanBin} exec gluetun wget -qO- -T 10 https://api.ipify.org)"
     host_ip="$(${curlBin} -4fsS --max-time 10 https://api.ipify.org)"
 
     if [ -z "$vpn_ip" ] || [ -z "$host_ip" ]; then
