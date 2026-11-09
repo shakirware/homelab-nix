@@ -445,6 +445,11 @@
         href: https://@KANEO_HOST@
         description: Projects and tasks
         siteMonitor: https://@KANEO_HOST@
+    - Mealie:
+        icon: mdi-silverware-fork-knife
+        href: https://@MEALIE_HOST@
+        description: Recipes and meal planning
+        siteMonitor: https://@MEALIE_HOST@
     - Immich:
         icon: mdi-image-multiple
         href: https://@IMMICH_HOST@

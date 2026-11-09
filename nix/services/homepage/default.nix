@@ -48,6 +48,7 @@ let
   homeAssistantHost = "homeassistant.${baseDomain}";
   yamtrackHost = "yamtrack.${baseDomain}";
   kaneoHost = "kaneo.${baseDomain}";
+  mealieHost = "mealie.${baseDomain}";
   immichHost = "immich.${baseDomain}";
   actualHost = "actual.${baseDomain}";
   vaultHost = "vault.${baseDomain}";
@@ -103,6 +104,7 @@ let
     HOME_ASSISTANT_HOST = homeAssistantHost;
     YAMTRACK_HOST = yamtrackHost;
     KANEO_HOST = kaneoHost;
+    MEALIE_HOST = mealieHost;
     IMMICH_HOST = immichHost;
 
     ACTUAL_HOST = actualHost;
