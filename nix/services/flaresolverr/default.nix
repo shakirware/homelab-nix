@@ -13,8 +13,8 @@ in {
 
     extraOptions = [
       "--network=container:gluetun"
-      "--memory=1536m"
-      "--memory-swap=1536m"
+      "--memory=2g"
+      "--memory-swap=2g"
     ];
   };
 
