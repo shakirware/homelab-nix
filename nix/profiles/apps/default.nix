@@ -21,6 +21,7 @@
     ../../services/home-assistant
     ../../services/yamtrack
     ../../services/kaneo
+    ../../services/mealie
     ../../services/immich
   ];
 }
