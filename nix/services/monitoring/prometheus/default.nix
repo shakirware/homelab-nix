@@ -30,6 +30,7 @@ let
     notes-files = "/healthcheck";
     yamtrack = "/health/";
     kaneo = "/api/health";
+    mealie = "/api/app/about";
     immich = "/api/server/ping";
     seerr = "/api/v1/status";
     audiobookshelf = "/healthcheck";
