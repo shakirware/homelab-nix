@@ -37,6 +37,7 @@
     ../../services/qbittorrent
 
     ../../services/profilarr
+    ../../services/profilarr-v2
     ../../services/cleanuparr
 
     ../../services/tuliprox
