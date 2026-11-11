@@ -97,22 +97,7 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  networking.nftables.tables."obsidian-couchdb" = {
-    family = "inet";
-    content = ''
-      chain input {
-        type filter hook input priority 0; policy accept;
-        tcp dport ${toString port} jump couchdb_guard
-      }
-
-      chain couchdb_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${config.homelab.ips.gw} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
 
   # CouchDB files are append-only, so a live copy is consistent enough.
   homelab.backup.paths = [ dataDir localIniPath ];
