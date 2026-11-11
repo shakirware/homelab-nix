@@ -6,7 +6,6 @@ let
 
   mergerfsOptions = [
     "allow_other"
-    "use_ino"
     "category.create=ff"
     "moveonenospc=true"
     "minfreespace=1T"
@@ -14,7 +13,7 @@ let
     # without noforget mergerfs drops nodes NFS still holds handles to, which
     # left clients' long-lived subdirectory bind mounts with ESTALE.
     "noforget"
-    "inodecalc=path-hash"
+    "inodecalc=hybrid-hash"
     "nofail"
     "x-systemd.mount-timeout=60s"
   ];
