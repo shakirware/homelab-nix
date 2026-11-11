@@ -70,6 +70,36 @@ services also enforce source-address restrictions. Expected firewall drops
 include UPnP/NAT-PMP discovery and attempts to reach unapproved ports; those
 do not, by themselves, indicate an outage.
 
+### Per-VM service guards
+
+The VLAN 20 VMs share one subnet, so the router cannot filter traffic between
+them; each VM's own nftables firewall is the only control. Podman DNATs
+published container ports before the NixOS `input` chain, so
+`networking.firewall.allowedTCPPorts` does not govern them. Every listening
+service port is instead declared in `homelab.firewall.restrict`
+([`backend-guard.nix`](../nix/modules/networking/backend-guard.nix)), which
+builds one `backend-guard` table per host at `prerouting` priority -150, ahead
+of the DNAT, and so covers containers and native services alike.
+
+| Port class | Allowed sources |
+| --- | --- |
+| Web applications behind Caddy | `vm-gw` |
+| Jellyfin, TuliProx | `vm-gw`, TRUSTED and IOT subnets (the router narrows these further) |
+| NetV, Home Assistant | `vm-gw`, TRUSTED subnet |
+| Loki push (3100) | Every VLAN 20 VM |
+| restic REST server, NFS | The backup clients; the NFS clients |
+| Node Exporter (9100) | `vm-monitoring` |
+| SSH on `vm-ci`, `vm-release` | Administrative workstation |
+
+Anything else, IPv6 included, is dropped. A build fails if a container
+publishes a port that has no entry. Containers may reach restricted ports
+through their own host's address only on `vm-media`
+(`homelab.firewall.allowLocalContainers`), where the media applications call
+each other that way; Cleanuparr, Pinchflat and the Gluetun control port opt
+out. Services on the host network or running natively (Prometheus, Grafana,
+Loki, Alertmanager, Home Assistant, Vaultwarden, AdGuard) still need their
+`allowedTCPPorts` entry as well.
+
 ### IoT isolation
 
 - **Client isolation:** Wi-Fi access lists and bridge horizons prevent IoT
@@ -194,6 +224,8 @@ binary backup and a redacted export.
 
 - **Proxmox management:** There is no host firewall or SSH hardening;
   management access relies on the router's zone firewall.
+- **SSH between servers:** Port 22 is open between all VLAN 20 VMs; only
+  `vm-ci` and `vm-release` restrict it to the administrative workstation.
 - **Router configuration:** Some existing VLAN and DHCP settings remain outside
   OpenTofu. Independent router access recovery is not fully verified.
 - **Photos export:** `/export/photos` is a subdirectory of the `diskA`
