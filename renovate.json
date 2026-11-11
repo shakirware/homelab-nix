@@ -88,6 +88,14 @@
       "groupName": "immich"
     },
     {
+      "description": "Profilarr and its parser must run the same release",
+      "matchPackageNames": [
+        "ghcr.io/dictionarry-hub/profilarr",
+        "ghcr.io/dictionarry-hub/profilarr-parser"
+      ],
+      "groupName": "profilarr"
+    },
+    {
       "description": "Immich's Postgres image only changes when upstream's compose file does",
       "matchPackageNames": ["ghcr.io/immich-app/postgres"],
       "enabled": false
