@@ -214,6 +214,8 @@ in {
     };
   };
 
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
+
   homelab.backup = {
     paths = [ baseDir ];
     exclude = [ dbDataDir "${baseDir}/runtime" ];
