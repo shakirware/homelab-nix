@@ -515,6 +515,14 @@ let
             annotations:
               summary: "DNS resolution failing"
               description: "AdGuard on {{ $labels.instance }} fails the {{ $labels.module }} lookup."
+
+          - alert: DnsResolutionFlapping
+            expr: count_over_time(probe_success{job="blackbox-dns"}[6h]) - sum_over_time(probe_success{job="blackbox-dns"}[6h]) >= 3
+            labels:
+              severity: warning
+            annotations:
+              summary: "DNS resolution failing intermittently"
+              description: "AdGuard on {{ $labels.instance }} failed the {{ $labels.module }} lookup {{ $value }} times in 6 hours; each failure is too short for DnsResolutionFailing."
     EOF
 
     cat > $out/proxmox.yml <<'EOF'
