@@ -12,6 +12,7 @@
     ../../modules/users/dirs.nix
 
     ../../modules/networking/default.nix
+    ../../modules/networking/backend-guard.nix
 
     ../../modules/dns/domains.nix
     ../../modules/dns/records.nix
