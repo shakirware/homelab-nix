@@ -44,24 +44,7 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  # Reverse-proxy-only access from vm-gw
-  # Before dstnat: Podman's DNAT bypasses the input hook.
-  networking.nftables.tables."cleanuparr-backend-guard" = {
-    family = "inet";
-    content = ''
-      chain prerouting {
-        type filter hook prerouting priority -150; policy accept;
-        fib daddr type local tcp dport ${toString port} jump cleanuparr_guard
-      }
-
-      chain cleanuparr_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
 
   # events.db is an activity log and is left out.
   homelab.backup = {

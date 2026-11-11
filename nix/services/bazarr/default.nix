@@ -37,7 +37,7 @@ in {
   systemd.services.podman-bazarr.after =
     [ "network-online.target" "srv-media.mount" "podman-sonarr.service" "podman-radarr.service" ];
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 6767 ];
+  homelab.firewall.restrict."6767" = [ config.homelab.ips.gw ];
 
   homelab.backup = {
     paths = [ "${appdataDir}/config" ];

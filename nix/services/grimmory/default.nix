@@ -149,7 +149,7 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
 
   networking.firewall.interfaces."podman4" = {
     allowedUDPPorts = lib.mkAfter [ 53 ];

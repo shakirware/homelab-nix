@@ -185,7 +185,7 @@ in {
     serviceConfig.ExecStartPre = lib.mkAfter [ waitDb ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ hostPort ];
+  homelab.firewall.restrict.${toString hostPort} = [ config.homelab.ips.gw ];
 
   # aardvark-dns on the gateway answers the containers' DNS (update checks,
   # metadata lookups).  Matched by subnet: podmanN numbering isn't stable.

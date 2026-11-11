@@ -37,7 +37,7 @@ in {
   systemd.services.podman-radarr.after =
     [ "network-online.target" "srv-media.mount" ];
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 7878 ];
+  homelab.firewall.restrict."7878" = [ config.homelab.ips.gw ];
 
   homelab.backup = {
     paths = [ "/srv/appdata/radarr/config.xml" ];

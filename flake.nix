@@ -30,6 +30,7 @@
 
       lab = { cidr = "192.168.20.0/24"; };
       home = { cidr = "192.168.1.0/24"; };
+      iot = { cidr = "192.168.40.0/24"; };
 
       sshKeyEnv = builtins.getEnv "COLMENA_SSH_KEY";
       targetUserEnv = builtins.getEnv "COLMENA_TARGET_USER";
@@ -42,7 +43,7 @@
         nixpkgs.lib.nixosSystem {
           inherit system;
 
-          specialArgs = { inherit lab home unstablePkgs; };
+          specialArgs = { inherit lab home iot unstablePkgs; };
 
           modules = [
             sops-nix.nixosModules.sops
@@ -83,7 +84,7 @@
         defaults = { ... }: {
           imports = [
             sops-nix.nixosModules.sops
-            ({ ... }: { _module.args = { inherit lab home unstablePkgs; }; })
+            ({ ... }: { _module.args = { inherit lab home iot unstablePkgs; }; })
           ];
 
           deployment.targetUser = targetUser;

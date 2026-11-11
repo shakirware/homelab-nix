@@ -30,7 +30,7 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
 
   homelab.backup = {
     paths = [

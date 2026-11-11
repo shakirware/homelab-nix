@@ -67,34 +67,5 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
-
-  # Published container ports are DNATed by netavark at nat-prerouting, so the
-  # packet is forwarded to the container rather than delivered locally and an
-  # input-hook filter never sees it.  The forward chain matches the original
-  # pre-DNAT destination port via conntrack, which is what actually gates
-  # access here; the input chain covers any non-DNATed path to the same port.
-  networking.nftables.tables."netv-backend-guard" = {
-    family = "inet";
-    content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        tcp dport ${toString port} jump netv_guard
-      }
-
-      chain forward {
-        type filter hook forward priority -50; policy accept;
-        ct status dnat ct original proto-dst ${toString port} jump netv_guard
-      }
-
-      chain netv_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        iifname "tailscale0" accept
-        ip saddr ${gwIp} accept
-        ip saddr ${home.cidr} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp home.cidr ];
 }
