@@ -12,6 +12,7 @@ in {
     "media.${base}" = ips.media;
     "apps.${base}" = ips.apps;
     "sensitive.${base}" = ips.sensitive;
+    "monitoring.${base}" = ips.monitoring;
     "adguard.${base}" = ips.gw;
     "homepage.${base}" = ips.gw;
     "actual.${base}" = ips.gw;
