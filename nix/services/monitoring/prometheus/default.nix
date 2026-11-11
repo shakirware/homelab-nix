@@ -38,6 +38,7 @@ let
     radarr = "/ping";
     bazarr = "/api/system/ping";
     prowlarr = "/ping";
+    profilarr = "/api/v1/health";
     grimmory = "/api/v1/healthcheck";
     shelfmark = "/api/health";
     readmeabook = "/api/health";
