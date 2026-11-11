@@ -54,25 +54,7 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
-
-  # Before dstnat: Podman's DNAT bypasses the input hook.
-  networking.nftables.tables."pinchflat-backend-guard" = {
-    family = "inet";
-    content = ''
-      chain prerouting {
-        type filter hook prerouting priority -150; policy accept;
-        fib daddr type local tcp dport ${toString port} jump pinchflat_guard
-      }
-
-      chain pinchflat_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
 
   homelab.backup = {
     paths = [ appdataDir ];

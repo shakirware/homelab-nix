@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, home, iot, ... }:
 
 let
   tz = "Europe/London";
@@ -173,31 +173,16 @@ in {
     };
   };
 
-  networking.firewall.allowedTCPPorts =
-    lib.mkAfter [ 8080 9696 6881 8901 8191 controlHostPort ];
-  networking.firewall.allowedUDPPorts = lib.mkAfter [ 6881 ];
-
-  # Only vm-gw (Homepage) may reach the control server.  The published port is
-  # DNATed, so the forward chain matches the pre-DNAT port via conntrack.
-  networking.nftables.tables."gluetun-control-guard" = {
-    family = "inet";
-    content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        tcp dport ${toString controlHostPort} jump gluetun_control_guard
-      }
-
-      chain forward {
-        type filter hook forward priority -50; policy accept;
-        ct status dnat ct original proto-dst ${toString controlHostPort} jump gluetun_control_guard
-      }
-
-      chain gluetun_control_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
+  homelab.firewall.restrict = {
+    "8080" = [ gwIp ];
+    "9696" = [ gwIp ];
+    "8191" = [ ];
+    "6881" = [ ];
+    "6881/udp" = [ ];
+    "8901" = [ gwIp home.cidr iot.cidr ];
+    ${toString controlHostPort} = {
+      sources = [ gwIp ];
+      localContainers = false;
+    };
   };
 }

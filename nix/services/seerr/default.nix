@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 let
   tz = "Europe/London";
@@ -20,7 +20,7 @@ in {
     extraOptions = [ "--init" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 5055 ];
+  homelab.firewall.restrict."5055" = [ config.homelab.ips.gw ];
 
   homelab.backup = {
     paths = [ "/srv/appdata/seerr" ];

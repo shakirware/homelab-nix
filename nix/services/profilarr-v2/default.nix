@@ -83,7 +83,7 @@ in {
     wants = [ "podman-profilarr-v2-parser.service" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ hostPort ];
+  homelab.firewall.restrict.${toString hostPort} = [ config.homelab.ips.gw ];
 
   networking.firewall.extraInputRules = lib.mkAfter ''
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept

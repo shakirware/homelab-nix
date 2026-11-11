@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, home, iot, ... }:
 
 let
   tz = "Europe/London";
@@ -41,8 +41,12 @@ in {
   systemd.services.podman-jellyfin.after =
     [ "network-online.target" "srv-media.mount" ];
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 8096 ];
-  networking.firewall.allowedUDPPorts = lib.mkAfter [ 7359 ];
+  homelab.firewall.restrict = let
+    clients = [ config.homelab.ips.gw home.cidr iot.cidr ];
+  in {
+    "8096" = clients;
+    "7359/udp" = clients;
+  };
 
   homelab.backup = {
     paths = [ "/srv/appdata/jellyfin" ];
