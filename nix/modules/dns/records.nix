@@ -129,7 +129,7 @@ in {
     }
     {
       host = "profilarr.${base}";
-      upstream = "${ips.media}:6868";
+      upstream = "${ips.media}:6869";
     }
     {
       host = "obsidian-sync.${base}";
