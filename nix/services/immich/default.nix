@@ -215,29 +215,11 @@ in {
     };
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
-
   networking.firewall.extraInputRules = lib.mkAfter ''
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept
   '';
 
-  networking.nftables.tables."immich-backend-guard" = {
-    family = "inet";
-
-    content = ''
-      chain prerouting {
-        type filter hook prerouting priority -150; policy accept;
-        fib daddr type local tcp dport ${toString port} jump immich_guard
-      }
-
-      chain immich_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
 
   homelab.backup.postgres = [{
     container = "immich-db";

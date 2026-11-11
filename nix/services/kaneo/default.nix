@@ -149,34 +149,13 @@ in {
     serviceConfig.ExecStartPre = lib.mkAfter [ waitDb ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
-
   # aardvark-dns on the gateway answers the containers' DNS.  Matched by
   # subnet: podmanN numbering isn't stable.
   networking.firewall.extraInputRules = lib.mkAfter ''
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept
   '';
 
-  # Only the gateway/reverse proxy may access Kaneo directly.  Hooked before
-  # dstnat: netavark DNATs the published port, so the packet is forwarded to
-  # the container and never reaches the input hook.
-  networking.nftables.tables."kaneo-backend-guard" = {
-    family = "inet";
-
-    content = ''
-      chain prerouting {
-        type filter hook prerouting priority -150; policy accept;
-        fib daddr type local tcp dport ${toString port} jump kaneo_guard
-      }
-
-      chain kaneo_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
 
   homelab.backup.postgres = [{
     container = "kaneo-db";

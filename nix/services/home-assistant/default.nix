@@ -206,24 +206,7 @@ in
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
 
-  networking.nftables.tables."home-assistant-backend-guard" = {
-    family = "inet";
-    content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        tcp dport ${toString port} jump home_assistant_guard
-      }
-
-      chain home_assistant_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        iifname "tailscale0" accept
-        ip saddr ${gwIp} accept
-        ip saddr ${home.cidr} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp home.cidr ];
 
   homelab.backup = {
     paths = [ cfgDir mediaDir backupDir ];

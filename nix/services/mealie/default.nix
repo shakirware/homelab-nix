@@ -50,25 +50,7 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
-
-  networking.nftables.tables."mealie-backend-guard" = {
-    family = "inet";
-
-    content = ''
-      chain prerouting {
-        type filter hook prerouting priority -150; policy accept;
-        fib daddr type local tcp dport ${toString port} jump mealie_guard
-      }
-
-      chain mealie_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
 
   homelab.backup = {
     paths = [ dataDir ];
