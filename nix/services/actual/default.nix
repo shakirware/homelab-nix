@@ -29,23 +29,7 @@ in {
     ports = [ "${bindIp}:${toString port}:5006" ];
   };
 
-  # Before dstnat: Podman's DNAT bypasses the input hook.
-  networking.nftables.tables."actual-backend-guard" = {
-    family = "inet";
-    content = ''
-      chain prerouting {
-        type filter hook prerouting priority -150; policy accept;
-        fib daddr type local tcp dport ${toString port} jump actual_guard
-      }
-
-      chain actual_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
 
   homelab.backup = {
     paths = [ appdataDir ];

@@ -29,23 +29,7 @@ in {
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
 
-  # Only the gateway/reverse proxy may access Vaultwarden directly.
-  networking.nftables.tables."vaultwarden-backend-guard" = {
-    family = "inet";
-    content = ''
-      chain prerouting {
-        type filter hook prerouting priority -150; policy accept;
-        fib daddr type local tcp dport ${toString port} jump vaultwarden_guard
-      }
-
-      chain vaultwarden_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
 
   homelab.backup = {
     paths = [ dataDir ];
