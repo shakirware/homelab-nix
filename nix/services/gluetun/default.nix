@@ -101,6 +101,7 @@ in {
       "${bindIp}:6881:6881" # torrent TCP
       "${bindIp}:6881:6881/udp" # torrent UDP
       "${bindIp}:8901:8901" # iptv proxy
+      "${bindIp}:8084:8084" # shelfmark
       "${bindIp}:${toString controlHostPort}:8000" # control server (Homepage)
     ];
 
@@ -115,7 +116,7 @@ in {
 
       FIREWALL_OUTBOUND_SUBNETS = "192.168.0.0/16";
 
-      FIREWALL_INPUT_PORTS = "8080,9696,6881,8901,8191,8000";
+      FIREWALL_INPUT_PORTS = "8080,9696,6881,8901,8191,8000,8084";
     };
 
     volumes = [
@@ -133,6 +134,7 @@ in {
   # These containers share Gluetun's network namespace.  PartOf ensures a
   # credential-driven Gluetun restart recreates every namespace consumer too.
   systemd.services.podman-flaresolverr.partOf = [ "podman-gluetun.service" ];
+  systemd.services.podman-shelfmark.partOf = [ "podman-gluetun.service" ];
   systemd.services.podman-prowlarr.partOf = [ "podman-gluetun.service" ];
   systemd.services.podman-qbittorrent.partOf = [ "podman-gluetun.service" ];
   systemd.services.podman-tuliprox.partOf = [ "podman-gluetun.service" ];

@@ -5,7 +5,6 @@ let
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
-  bindIp = "0.0.0.0";
   port = 8084;
 in {
   systemd.tmpfiles.rules = lib.mkAfter [
@@ -35,13 +34,18 @@ in {
       "/srv/downloads:/data"
     ];
 
-    ports = [ "${bindIp}:${toString port}:${toString port}" ];
-
+    extraOptions = [ "--network=container:gluetun" ];
   };
 
   systemd.services.podman-shelfmark = {
     wants = [ "network-online.target" ];
-    after = [ "network-online.target" "srv-media.mount" "srv-downloads.mount" ];
+    after = [
+      "network-online.target"
+      "srv-media.mount"
+      "srv-downloads.mount"
+      "podman-gluetun.service"
+    ];
+    requires = [ "podman-gluetun.service" ];
     unitConfig.RequiresMountsFor = [ "/srv/media" "/srv/downloads" ];
   };
 
