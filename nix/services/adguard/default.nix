@@ -60,6 +60,8 @@
   networking.firewall.allowedTCPPorts = lib.mkAfter [ 53 3000 ];
   networking.firewall.allowedUDPPorts = lib.mkAfter [ 53 ];
 
+  homelab.firewall.restrict."3000" = [ ];
+
   # Settings changed in the UI (mutableSettings); filters re-download and the
   # query log is skipped.
   homelab.backup.paths = [ "/var/lib/private/AdGuardHome/AdGuardHome.yaml" ];
