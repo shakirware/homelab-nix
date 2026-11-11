@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 {
   services.resolved.enable = lib.mkForce false;
@@ -26,6 +26,9 @@
         upstream_dns = [ "127.0.0.1:5335" ];
 
         bootstrap_dns = [ "1.1.1.1" "9.9.9.9" ];
+
+        ratelimit_subnet_len_ipv4 = 32;
+        ratelimit_whitelist = [ config.homelab.ips.apps ];
       };
 
       # AdGuard consults its own rewrites *before* the upstream resolver, so any
