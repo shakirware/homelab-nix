@@ -54,7 +54,10 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ gwIp ];
+  homelab.firewall.restrict.${toString port} = {
+    sources = [ gwIp ];
+    localContainers = false;
+  };
 
   homelab.backup = {
     paths = [ appdataDir ];

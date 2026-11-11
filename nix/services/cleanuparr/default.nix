@@ -44,7 +44,10 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ gwIp ];
+  homelab.firewall.restrict.${toString port} = {
+    sources = [ gwIp ];
+    localContainers = false;
+  };
 
   # events.db is an activity log and is left out.
   homelab.backup = {

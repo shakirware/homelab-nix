@@ -48,4 +48,6 @@
 
     ../../services/monitoring/mount-probe
   ];
+
+  homelab.firewall.allowLocalContainers = true;
 }
