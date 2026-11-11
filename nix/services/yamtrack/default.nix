@@ -141,32 +141,12 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
-
   networking.firewall.interfaces."podman3" = {
   allowedUDPPorts = lib.mkAfter [ 53 ];
   allowedTCPPorts = lib.mkAfter [ 53 ];
 };
 
-  # Only the gateway/reverse proxy may access Yamtrack directly.
-  # Before dstnat: Podman's DNAT bypasses the input hook.
-  networking.nftables.tables."yamtrack-backend-guard" = {
-    family = "inet";
-
-    content = ''
-      chain prerouting {
-        type filter hook prerouting priority -150; policy accept;
-        fib daddr type local tcp dport ${toString port} jump yamtrack_guard
-      }
-
-      chain yamtrack_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${gwIp} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ gwIp ];
 
   homelab.backup.sqlite = [ "${dbDir}/db.sqlite3" ];
 }
