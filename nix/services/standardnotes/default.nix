@@ -257,19 +257,11 @@ in {
 
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
 
-  networking.firewall.allowedTCPPorts =
-    lib.mkAfter [ apiPort filesPort webPort ];
-
   networking.firewall.filterForward = true;
 
-  networking.firewall.extraInputRules = lib.mkAfter ''
-    ip saddr 192.168.20.0/24 tcp dport { ${toString apiPort}, ${
-      toString filesPort
-    }, ${toString webPort} } accept
-    tcp dport { ${toString apiPort}, ${toString filesPort}, ${
-      toString webPort
-    } } drop
-  '';
+  homelab.firewall.restrict = lib.genAttrs
+    (map toString [ apiPort filesPort webPort ])
+    (_: [ config.homelab.ips.gw ]);
 
   networking.nftables.tables."nixos-fw" = {
     family = "inet";
