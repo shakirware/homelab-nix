@@ -89,5 +89,13 @@ in {
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept
   '';
 
-  homelab.backup.paths = [ appdataDir ];
+  homelab.backup = {
+    paths = [ appdataDir ];
+    exclude = [
+      "${appdataDir}/backups"
+      "${appdataDir}/logs"
+      "${appdataDir}/data/profilarr.db"
+    ];
+    sqlite = [ "${appdataDir}/data/profilarr.db" ];
+  };
 }
