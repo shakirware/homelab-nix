@@ -76,4 +76,13 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+
+  homelab.firewall.restrict.${toString port} = with config.homelab.ips; [
+    gw
+    storage
+    media
+    apps
+    sensitive
+    monitoring
+  ];
 }

@@ -178,20 +178,5 @@ in {
   # may reach the (unauthenticated) API.
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
 
-  networking.nftables.tables."alertmanager-guard" = {
-    family = "inet";
-    content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        tcp dport ${toString port} jump alertmanager_guard
-      }
-
-      chain alertmanager_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr ${config.homelab.ips.gw} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
 }

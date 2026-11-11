@@ -50,18 +50,8 @@ in {
   networking.firewall.allowedUDPPorts = lib.mkAfter [ port ];
 
   # Only the router may send; anything else could forge log lines.
-  networking.nftables.tables."router-syslog-guard" = {
-    family = "inet";
-    content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        udp dport ${toString port} jump router_syslog_guard
-      }
-
-      chain router_syslog_guard {
-        ip saddr ${ips.router_vlan20} accept
-        drop
-      }
-    '';
+  homelab.firewall.restrict."${toString port}/udp" = {
+    sources = [ ips.router_vlan20 ];
+    localContainers = false;
   };
 }

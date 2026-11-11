@@ -189,6 +189,8 @@ in {
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
 
+  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
+
   # Hand-made dashboards live in grafana.db; plugins re-download.
   homelab.backup.sqlite = [ "${dataDir}/grafana.db" ];
 }
