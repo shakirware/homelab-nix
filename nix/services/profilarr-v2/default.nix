@@ -57,6 +57,7 @@ in {
         PGID = pgid;
         PARSER_HOST = parserIp;
         PARSER_PORT = "5000";
+        ORIGIN = "https://profilarr.${config.homelab.baseDomain}";
       };
 
       volumes = [ "${appdataDir}:/config" ];
