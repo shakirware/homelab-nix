@@ -25,7 +25,7 @@ The Nix configuration defines this pipeline; successful scheduled runs and actua
 | --- | --- |
 | `vm-gw` | AdGuard Home configuration |
 | `vm-apps` | Home Assistant configuration/data, Obsidian Livesync data, Yamtrack SQLite, Mealie SQLite and recipe images, Kaneo PostgreSQL and the Immich PostgreSQL database (uncompressed `pg_dump -Fc -Z0`, so nightly dumps deduplicate) |
-| `vm-media` | Jellyfin and media-app configurations/databases (including *arr services), Audiobookshelf, qBittorrent settings and other declared app data |
+| `vm-media` | Jellyfin and media-app configurations/databases (including *arr services and the Profilarr v2 SQLite database, which holds its profiles, custom formats and sync settings), Audiobookshelf, qBittorrent settings and other declared app data |
 | `vm-sensitive` | Actual Budget, Standard Notes, InvoicePlane and Vaultwarden data/databases |
 | `vm-monitoring` | Grafana SQLite database |
 | `vm-storage` | Books from available disk branches and locally stored, age-encrypted infrastructure backups |
