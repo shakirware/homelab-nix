@@ -97,21 +97,8 @@ in {
   # guard narrows it to the client list.
   networking.firewall.allowedTCPPorts = lib.mkAfter [ 2049 ];
 
-  networking.nftables.tables."nfs-client-guard" = {
-    family = "inet";
-    content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        tcp dport 2049 jump nfs_guard
-        udp dport 2049 jump nfs_guard
-      }
-
-      chain nfs_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr { ${lib.concatStringsSep ", " clients} } accept
-        drop
-      }
-    '';
+  homelab.firewall.restrict = {
+    "2049" = clients;
+    "2049/udp" = clients;
   };
 }
