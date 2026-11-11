@@ -40,21 +40,7 @@ in {
   services.journald.extraConfig = "SystemMaxUse=1G";
 
   # SSH from the admin workstation only (the router enforces the same).
-  networking.nftables.tables."ssh-guard" = {
-    family = "inet";
-    content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        tcp dport 22 jump ssh_guard
-      }
-
-      chain ssh_guard {
-        ct state established,related accept
-        ip saddr ${adminHost} accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict."22" = [ adminHost ];
 
   # Hands freed blocks back to the Proxmox thin pool (the disk has discard=on).
   # Daily: CI writes and deletes gigabytes per run; one afternoon of that left

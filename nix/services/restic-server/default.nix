@@ -60,22 +60,5 @@ in {
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
 
-  # Only the backup clients may reach the REST server.
-  networking.nftables.tables."restic-server-guard" = {
-    family = "inet";
-
-    content = ''
-      chain input {
-        type filter hook input priority -50; policy accept;
-        tcp dport ${toString port} jump restic_guard
-      }
-
-      chain restic_guard {
-        ct state established,related accept
-        iifname "lo" accept
-        ip saddr { ${lib.concatStringsSep ", " clients} } accept
-        drop
-      }
-    '';
-  };
+  homelab.firewall.restrict.${toString port} = clients;
 }
