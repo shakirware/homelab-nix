@@ -5,6 +5,8 @@ in {
   imports =
     [ ../../profiles/base ../../profiles/ops ../../services/nfs-client ];
 
+  homelab.firewall.restrict."22" = [ ips.admin "100.64.0.0/10" ];
+
   systemd.network.networks."10-lan" = {
     matchConfig.MACAddress = "bc:24:11:b5:da:e2";
     networkConfig = {

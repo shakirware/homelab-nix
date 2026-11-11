@@ -1,4 +1,4 @@
-{ lib, pkgs, modulesPath, ... }:
+{ config, lib, pkgs, modulesPath, ... }:
 
 {
   imports = [
@@ -46,6 +46,11 @@
     PasswordAuthentication = false;
     KbdInteractiveAuthentication = false;
     PermitRootLogin = "no";
+  };
+
+  homelab.firewall.restrict."22" = lib.mkDefault {
+    sources = [ config.homelab.ips.admin config.homelab.ips.gw ];
+    localContainers = false;
   };
 
   security.sudo.wheelNeedsPassword = false;

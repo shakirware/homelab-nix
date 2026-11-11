@@ -89,6 +89,8 @@ of the DNAT, and so covers containers and native services alike.
 | Loki push (3100) | Every VLAN 20 VM |
 | restic REST server, NFS | The backup clients; the NFS clients |
 | Node Exporter (9100) | `vm-monitoring` |
+| SSH on the VLAN 20 VMs | Administrative workstation, `vm-gw` |
+| SSH on `vm-gw` | Administrative workstation, Tailscale addresses |
 | SSH on `vm-ci`, `vm-release` | Administrative workstation |
 
 Anything else, IPv6 included, is dropped. A build fails if a container
@@ -224,8 +226,6 @@ binary backup and a redacted export.
 
 - **Proxmox management:** There is no host firewall or SSH hardening;
   management access relies on the router's zone firewall.
-- **SSH between servers:** Port 22 is open between all VLAN 20 VMs; only
-  `vm-ci` and `vm-release` restrict it to the administrative workstation.
 - **Router configuration:** Some existing VLAN and DHCP settings remain outside
   OpenTofu. Independent router access recovery is not fully verified.
 - **Photos export:** `/export/photos` is a subdirectory of the `diskA`

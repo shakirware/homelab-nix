@@ -4,7 +4,7 @@ let
   ips = config.homelab.ips;
   # Mirrors local.admin_hosts in infra/router/locals.tf; the router allows SSH
   # into VLAN 30 from this address only.
-  adminHost = "192.168.1.74";
+  adminHost = ips.admin;
 in {
   imports = [ ../../profiles/base ../../services/ci-runner ];
 
