@@ -3,8 +3,6 @@
 let
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
-
-  bindIp = "0.0.0.0";
 in {
   virtualisation.oci-containers.containers.radarr = {
     image = "lscr.io/linuxserver/radarr:version-6.4.4.10685@sha256:fc0ae3c50f8128b97e84381903ec8d6845c3a569641cb7117c124376cccb57c1";
@@ -24,17 +22,12 @@ in {
       "/srv/downloads:/downloads"
       "/srv/media:/media"
     ];
-
-    ports = [ "${bindIp}:7878:7878" ];
   };
 
-  # Ensure media mount exists before start
-  systemd.services.podman-radarr.unitConfig.RequiresMountsFor =
-    [ "/srv/media" ];
-  systemd.services.podman-radarr.after =
-    [ "network-online.target" "srv-media.mount" ];
-
-  homelab.firewall.restrict."7878" = [ config.homelab.ips.gw ];
+  homelab.containers.radarr = {
+    publish."7878" = [ config.homelab.ips.gw ];
+    media = true;
+  };
 
   homelab.backup = {
     paths = [ "/srv/appdata/radarr/config.xml" ];
