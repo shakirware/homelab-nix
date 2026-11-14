@@ -151,7 +151,9 @@ GitHub only hands the runner jobs from that repository. Removing the VLAN uses
 
 - **DNS and ingress:** AdGuard Home forwards through Unbound. Internal service
   records resolve to `vm-gw`, where Caddy provides HTTPS and reverse proxying.
-  Records are defined in [`records.nix`](../nix/modules/dns/records.nix).
+  Records are defined in [`records.nix`](../nix/modules/dns/records.nix):
+  one `webHosts` entry per web service gives its DNS record on `vm-gw`, its
+  Caddy vhost and its Blackbox health probe (`probePath`, default `/`).
 - **Remote access:** Tailscale advertises the server subnet, with split DNS for
   internal names and direct connections where permitted by the firewall.
   Immich is reached the same way as the other services: through Caddy on

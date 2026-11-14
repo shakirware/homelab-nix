@@ -53,7 +53,7 @@ This is my own infrastructure rather than a reusable installer but several compo
 | Network segmentation | [`infra/router/`](infra/router) | VLANs, zone firewall, RouterOS OpenTofu and router-local rollback |
 | Provisioning and deployment | [`infra/proxmox/vms.tf`](infra/proxmox/vms.tf) · [`flake.nix`](flake.nix) | Proxmox VM definitions alongside eight NixOS configurations and a Colmena hive |
 | Role-based modules | [`nix/profiles/`](nix/profiles) | Shared defaults separated from application-specific roles |
-| Service discovery | [`records.nix`](nix/modules/dns/records.nix) | Common DNS and reverse-proxy host definitions |
+| Service discovery | [`records.nix`](nix/modules/dns/records.nix) | DNS records, reverse-proxy hosts and health probe paths |
 | Runtime secrets | [`templates.nix`](nix/modules/secrets/templates.nix) | sops-nix secrets rendered into environment files with dependent service restarts |
 | Self-hosted CI | [`ci-runner/default.nix`](nix/services/ci-runner/default.nix) | Ephemeral runners in containers under rootless Docker, on VLANs that can only open connections to the internet; pull requests and releases run on separate VMs |
 | Monitoring the monitor | [`heartbeat/default.nix`](nix/services/monitoring/heartbeat/default.nix) | A systemd timer only sends an external heartbeat when local alerting checks pass |
