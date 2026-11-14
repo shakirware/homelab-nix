@@ -17,10 +17,6 @@ let
   podman = "${pkgs.podman}/bin/podman";
   bash = "${pkgs.bash}/bin/bash";
 in {
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d ${appdataDir} 2775 ${config.homelab.ids.user} media - -"
-  ];
-
   systemd.services."podman-network-${net}" = {
     description = "Ensure podman network ${net} exists";
     wantedBy = [ "multi-user.target" ];
@@ -74,7 +70,10 @@ in {
     wants = [ "podman-profilarr-v2-parser.service" ];
   };
 
-  homelab.containers."profilarr-v2".publish.${toString hostPort} = { sources = [ config.homelab.ips.gw ]; to = 6868; };
+  homelab.containers."profilarr-v2" = {
+    publish.${toString hostPort} = { sources = [ config.homelab.ips.gw ]; to = 6868; };
+    appdata = appdataDir;
+  };
 
   networking.firewall.extraInputRules = lib.mkAfter ''
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept

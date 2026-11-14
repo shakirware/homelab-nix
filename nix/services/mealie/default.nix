@@ -11,10 +11,6 @@ let
 
   gwIp = config.homelab.ips.gw;
 in {
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d ${dataDir} 2775 ${config.homelab.ids.user} media - -"
-  ];
-
   virtualisation.oci-containers.containers.mealie = {
     image = "ghcr.io/mealie-recipes/mealie:v3.30.0@sha256:90f83da6f3ab0a421efc827118a556168573930105f13fa3321768f42163d784";
     environment = {
@@ -42,7 +38,10 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  homelab.containers.mealie.publish.${toString port} = { sources = [ gwIp ]; to = 9000; };
+  homelab.containers.mealie = {
+    publish.${toString port} = { sources = [ gwIp ]; to = 9000; };
+    appdata = dataDir;
+  };
 
   homelab.backup = {
     paths = [ dataDir ];

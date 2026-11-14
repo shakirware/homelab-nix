@@ -15,15 +15,6 @@ let
 
   gwIp = config.homelab.ips.gw;
 in {
-  # Created owned by the host admin like every other /srv/appdata service:
-  # tmpfiles refuses to descend into a directory whose owner differs from its
-  # parent.  The upstream entrypoint chowns the cache to its own `netv` user
-  # (uid 10001) on first start, which is the case it is written to handle.
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d ${appdataDir} 2775 ${config.homelab.ids.user} media - -"
-    "d ${cacheDir} 2775 ${config.homelab.ids.user} media - -"
-  ];
-
   virtualisation.oci-containers.containers.netv = {
     image = "ghcr.io/jvdillon/netv:0.4.0@sha256:b3258d6a3b5cd6cad7405002e838885d15a3c0625b221cef89fe19239c7f1e9c";
     environment = {
@@ -61,5 +52,15 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  homelab.containers.netv.publish.${toString port} = [ gwIp home.cidr ];
+  homelab.containers.netv = {
+    publish.${toString port} = [ gwIp home.cidr ];
+    # Created owned by the host admin like every other /srv/appdata service:
+    # tmpfiles refuses to descend into a directory whose owner differs from its
+    # parent.  The upstream entrypoint chowns the cache to its own `netv` user
+    # (uid 10001) on first start, which is the case it is written to handle.
+    appdata = [
+      appdataDir
+      cacheDir
+    ];
+  };
 }

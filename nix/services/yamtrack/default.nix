@@ -32,12 +32,6 @@ in {
     restartUnits = [ "podman-yamtrack.service" ];
   };
 
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d ${appdataDir} 2775 ${config.homelab.ids.user} media - -"
-    "d ${dbDir} 2775 ${config.homelab.ids.user} media - -"
-    "d ${redisDir} 2775 ${config.homelab.ids.user} media - -"
-  ];
-
   # Dedicated network for Yamtrack <-> Redis.
   systemd.services."podman-network-${net}" = {
     description = "Ensure Podman network ${net} exists";
@@ -136,7 +130,14 @@ in {
   allowedTCPPorts = [ 53 ];
 };
 
-  homelab.containers.yamtrack.publish.${toString port} = { sources = [ gwIp ]; to = 8000; };
+  homelab.containers.yamtrack = {
+    publish.${toString port} = { sources = [ gwIp ]; to = 8000; };
+    appdata = [
+      appdataDir
+      dbDir
+      redisDir
+    ];
+  };
 
   homelab.backup.sqlite = [ "${dbDir}/db.sqlite3" ];
 }

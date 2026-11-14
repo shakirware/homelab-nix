@@ -19,6 +19,14 @@ let
 
   gwIp = config.homelab.ips.gw;
 in {
+  homelab.containers.tuliprox.appdata = [
+    appdataDir
+    cfgDir
+    dataDir
+    backupDir
+    downloadsDir
+  ];
+
   homelab.secrets.envTemplates.tuliprox = {
     restartUnits = [ "podman-tuliprox.service" ];
     env = {
@@ -52,14 +60,6 @@ in {
       TULIPROX_FILTER = "tuliprox/filter";
     };
   };
-
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d ${appdataDir}    2775 ${config.homelab.ids.user} media - -"
-    "d ${cfgDir}        2775 ${config.homelab.ids.user} media - -"
-    "d ${dataDir}       2775 ${config.homelab.ids.user} media - -"
-    "d ${backupDir}     2775 ${config.homelab.ids.user} media - -"
-    "d ${downloadsDir}  2775 ${config.homelab.ids.user} media - -"
-  ];
 
   virtualisation.oci-containers.containers.tuliprox = {
     image = "ghcr.io/euzu/tuliprox:latest@sha256:3940211e60f2800b57be286d06fb7ffca8726e9e7a0d4be835cea040f84b0f2b";
