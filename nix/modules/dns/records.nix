@@ -4,51 +4,15 @@ let
   base = config.homelab.baseDomain;
   ips = config.homelab.ips;
 in {
-  config.homelab.domains = lib.mkDefault {
-    "router.${base}" = ips.gw;
-    "proxmox.${base}" = ips.gw;
+  config.homelab.domains = lib.mkDefault ({
     "gw.${base}" = ips.gw;
     "storage.${base}" = ips.storage;
     "media.${base}" = ips.media;
     "apps.${base}" = ips.apps;
     "sensitive.${base}" = ips.sensitive;
     "monitoring.${base}" = ips.monitoring;
-    "adguard.${base}" = ips.gw;
-    "homepage.${base}" = ips.gw;
-    "actual.${base}" = ips.gw;
-    "vault.${base}" = ips.gw;
-    "invoice.${base}" = ips.gw;
-    "jellyfin.${base}" = ips.gw;
-    "seerr.${base}" = ips.gw;
-    "shelfmark.${base}" = ips.gw;
-    "readmeabook.${base}" = ips.gw;
-    "grimmory.${base}" = ips.gw;
-    "audiobookshelf.${base}" = ips.gw;
-    "profilarr.${base}" = ips.gw;
-    "sonarr.${base}" = ips.gw;
-    "radarr.${base}" = ips.gw;
-    "bazarr.${base}" = ips.gw;
-    "prowlarr.${base}" = ips.gw;
-    "qbittorrent.${base}" = ips.gw;
-    "iptv.${base}" = ips.gw;
-    "netv.${base}" = ips.gw;
-    "obsidian-sync.${base}" = ips.gw;
-    "homeassistant.${base}" = ips.gw;
-    "yamtrack.${base}" = ips.gw;
-    "kaneo.${base}" = ips.gw;
-    "mealie.${base}" = ips.gw;
-    "immich.${base}" = ips.gw;
-    "notes.${base}" = ips.gw;
-    "notes-api.${base}" = ips.gw;
-    "notes-files.${base}" = ips.gw;
-    "grafana.${base}" = ips.gw;
-    "prometheus.${base}" = ips.gw;
-    "alertmanager.${base}" = ips.gw;
-    "loki.${base}" = ips.gw;
-    "tracearr.${base}" = ips.gw;
-    "cleanuparr.${base}" = ips.gw;
-    "pinchflat.${base}" = ips.gw;
-  };
+  } // lib.listToAttrs
+    (map (h: lib.nameValuePair h.host ips.gw) config.homelab.webHosts));
 
   config.homelab.webHosts = lib.mkDefault [
     {
@@ -67,10 +31,12 @@ in {
     {
       host = "actual.${base}";
       upstream = "${ips.sensitive}:5006";
+      probePath = "/health";
     }
     {
       host = "vault.${base}";
       upstream = "${ips.sensitive}:8222";
+      probePath = "/alive";
     }
     {
       host = "invoice.${base}";
@@ -79,42 +45,52 @@ in {
     {
       host = "jellyfin.${base}";
       upstream = "${ips.media}:8096";
+      probePath = "/health";
     }
     {
       host = "seerr.${base}";
       upstream = "${ips.media}:5055";
+      probePath = "/api/v1/status";
     }
     {
       host = "shelfmark.${base}";
       upstream = "${ips.media}:8084";
+      probePath = "/api/health";
     }
     {
       host = "readmeabook.${base}";
       upstream = "${ips.media}:3030";
+      probePath = "/api/health";
     }
     {
       host = "grimmory.${base}";
       upstream = "${ips.media}:6060";
+      probePath = "/api/v1/healthcheck";
     }
     {
       host = "audiobookshelf.${base}";
       upstream = "${ips.media}:13378";
+      probePath = "/healthcheck";
     }
     {
       host = "sonarr.${base}";
       upstream = "${ips.media}:8989";
+      probePath = "/ping";
     }
     {
       host = "radarr.${base}";
       upstream = "${ips.media}:7878";
+      probePath = "/ping";
     }
     {
       host = "bazarr.${base}";
       upstream = "${ips.media}:6767";
+      probePath = "/api/system/ping";
     }
     {
       host = "prowlarr.${base}";
       upstream = "${ips.media}:9696";
+      probePath = "/ping";
     }
     {
       host = "qbittorrent.${base}";
@@ -131,31 +107,40 @@ in {
     {
       host = "profilarr.${base}";
       upstream = "${ips.media}:6869";
+      probePath = "/api/v1/health";
     }
     {
       host = "obsidian-sync.${base}";
       upstream = "${ips.apps}:5984";
+      probePath = "/_up";
+      # CouchDB requires auth on every path; a 401 still proves it is serving.
+      probeModule = "http_auth_required";
     }
     {
       host = "homeassistant.${base}";
       upstream = "${ips.apps}:8123";
+      probePath = "/manifest.json";
     }
     {
       host = "yamtrack.${base}";
       upstream = "${ips.apps}:8000";
+      probePath = "/health/";
     }
     {
       host = "kaneo.${base}";
       upstream = "${ips.apps}:5173";
+      probePath = "/api/health";
     }
     {
       host = "mealie.${base}";
       upstream = "${ips.apps}:9000";
+      probePath = "/api/app/about";
     }
     {
       host = "immich.${base}";
       upstream = "${ips.apps}:2283";
       maxBodySize = "50GB";
+      probePath = "/api/server/ping";
     }
     {
       host = "notes.${base}";
@@ -165,31 +150,38 @@ in {
       host = "notes-api.${base}";
       upstream = "${ips.sensitive}:3000";
       corsAllowOrigin = "https://notes.${base}";
+      probePath = "/healthcheck";
     }
     {
       host = "notes-files.${base}";
       upstream = "${ips.sensitive}:3125";
       corsAllowOrigin = "https://notes.${base}";
+      probePath = "/healthcheck";
     }
     {
       host = "grafana.${base}";
       upstream = "${ips.monitoring}:3000";
+      probePath = "/api/health";
     }
     {
       host = "prometheus.${base}";
       upstream = "${ips.monitoring}:9090";
+      probePath = "/-/healthy";
     }
     {
       host = "alertmanager.${base}";
       upstream = "${ips.monitoring}:9093";
+      probePath = "/-/healthy";
     }
     {
       host = "loki.${base}";
       upstream = "${ips.monitoring}:3100";
+      probePath = "/ready";
     }
     {
       host = "tracearr.${base}";
       upstream = "${ips.media}:3003";
+      probePath = "/health";
     }
     {
       host = "router.${base}";
@@ -198,10 +190,12 @@ in {
     {
       host = "cleanuparr.${base}";
       upstream = "${ips.media}:11011";
+      probePath = "/health";
     }
     {
       host = "pinchflat.${base}";
       upstream = "${ips.media}:8945";
+      probePath = "/healthcheck";
     }
   ];
 }

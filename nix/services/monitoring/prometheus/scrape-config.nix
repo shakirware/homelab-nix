@@ -7,42 +7,6 @@ let
   pveExporterPort = 9221;
   blackboxPort = 9115;
 
-  # Unauthenticated health endpoints per vhost; anything not listed is probed
-  # at "/". Every Caddy vhost is probed, so new services are covered by default.
-  probePaths = {
-    grafana = "/api/health";
-    prometheus = "/-/healthy";
-    alertmanager = "/-/healthy";
-    loki = "/ready";
-    jellyfin = "/health";
-    homeassistant = "/manifest.json";
-    actual = "/health";
-    vault = "/alive";
-    notes-api = "/healthcheck";
-    notes-files = "/healthcheck";
-    yamtrack = "/health/";
-    kaneo = "/api/health";
-    mealie = "/api/app/about";
-    immich = "/api/server/ping";
-    seerr = "/api/v1/status";
-    audiobookshelf = "/healthcheck";
-    sonarr = "/ping";
-    radarr = "/ping";
-    bazarr = "/api/system/ping";
-    prowlarr = "/ping";
-    profilarr = "/api/v1/health";
-    grimmory = "/api/v1/healthcheck";
-    shelfmark = "/api/health";
-    readmeabook = "/api/health";
-    tracearr = "/health";
-    cleanuparr = "/health";
-    pinchflat = "/healthcheck";
-    obsidian-sync = "/_up";
-  };
-
-  # CouchDB requires auth on every path; a 401 still proves it is serving.
-  authRequiredProbes = [ "obsidian-sync" ];
-
   nodeByUpstreamIp = {
     "127.0.0.1" = "gw.${baseDomain}:${toString nodePort}";
     ${ips.gw} = "gw.${baseDomain}:${toString nodePort}";
@@ -63,13 +27,10 @@ let
       name = lib.removeSuffix ".${baseDomain}" h.host;
       node = nodeByUpstreamIp.${upstreamIp h.upstream} or null;
     in {
-      targets = [ "https://${h.host}${probePaths.${name} or "/"}" ];
+      targets = [ "https://${h.host}${h.probePath}" ];
       labels = {
         service = name;
-        module = if lib.elem name authRequiredProbes then
-          "http_auth_required"
-        else
-          "http_2xx";
+        module = h.probeModule;
       } // lib.optionalAttrs (node != null) { inherit node; };
     }) config.homelab.webHosts;
 
