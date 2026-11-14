@@ -32,10 +32,7 @@ in {
 
   };
 
-  systemd.services.podman-jellyfin.unitConfig.RequiresMountsFor =
-    [ "/srv/media" ];
-  systemd.services.podman-jellyfin.after =
-    [ "network-online.target" "srv-media.mount" ];
+  homelab.containers.jellyfin.media = true;
 
   homelab.firewall.restrict = let
     clients = [ config.homelab.ips.gw home.cidr iot.cidr ];

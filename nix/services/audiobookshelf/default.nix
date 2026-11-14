@@ -15,11 +15,10 @@ in {
 
   systemd.services.podman-audiobookshelf = {
     wants = [ "network-online.target" ];
-    after = [ "network-online.target" "srv-media.mount" ];
-    unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
   homelab.containers.audiobookshelf = {
+    media = true;
     publish.${toString port} = { sources = [ config.homelab.ips.gw ]; to = 80; };
     appdata = [
       "/srv/appdata/audiobookshelf"
