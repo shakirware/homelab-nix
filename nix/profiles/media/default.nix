@@ -36,7 +36,6 @@
     ../../services/gluetun
     ../../services/qbittorrent
 
-    ../../services/profilarr
     ../../services/profilarr-v2
     ../../services/cleanuparr
 
