@@ -3,7 +3,6 @@
 let
 
   port = 5006;
-  bindIp = "0.0.0.0";
 
   appdataDir = "/srv/appdata/actual";
 
@@ -22,11 +21,9 @@ in {
     extraOptions = [ "--user=${uid}:${gid}" ];
 
     volumes = [ "${appdataDir}:/data" ];
-
-    ports = [ "${bindIp}:${toString port}:5006" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ gwIp ];
+  homelab.containers.actual.publish.${toString port} = { sources = [ gwIp ]; to = 5006; };
 
   homelab.backup = {
     paths = [ appdataDir ];

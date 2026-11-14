@@ -1,12 +1,9 @@
 { config, lib, pkgs, ... }:
 
 let
-
   apiPort = 3000;
   filesPort = 3125;
   webPort = 3002;
-
-  bindIp = "0.0.0.0";
 
   baseDomain = config.homelab.baseDomain;
 
@@ -162,8 +159,8 @@ in {
       environmentFiles = [ envFile ];
 
       ports = [
-        "${bindIp}:${toString apiPort}:3000"
-        "${bindIp}:${toString filesPort}:3104"
+        "0.0.0.0:${toString apiPort}:3000"
+        "0.0.0.0:${toString filesPort}:3104"
       ];
 
       volumes = [
@@ -218,7 +215,7 @@ in {
         DEFAULT_SYNC_SERVER = apiUrl;
       };
 
-      ports = [ "${bindIp}:${toString webPort}:80" ];
+      ports = [ "0.0.0.0:${toString webPort}:80" ];
     };
   };
 

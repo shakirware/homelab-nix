@@ -3,7 +3,6 @@
 let
 
   port = 2283;
-  bindIp = "0.0.0.0";
 
   net = "immich-net";
 
@@ -158,8 +157,6 @@ in {
         "/etc/localtime:/etc/localtime:ro"
       ];
 
-      ports = [ "${bindIp}:${toString port}:2283" ];
-
       extraOptions = [
         "--network=${net}"
         "--ip=${serverIp}"
@@ -210,7 +207,7 @@ in {
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept
   '';
 
-  homelab.firewall.restrict.${toString port} = [ gwIp ];
+  homelab.containers."immich-server".publish.${toString port} = { sources = [ gwIp ]; to = 2283; };
 
   homelab.backup.postgres = [{
     container = "immich-db";

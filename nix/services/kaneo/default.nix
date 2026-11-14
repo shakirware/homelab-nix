@@ -3,7 +3,6 @@
 let
 
   port = 5173;
-  bindIp = "0.0.0.0";
 
   net = "kaneo-net";
 
@@ -118,8 +117,6 @@ in {
       image = "ghcr.io/usekaneo/kaneo:2.49.0@sha256:cd1826b1aba3ce736015cadf6f6c975d923aac00f4b6aaa7aedb29bc722dae49";
       environmentFiles = [ config.sops.templates.${envName}.path ];
 
-      ports = [ "${bindIp}:${toString port}:5173" ];
-
       extraOptions = [ "--network=${net}" "--ip=${appIp}" "--name=kaneo" ];
     };
   };
@@ -150,7 +147,7 @@ in {
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept
   '';
 
-  homelab.firewall.restrict.${toString port} = [ gwIp ];
+  homelab.containers.kaneo.publish.${toString port} = { sources = [ gwIp ]; to = 5173; };
 
   homelab.backup.postgres = [{
     container = "kaneo-db";

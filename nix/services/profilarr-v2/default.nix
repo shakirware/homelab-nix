@@ -4,7 +4,6 @@ let
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
-  bindIp = "0.0.0.0";
   hostPort = 6869;
 
   appdataDir = "/srv/appdata/profilarr-v2";
@@ -56,8 +55,6 @@ in {
 
       volumes = [ "${appdataDir}:/config" ];
 
-      ports = [ "${bindIp}:${toString hostPort}:6868" ];
-
       extraOptions = [ "--network=${net}" "--ip=${appIp}" "--name=profilarr-v2" ];
     };
   };
@@ -77,7 +74,7 @@ in {
     wants = [ "podman-profilarr-v2-parser.service" ];
   };
 
-  homelab.firewall.restrict.${toString hostPort} = [ config.homelab.ips.gw ];
+  homelab.containers."profilarr-v2".publish.${toString hostPort} = { sources = [ config.homelab.ips.gw ]; to = 6868; };
 
   networking.firewall.extraInputRules = lib.mkAfter ''
     ip saddr ${subnet} ip daddr ${gateway} meta l4proto { tcp, udp } th dport 53 accept

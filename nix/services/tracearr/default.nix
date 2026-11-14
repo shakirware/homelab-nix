@@ -3,7 +3,6 @@
 let
 
   hostPort = 3003;
-  bindIp = "0.0.0.0";
 
   net = "tracearr-net";
 
@@ -144,8 +143,6 @@ in {
       image = "ghcr.io/connorgallopo/tracearr:3.1.5@sha256:bf8c9e3ea2f2c70247f312e1bfcf7b2b5d66f366b24e301a4dddf692e933b389";
       environmentFiles = [ config.sops.templates.${envName}.path ];
 
-      ports = [ "${bindIp}:${toString hostPort}:3000" ];
-
       extraOptions = [ "--network=${net}" "--ip=${appIp}" "--name=tracearr" ];
     };
   };
@@ -177,7 +174,7 @@ in {
     serviceConfig.ExecStartPre = [ waitDb ];
   };
 
-  homelab.firewall.restrict.${toString hostPort} = [ config.homelab.ips.gw ];
+  homelab.containers.tracearr.publish.${toString hostPort} = { sources = [ config.homelab.ips.gw ]; to = 3000; };
 
   # aardvark-dns on the gateway answers the containers' DNS (update checks,
   # metadata lookups).  Matched by subnet: podmanN numbering isn't stable.

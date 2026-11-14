@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  bindIp = "0.0.0.0";
   port = 13378;
 in {
   systemd.tmpfiles.rules = lib.mkAfter [
@@ -18,8 +17,6 @@ in {
       "/srv/appdata/audiobookshelf/config:/config"
     ];
 
-    ports = [ "${bindIp}:${toString port}:80" ];
-
   };
 
   systemd.services.podman-audiobookshelf = {
@@ -28,7 +25,7 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
+  homelab.containers.audiobookshelf.publish.${toString port} = { sources = [ config.homelab.ips.gw ]; to = 80; };
 
   homelab.backup = {
     paths = [

@@ -4,7 +4,6 @@ let
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
-  bindIp = "0.0.0.0";
   port = 6060;
 
   net = "books-net";
@@ -124,8 +123,6 @@ in {
       "/srv/media/books/bookdrop:/bookdrop"
     ];
 
-    ports = [ "${bindIp}:${toString port}:${toString port}" ];
-
     extraOptions = [ "--network=${net}" ];
   };
 
@@ -144,7 +141,7 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
+  homelab.containers.grimmory.publish.${toString port} = [ config.homelab.ips.gw ];
 
   networking.firewall.interfaces."podman4" = {
     allowedUDPPorts = [ 53 ];

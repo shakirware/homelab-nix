@@ -1,8 +1,6 @@
 { config, lib, pkgs, home, iot, ... }:
 
 let
-  bindIp = "0.0.0.0";
-
   vpnNet = "vpn-net";
 
   # Host port for Gluetun's control server; 8000 is taken by neTV.
@@ -92,14 +90,14 @@ in {
     ];
 
     ports = [
-      "${bindIp}:8191:8191" # flaresolverr
-      "${bindIp}:8080:8080" # qbittorrent webui
-      "${bindIp}:9696:9696" # prowlarr
-      "${bindIp}:6881:6881" # torrent TCP
-      "${bindIp}:6881:6881/udp" # torrent UDP
-      "${bindIp}:8901:8901" # iptv proxy
-      "${bindIp}:8084:8084" # shelfmark
-      "${bindIp}:${toString controlHostPort}:8000" # control server (Homepage)
+      "0.0.0.0:8191:8191" # flaresolverr
+      "0.0.0.0:8080:8080" # qbittorrent webui
+      "0.0.0.0:9696:9696" # prowlarr
+      "0.0.0.0:6881:6881" # torrent TCP
+      "0.0.0.0:6881:6881/udp" # torrent UDP
+      "0.0.0.0:8901:8901" # iptv proxy
+      "0.0.0.0:8084:8084" # shelfmark
+      "0.0.0.0:${toString controlHostPort}:8000" # control server (Homepage)
     ];
 
     environment = {

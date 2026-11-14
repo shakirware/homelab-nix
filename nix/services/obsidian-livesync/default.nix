@@ -2,7 +2,6 @@
 
 let
 
-  bindIp = "0.0.0.0";
   port = 5984;
 
   baseDir = "/srv/appdata/obsidian-livesync";
@@ -83,8 +82,6 @@ in {
       "${dataDir}:/opt/couchdb/data"
       "${localIniPath}:/opt/couchdb/etc/local.ini"
     ];
-
-    ports = [ "${bindIp}:${toString port}:${toString port}" ];
   };
 
   systemd.services.podman-couchdb = {
@@ -94,7 +91,7 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
+  homelab.containers.couchdb.publish.${toString port} = [ config.homelab.ips.gw ];
 
   # CouchDB files are append-only, so a live copy is consistent enough.
   homelab.backup.paths = [ dataDir localIniPath ];
