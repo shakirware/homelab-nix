@@ -6,9 +6,7 @@ let
 
   port = 8084;
 in {
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d /srv/appdata/shelfmark 2775 ${config.homelab.ids.user} media - -"
-  ];
+  homelab.containers.shelfmark.appdata = "/srv/appdata/shelfmark";
 
   virtualisation.oci-containers.containers.shelfmark = {
     image = "ghcr.io/calibrain/shelfmark:v1.6.2@sha256:0b400a5d58951b35bfede3d9943b632551259c31e130316fe56c5cc0e2e4faea";

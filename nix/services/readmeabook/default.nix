@@ -6,14 +6,6 @@ let
 
   port = 3030;
 in {
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d /srv/appdata/readmeabook 2775 ${config.homelab.ids.user} media - -"
-    "d /srv/appdata/readmeabook/config 2775 ${config.homelab.ids.user} media - -"
-    "d /srv/appdata/readmeabook/cache 2775 ${config.homelab.ids.user} media - -"
-    "d /srv/appdata/readmeabook/pgdata 2775 ${config.homelab.ids.user} media - -"
-    "d /srv/appdata/readmeabook/redis 2775 ${config.homelab.ids.user} media - -"
-  ];
-
   virtualisation.oci-containers.containers.readmeabook = {
     image = "ghcr.io/kikootwo/readmeabook:1.2.13@sha256:b789e19d8cb888e572094c1b790cf4f57c2249a4a7fd1fab8f55633c79f196cd";
     environment = {
@@ -41,7 +33,16 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" "/srv/downloads" ];
   };
 
-  homelab.containers.readmeabook.publish.${toString port} = [ config.homelab.ips.gw ];
+  homelab.containers.readmeabook = {
+    publish.${toString port} = [ config.homelab.ips.gw ];
+    appdata = [
+      "/srv/appdata/readmeabook"
+      "/srv/appdata/readmeabook/config"
+      "/srv/appdata/readmeabook/cache"
+      "/srv/appdata/readmeabook/pgdata"
+      "/srv/appdata/readmeabook/redis"
+    ];
+  };
 
   homelab.backup = {
     paths = [ "/srv/appdata/readmeabook/config" ];

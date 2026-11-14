@@ -56,10 +56,11 @@ let
       };
 
       appdata = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
+        type = lib.types.coercedTo lib.types.str lib.singleton
+          (lib.types.listOf lib.types.str);
+        default = [ ];
         description = ''
-          Appdata directory to create, owned by the media user and group
+          Directories to create, owned by the media user and group
           (mode 2775).
         '';
       };
@@ -118,8 +119,7 @@ in {
         }) c.publish);
 
     systemd.tmpfiles.rules = forEach (_: c:
-      lib.mkIf (c.appdata != null) (lib.mkAfter [
-        "d ${c.appdata} 2775 ${config.homelab.ids.user} media - -"
-      ]));
+      lib.mkAfter (map (dir: "d ${dir} 2775 ${config.homelab.ids.user} media - -")
+        c.appdata));
   };
 }

@@ -28,13 +28,6 @@ in {
     restartUnits = [ ];
   };
 
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d /srv/appdata/grimmory 2775 ${config.homelab.ids.user} media - -"
-    "d /srv/appdata/grimmory/data 2775 ${config.homelab.ids.user} media - -"
-    "d /srv/appdata/grimmory/mariadb 2775 ${config.homelab.ids.user} media - -"
-    "d /srv/appdata/grimmory/mariadb/config 2775 ${config.homelab.ids.user} media - -"
-  ];
-
   systemd.services."podman-network-${net}" = {
     description = "Ensure Podman network ${net} exists";
     wantedBy = [ "multi-user.target" ];
@@ -141,7 +134,15 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
-  homelab.containers.grimmory.publish.${toString port} = [ config.homelab.ips.gw ];
+  homelab.containers.grimmory = {
+    publish.${toString port} = [ config.homelab.ips.gw ];
+    appdata = [
+      "/srv/appdata/grimmory"
+      "/srv/appdata/grimmory/data"
+      "/srv/appdata/grimmory/mariadb"
+      "/srv/appdata/grimmory/mariadb/config"
+    ];
+  };
 
   networking.firewall.interfaces."podman4" = {
     allowedUDPPorts = [ 53 ];
