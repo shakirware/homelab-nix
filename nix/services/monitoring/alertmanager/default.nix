@@ -57,52 +57,72 @@ let
       {{ end }}
     EOF
   '';
+
+  alertmanagerYaml = { botToken, chatId }: ''
+    global: {}
+
+    templates:
+      - /etc/alertmanager/templates/*.tmpl
+
+    route:
+      receiver: telegram
+      group_by: [ "alertname", "instance" ]
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 4h
+
+      routes:
+        - receiver: "null"
+          matchers:
+            - alertname="Watchdog"
+
+        - receiver: "null"
+          matchers:
+            - severity="none"
+
+    inhibit_rules:
+      - source_matchers:
+          - alertname="InstanceDown"
+          - job=~"node|node-proxmox"
+        target_matchers:
+          - alertname=~"ServiceProbeFailing|MountProbeMissing"
+        equal: [ "node" ]
+
+    receivers:
+      - name: "null"
+
+      - name: telegram
+        telegram_configs:
+          - bot_token: "${botToken}"
+            chat_id: ${chatId}
+            send_resolved: true
+            parse_mode: "HTML"
+            message: '{{ template "telegram.message" . }}'
+  '';
+
+  configCheck = pkgs.runCommand "alertmanager-config-check" {
+    nativeBuildInputs = [ pkgs.prometheus-alertmanager ];
+    config = alertmanagerYaml {
+      botToken = "0:check";
+      chatId = "1";
+    };
+    passAsFile = [ "config" ];
+  } ''
+    sed 's#/etc/alertmanager/templates/#${templatesDir}/#' "$configPath" > alertmanager.yml
+    amtool check-config alertmanager.yml
+    touch $out
+  '';
 in {
+  system.checks = [ configCheck ];
+
   sops.secrets."alerting/telegram_bot_token" = { };
   sops.secrets."alerting/telegram_chat_id" = { };
 
   sops.templates.${cfgName} = {
-    content = ''
-      global: {}
-
-      templates:
-        - /etc/alertmanager/templates/*.tmpl
-
-      route:
-        receiver: telegram
-        group_by: [ "alertname", "instance" ]
-        group_wait: 10s
-        group_interval: 1m
-        repeat_interval: 4h
-
-        routes:
-          - receiver: "null"
-            matchers:
-              - alertname="Watchdog"
-
-          - receiver: "null"
-            matchers:
-              - severity="none"
-
-      inhibit_rules:
-        - source_matchers:
-            - alertname="InstanceDown"
-            - job=~"node|node-proxmox"
-          target_matchers:
-            - alertname=~"ServiceProbeFailing|MountProbeMissing"
-          equal: [ "node" ]
-
-      receivers:
-        - name: "null"
-
-        - name: telegram
-          telegram_configs:
-            - bot_token: "${config.sops.placeholder."alerting/telegram_bot_token"}"
-              chat_id: ${config.sops.placeholder."alerting/telegram_chat_id"}
-              send_resolved: true
-              parse_mode: "HTML"
-              message: '{{ template "telegram.message" . }}'
-    '';
+    content = alertmanagerYaml {
+      botToken = config.sops.placeholder."alerting/telegram_bot_token";
+      chatId = config.sops.placeholder."alerting/telegram_chat_id";
+    };
     owner = "root";
     group = "nogroup";
     mode = "0440";
