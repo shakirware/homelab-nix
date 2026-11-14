@@ -4,13 +4,8 @@ let
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
-  bindIp = "0.0.0.0";
   appdataDir = "/srv/appdata/bazarr";
 in {
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d ${appdataDir} 2775 ${config.homelab.ids.user} media - -"
-  ];
-
   virtualisation.oci-containers.containers.bazarr = {
     image = "lscr.io/linuxserver/bazarr:version-v1.6.2@sha256:946dc8c5bb5331418eac60050cf40a63cb8f66ac039841dda493870e3559799c";
     environment = {
@@ -24,16 +19,16 @@ in {
       "${appdataDir}:/config"
       "/srv/media:/media"
     ];
-
-    ports = [ "${bindIp}:6767:6767" ];
   };
 
-  # Ensure media mount exists before start
-  systemd.services.podman-bazarr.unitConfig.RequiresMountsFor = [ "/srv/media" ];
-  systemd.services.podman-bazarr.after =
-    [ "network-online.target" "srv-media.mount" "podman-sonarr.service" "podman-radarr.service" ];
+  homelab.containers.bazarr = {
+    publish."6767" = [ config.homelab.ips.gw ];
+    media = true;
+    appdata = appdataDir;
+  };
 
-  homelab.firewall.restrict."6767" = [ config.homelab.ips.gw ];
+  systemd.services.podman-bazarr.after =
+    [ "podman-sonarr.service" "podman-radarr.service" ];
 
   homelab.backup = {
     paths = [ "${appdataDir}/config" ];

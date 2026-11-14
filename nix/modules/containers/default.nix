@@ -3,17 +3,43 @@
 let
   cfg = config.homelab.containers;
 
+  publishType = lib.types.submodule {
+    options = {
+      sources = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Sources allowed to reach the port.";
+      };
+      to = lib.mkOption {
+        type = lib.types.nullOr lib.types.port;
+        default = null;
+        description = "Port inside the container, if different.";
+      };
+      localContainers = lib.mkOption {
+        type = lib.types.nullOr lib.types.bool;
+        default = null;
+        description =
+          "Passed to `homelab.firewall.restrict` when set.";
+      };
+    };
+  };
+
   containerType = lib.types.submodule {
     options = {
       publish = lib.mkOption {
-        type = lib.types.attrsOf (lib.types.listOf lib.types.str);
+        type = lib.types.attrsOf (lib.types.coercedTo
+          (lib.types.listOf lib.types.str) (sources: { inherit sources; })
+          publishType);
         default = { };
-        example = lib.literalExpression
-          ''{ "7878" = [ config.homelab.ips.gw ]; }'';
+        example = lib.literalExpression ''
+          {
+            "7878" = [ config.homelab.ips.gw ];
+            "3003" = { sources = [ config.homelab.ips.gw ]; to = 3000; };
+          }
+        '';
         description = ''
-          Ports published on all host addresses (same port inside the
-          container), each with the sources allowed to reach it through
-          `homelab.firewall.restrict`.
+          Host ports published on all host addresses, each restricted to its
+          sources through `homelab.firewall.restrict`.
         '';
       };
 
@@ -61,7 +87,9 @@ in {
   config = {
     virtualisation.oci-containers.containers = forEach (name: c: {
       ${name} = {
-        ports = lib.mapAttrsToList (port: _: "0.0.0.0:${port}:${port}") c.publish;
+        ports = lib.mapAttrsToList (port: p:
+          "0.0.0.0:${port}:${if p.to == null then port else toString p.to}")
+          c.publish;
         extraOptions = lib.optional c.vpn "--network=container:gluetun"
           ++ lib.optionals (c.memory != null) [
             "--memory=${c.memory}"
@@ -83,7 +111,11 @@ in {
       ];
     });
 
-    homelab.firewall.restrict = forEach (_: c: c.publish);
+    homelab.firewall.restrict = forEach (_: c:
+      lib.mapAttrs (_: p:
+        { inherit (p) sources; } // lib.optionalAttrs (p.localContainers != null) {
+          inherit (p) localContainers;
+        }) c.publish);
 
     systemd.tmpfiles.rules = forEach (_: c:
       lib.mkIf (c.appdata != null) (lib.mkAfter [

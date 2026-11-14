@@ -1,8 +1,6 @@
 { config, lib, ... }:
 
-let
-  bindIp = "0.0.0.0";
-in {
+{
   virtualisation.oci-containers.containers.seerr = {
     image = "ghcr.io/seerr-team/seerr:v3.5.1@sha256:d8fab675b55ad293ded98fd71efcfd46054cbad9746534ae1cc4794a88c0b3be";
     environment = {
@@ -12,12 +10,10 @@ in {
 
     volumes = [ "/srv/appdata/seerr:/app/config" ];
 
-    ports = [ "${bindIp}:5055:5055" ];
-
     extraOptions = [ "--init" ];
   };
 
-  homelab.firewall.restrict."5055" = [ config.homelab.ips.gw ];
+  homelab.containers.seerr.publish."5055" = [ config.homelab.ips.gw ];
 
   homelab.backup = {
     paths = [ "/srv/appdata/seerr" ];
