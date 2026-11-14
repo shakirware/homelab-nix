@@ -59,8 +59,6 @@ in {
 
   virtualisation.oci-containers.containers.yamtrack-redis = {
     image = "redis:8-alpine@sha256:0bf6577d7774e592b29d093e3ac9390eb91e13d72c21e506afce736de5e0eeb0";
-    autoStart = true;
-
     volumes = [
       "${redisDir}:/data"
     ];
@@ -87,8 +85,6 @@ in {
 
   virtualisation.oci-containers.containers.yamtrack = {
     image = "ghcr.io/fuzzygrim/yamtrack:0.26.3@sha256:78497b454b2b52d3b1062f6fd238351d714cff0895db4369e49ace36f4622e75";
-    autoStart = true;
-
     environment = {
       TZ = config.time.timeZone;
 

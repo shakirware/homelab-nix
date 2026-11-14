@@ -13,8 +13,6 @@ in {
 
   virtualisation.oci-containers.containers.bazarr = {
     image = "lscr.io/linuxserver/bazarr:version-v1.6.2@sha256:946dc8c5bb5331418eac60050cf40a63cb8f66ac039841dda493870e3559799c";
-    autoStart = true;
-
     environment = {
       PUID = puid;
       PGID = pgid;

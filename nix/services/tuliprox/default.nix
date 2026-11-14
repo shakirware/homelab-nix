@@ -63,8 +63,6 @@ in {
 
   virtualisation.oci-containers.containers.tuliprox = {
     image = "ghcr.io/euzu/tuliprox:latest@sha256:3940211e60f2800b57be286d06fb7ffca8726e9e7a0d4be835cea040f84b0f2b";
-    autoStart = true;
-
     cmd = [
       "/app/tuliprox"
       "-p"

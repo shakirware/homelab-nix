@@ -165,8 +165,6 @@ in
 
   virtualisation.oci-containers.containers."home-assistant" = {
     image = homeAssistantImage;
-    autoStart = true;
-
     environment = {
       TZ = config.time.timeZone;
     };

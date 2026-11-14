@@ -127,8 +127,6 @@ in {
 
   virtualisation.oci-containers.containers.invoiceplane-db = {
     image = "mariadb:12.3@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf";
-    autoStart = true;
-
     environment = {
       TZ = config.time.timeZone;
       MARIADB_DATABASE = "invoiceplane";
@@ -150,8 +148,6 @@ in {
   virtualisation.oci-containers.containers.invoiceplane = {
     # Pin for reproducibility; move to newer tag after testing
     image = "mhzawadi/invoiceplane:1.7.2.1@sha256:e1d7b0bd36f3d0c73fa513abe8d14fa3db04b4ebc665e7f2b718e5c72d6e1c9c";
-    autoStart = true;
-
     environment = {
       TZ = config.time.timeZone;
       MYSQL_HOST = "invoiceplane-db";

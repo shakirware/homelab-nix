@@ -27,8 +27,6 @@ in {
 
   virtualisation.oci-containers.containers.netv = {
     image = "ghcr.io/jvdillon/netv:0.4.0@sha256:b3258d6a3b5cd6cad7405002e838885d15a3c0625b221cef89fe19239c7f1e9c";
-    autoStart = true;
-
     environment = {
       TZ = config.time.timeZone;
       NETV_PORT = toString port;

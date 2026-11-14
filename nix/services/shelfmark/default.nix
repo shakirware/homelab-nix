@@ -12,8 +12,6 @@ in {
 
   virtualisation.oci-containers.containers.shelfmark = {
     image = "ghcr.io/calibrain/shelfmark:v1.6.2@sha256:0b400a5d58951b35bfede3d9943b632551259c31e130316fe56c5cc0e2e4faea";
-    autoStart = true;
-
     environment = {
       PUID = puid;
       PGID = pgid;

@@ -161,8 +161,6 @@ in {
 
   virtualisation.oci-containers.containers.grafana = {
     image = "grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205";
-    autoStart = true;
-
     environment = {
       GF_SERVER_HTTP_PORT = toString port;
       GF_SERVER_DOMAIN = "grafana.${base}";

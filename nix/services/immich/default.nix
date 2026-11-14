@@ -102,8 +102,6 @@ in {
     immich-db = {
       image =
         "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23";
-      autoStart = true;
-
       environment = {
         POSTGRES_USER = "postgres";
         POSTGRES_DB = "immich";
@@ -126,16 +124,12 @@ in {
     immich-redis = {
       image =
         "docker.io/valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d";
-      autoStart = true;
-
       extraOptions = [ "--network=${net}" "--ip=${redisIp}" "--name=immich-redis" ];
     };
 
     immich-machine-learning = {
       image =
         "ghcr.io/immich-app/immich-machine-learning:v3.3.6@sha256:14367bfb374b8576ddf49abd67c5ca0190a4c7fcf6303cdad65d7f7bf1a50bc2";
-      autoStart = true;
-
       environment = {
         TZ = config.time.timeZone;
         MACHINE_LEARNING_MODEL_TTL = "300";
@@ -155,8 +149,6 @@ in {
     immich-server = {
       image =
         "ghcr.io/immich-app/immich-server:v3.3.6@sha256:e1981983b1c13f6024b57d72e7ecae3342eed1581201ab09fb248932d86c593a";
-      autoStart = true;
-
       environmentFiles = [ config.sops.templates.${envName}.path ];
 
       volumes = [

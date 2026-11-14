@@ -53,8 +53,6 @@ in {
 
   virtualisation.oci-containers.containers.grimmory-db = {
     image = "lscr.io/linuxserver/mariadb:11.8.9@sha256:dfd0f601cedf95381781c1b9b27424c608a78ddd97faa484da678873240f65e6";
-    autoStart = true;
-
     environment = {
       PUID = puid;
       PGID = pgid;
@@ -107,8 +105,6 @@ in {
 
   virtualisation.oci-containers.containers.grimmory = {
     image = "ghcr.io/grimmory-tools/grimmory:v3.5.0@sha256:bf6fe21c6e247597f7869664a440b5a34242e2d2940575cae39c17bfaa66dc0b";
-    autoStart = true;
-
     environment = {
       USER_ID = puid;
       GROUP_ID = pgid;

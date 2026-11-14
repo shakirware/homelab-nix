@@ -102,8 +102,6 @@ in {
   virtualisation.oci-containers.containers = {
     kaneo-db = {
       image = "postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab";
-      autoStart = true;
-
       environment = {
         POSTGRES_USER = "kaneo";
         POSTGRES_DB = "kaneo";
@@ -118,8 +116,6 @@ in {
 
     kaneo = {
       image = "ghcr.io/usekaneo/kaneo:2.49.0@sha256:cd1826b1aba3ce736015cadf6f6c975d923aac00f4b6aaa7aedb29bc722dae49";
-      autoStart = true;
-
       environmentFiles = [ config.sops.templates.${envName}.path ];
 
       ports = [ "${bindIp}:${toString port}:5173" ];
