@@ -2,7 +2,6 @@
 
 let
 
-  bindIp = "0.0.0.0";
   port = 8000;
 
   appdataDir = "/srv/appdata/netv";
@@ -37,8 +36,6 @@ in {
       "/etc/localtime:/etc/localtime:ro"
     ];
 
-    ports = [ "${bindIp}:${toString port}:${toString port}" ];
-
     # No --user override: the entrypoint must start privileged so it can chown
     # the cache and add netv to the host render group before gosu drops it.
     #
@@ -64,5 +61,5 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ gwIp home.cidr ];
+  homelab.containers.netv.publish.${toString port} = [ gwIp home.cidr ];
 }

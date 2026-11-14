@@ -4,7 +4,6 @@ let
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
-  bindIp = "0.0.0.0";
   port = 3030;
 in {
   systemd.tmpfiles.rules = lib.mkAfter [
@@ -34,8 +33,6 @@ in {
       "/srv/media/audiobooks:/media"
     ];
 
-    ports = [ "${bindIp}:${toString port}:${toString port}" ];
-
   };
 
   systemd.services.podman-readmeabook = {
@@ -44,7 +41,7 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" "/srv/downloads" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
+  homelab.containers.readmeabook.publish.${toString port} = [ config.homelab.ips.gw ];
 
   homelab.backup = {
     paths = [ "/srv/appdata/readmeabook/config" ];

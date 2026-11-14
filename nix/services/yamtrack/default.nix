@@ -2,7 +2,6 @@
 
 let
 
-  bindIp = "0.0.0.0";
   port = 8000;
 
   appdataDir = "/srv/appdata/yamtrack";
@@ -111,10 +110,6 @@ in {
       "${dbDir}:/yamtrack/db"
     ];
 
-    ports = [
-      "${bindIp}:${toString port}:8000"
-    ];
-
     extraOptions = [
       "--network=${net}"
       "--no-healthcheck"
@@ -141,7 +136,7 @@ in {
   allowedTCPPorts = [ 53 ];
 };
 
-  homelab.firewall.restrict.${toString port} = [ gwIp ];
+  homelab.containers.yamtrack.publish.${toString port} = { sources = [ gwIp ]; to = 8000; };
 
   homelab.backup.sqlite = [ "${dbDir}/db.sqlite3" ];
 }

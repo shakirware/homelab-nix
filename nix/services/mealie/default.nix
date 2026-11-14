@@ -2,7 +2,6 @@
 
 let
 
-  bindIp = "0.0.0.0";
   port = 9000;
 
   dataDir = "/srv/appdata/mealie";
@@ -33,10 +32,6 @@ in {
       "${dataDir}:/app/data"
     ];
 
-    ports = [
-      "${bindIp}:${toString port}:9000"
-    ];
-
     extraOptions = [
       "--memory=1g"
     ];
@@ -47,7 +42,7 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  homelab.firewall.restrict.${toString port} = [ gwIp ];
+  homelab.containers.mealie.publish.${toString port} = { sources = [ gwIp ]; to = 9000; };
 
   homelab.backup = {
     paths = [ dataDir ];

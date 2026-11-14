@@ -4,7 +4,6 @@ let
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
-  bindIp = "0.0.0.0";
 in {
 
   environment.systemPackages = with pkgs; [
@@ -22,7 +21,7 @@ in {
 
     volumes = [ "/srv/appdata/jellyfin:/config" "/srv/media:/data" ];
 
-    ports = [ "${bindIp}:8096:8096" "${bindIp}:7359:7359/udp" ];
+    ports = [ "0.0.0.0:8096:8096" "0.0.0.0:7359:7359/udp" ];
 
     extraOptions = [
       # The default 10 s ends in SIGKILL mid-shutdown.

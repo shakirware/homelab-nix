@@ -2,7 +2,6 @@
 
 let
 
-  bindIp = "0.0.0.0";
   port = 8088;
 
   baseDomain = config.homelab.baseDomain;
@@ -173,8 +172,6 @@ in {
       "${envConfig}:/var/www/html/application/config/production/config.php:ro"
     ];
 
-    ports = [ "${bindIp}:${toString port}:80" ];
-
     extraOptions = [ "--network=podman" "--name=invoiceplane" ];
   };
 
@@ -209,7 +206,7 @@ in {
     };
   };
 
-  homelab.firewall.restrict.${toString port} = [ gwIp ];
+  homelab.containers.invoiceplane.publish.${toString port} = { sources = [ gwIp ]; to = 80; };
 
   homelab.backup = {
     paths = [ baseDir ];

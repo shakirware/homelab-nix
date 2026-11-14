@@ -5,7 +5,6 @@ let
   uid = toString config.homelab.ids.uid;
   gid = toString config.homelab.ids.mediaGid;
 
-  bindIp = "0.0.0.0";
   port = 8945;
 
   appdataDir = "/srv/appdata/pinchflat";
@@ -36,8 +35,6 @@ in {
       "${downloadsDir}:/downloads"
     ];
 
-    ports = [ "${bindIp}:${toString port}:${toString port}" ];
-
     extraOptions = [
       "--name=pinchflat"
       "--user=${uid}:${gid}"
@@ -51,7 +48,7 @@ in {
     unitConfig.RequiresMountsFor = [ "/srv/media" ];
   };
 
-  homelab.firewall.restrict.${toString port} = {
+  homelab.containers.pinchflat.publish.${toString port} = {
     sources = [ gwIp ];
     localContainers = false;
   };
