@@ -1,0 +1,39 @@
+groups:
+  - name: mounts
+    rules:
+      - alert: MountPathUnhealthy
+        expr: homelab_mount_path_healthy == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Media path inaccessible"
+          description: "{{ $labels.instance }} {{ $labels.scope }} {{ $labels.container }} {{ $labels.path }} cannot be stat'ed/listed (stale handle, I/O error or missing)."
+
+      - alert: MediaNfsNotMounted
+        expr: homelab_mount_nfs_mounted == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Media NFS mount missing"
+          description: "{{ $labels.instance }} {{ $labels.path }} is not an active NFS mount."
+
+      - alert: MountProbeStale
+        expr: time() - homelab_mount_probe_last_run_timestamp_seconds > 300
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Mount probe not completing"
+          description: "{{ $labels.instance }} mount probe last completed {{ $value | humanizeDuration }} ago; NFS may be hung."
+
+      - alert: MountProbeMissing
+        expr: absent(homelab_mount_probe_last_run_timestamp_seconds{instance="media.@baseDomain@:@nodePort@"})
+        for: 10m
+        labels:
+          severity: warning
+          node: "media.@baseDomain@:@nodePort@"
+        annotations:
+          summary: "Mount probe metrics missing"
+          description: "vm-media is not exporting mount-probe metrics."

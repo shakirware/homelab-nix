@@ -1,0 +1,38 @@
+groups:
+  - name: monitoring
+    rules:
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful{job="prometheus"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus config reload failed"
+          description: "The last Prometheus configuration reload failed."
+
+      - alert: PrometheusRuleEvaluationFailures
+        expr: sum(increase(prometheus_rule_evaluation_failures_total{job="prometheus"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus rule evaluation failures"
+          description: "Prometheus failed to evaluate one or more rules in the last 5m."
+
+      - alert: AlertmanagerNotificationFailures
+        expr: sum(increase(alertmanager_notifications_failed_total{job="alertmanager"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager notification failures"
+          description: "Alertmanager failed to deliver one or more notifications in the last 5m."
+
+      - alert: LokiIngestionStopped
+        expr: sum(rate(loki_distributor_lines_received_total{job="loki"}[30m])) == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki is not receiving logs"
+          description: "Loki has received no log lines for 30m; check Alloy on the hosts and Loki on vm-monitoring."

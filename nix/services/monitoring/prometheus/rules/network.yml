@@ -1,0 +1,37 @@
+groups:
+  - name: network
+    rules:
+      - alert: RouterUnreachable
+        expr: probe_success{job="blackbox-icmp",target="router"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Router unreachable"
+          description: "The MikroTik ({{ $labels.instance }}) does not answer ping from vm-monitoring."
+
+      - alert: InternetDown
+        expr: max(probe_success{job="blackbox-icmp",target="internet"}) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Internet unreachable"
+          description: "Neither 1.1.1.1 nor 9.9.9.9 answers ping; the WAN link is probably down. This notification is delayed until it recovers."
+
+      - alert: DnsResolutionFailing
+        expr: probe_success{job="blackbox-dns"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DNS resolution failing"
+          description: "AdGuard on {{ $labels.instance }} fails the {{ $labels.module }} lookup."
+
+      - alert: DnsResolutionFlapping
+        expr: count_over_time(probe_success{job="blackbox-dns"}[6h]) - sum_over_time(probe_success{job="blackbox-dns"}[6h]) >= 3
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNS resolution failing intermittently"
+          description: "AdGuard on {{ $labels.instance }} failed the {{ $labels.module }} lookup {{ $value }} times in 6 hours; each failure is too short for DnsResolutionFailing."

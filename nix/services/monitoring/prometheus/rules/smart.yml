@@ -1,0 +1,109 @@
+# Only interpreted health signals and plain-count attributes are used.
+# Seagate raw_read_error_rate / seek_error_rate / command_timeout raw
+# values are vendor-encoded and deliberately not alerted on.
+groups:
+  - name: smart
+    rules:
+      - alert: SmartDeviceUnhealthy
+        expr: smartmon_device_smart_healthy == 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SMART health check failing"
+          description: "{{ $labels.disk }} reports SMART overall-health FAILED."
+
+      - alert: SmartDataStale
+        expr: time() - smartmon_smartctl_run > 7200
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SMART data stale"
+          description: "{{ $labels.disk }} SMART data has not refreshed for {{ $value | humanizeDuration }}."
+
+      - alert: SmartPendingSectors
+        expr: smartmon_current_pending_sector_raw_value > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk has pending sectors"
+          description: "{{ $labels.disk }} has {{ $value }} pending (unreadable) sectors."
+
+      - alert: SmartOfflineUncorrectable
+        expr: smartmon_offline_uncorrectable_raw_value > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk has uncorrectable sectors"
+          description: "{{ $labels.disk }} has {{ $value }} offline-uncorrectable sectors."
+
+      - alert: SmartReportedUncorrectIncreasing
+        expr: delta(smartmon_reported_uncorrect_raw_value[24h]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk reporting new uncorrectable errors"
+          description: "{{ $labels.disk }} reported {{ $value }} new uncorrectable errors in 24h."
+
+      - alert: SmartReallocationIncreasing
+        expr: delta(smartmon_reallocated_sector_ct_raw_value[24h]) > 0 or delta(smartmon_runtime_bad_block_raw_value[24h]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk reallocating sectors"
+          description: "{{ $labels.disk }} reallocated/bad-block count grew by {{ $value }} in 24h."
+
+      - alert: SmartCrcErrorsIncreasing
+        expr: delta(smartmon_udma_crc_error_count_raw_value[1h]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk interface CRC errors"
+          description: "{{ $labels.disk }} logged {{ $value }} new CRC errors in 1h (cable/backplane)."
+
+      - alert: HddTemperatureHigh
+        expr: smartmon_temperature_celsius_raw_value{type="sat"} > 55
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk running hot"
+          description: "{{ $labels.disk }} is at {{ $value }}°C."
+
+      - alert: NvmeCriticalWarning
+        expr: nvme_critical_warning > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NVMe critical warning"
+          description: "{{ $labels.device }} critical_warning={{ $value }}."
+
+      - alert: NvmeMediaErrors
+        expr: delta(nvme_media_errors_total[24h]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "NVMe media/data integrity errors"
+          description: "{{ $labels.device }} logged {{ $value }} new media errors in 24h."
+
+      - alert: NvmeSpareLow
+        expr: nvme_available_spare_ratio < nvme_available_spare_threshold_ratio
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NVMe spare below threshold"
+          description: "{{ $labels.device }} available spare is below the vendor threshold."
+
+      - alert: NvmeWearHigh
+        expr: nvme_percentage_used_ratio > 0.9
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "NVMe nearing rated endurance"
+          description: "{{ $labels.device }} has used {{ $value | humanizePercentage }} of rated endurance."
