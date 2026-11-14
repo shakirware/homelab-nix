@@ -1,0 +1,47 @@
+groups:
+  - name: backups
+    rules:
+      - alert: BackupLastRunFailed
+        expr: homelab_backup_last_run_success == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup failed"
+          description: "Backup {{ $labels.backup }} on {{ $labels.instance }} last run failed."
+
+      - alert: BackupMissedOrStale
+        expr: (time() - homelab_backup_last_success_timestamp_seconds) > on(instance, backup) homelab_backup_max_age_seconds
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup overdue"
+          description: "Backup {{ $labels.backup }} on {{ $labels.instance }} last succeeded {{ $value | humanizeDuration }} ago (schedule missed)."
+
+      - alert: BackupCheckFailed
+        expr: node_systemd_unit_state{name="restic-check.service",state="failed"} == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup integrity check failed"
+          description: "restic check found a problem in a local or B2 repository on {{ $labels.instance }}; see journalctl -u restic-check."
+
+      - alert: BackupOffsiteNearlyFull
+        expr: sum(homelab_backup_repo_bytes{repo=~"b2-.*"}) > 8e9
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Off-site backups near the B2 free tier"
+          description: "B2 repositories hold {{ $value | humanize1024 }}B of the free 10 GB; trim retention or exclusions before uploads are refused."
+
+      - alert: BackupMetricsMissing
+        expr: absent(homelab_backup_last_success_timestamp_seconds)
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "No backup metrics"
+          description: "No backup job is reporting; backups cannot be verified."

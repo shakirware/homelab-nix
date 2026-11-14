@@ -1,0 +1,85 @@
+groups:
+  - name: proxmox-hwmon
+    rules:
+      - alert: ProxmoxNvmeHot
+        expr: (node_hwmon_temp_celsius{job="node-proxmox",chip="nvme_nvme0",sensor="temp1"} > 75) and (node_hwmon_temp_celsius{job="node-proxmox",chip="nvme_nvme0",sensor="temp1"} <= 85)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox NVMe running hot"
+          description: "Proxmox NVMe composite temp is {{ $value }}°C for 10m."
+
+      - alert: ProxmoxNvmeCritical
+        expr: node_hwmon_temp_celsius{job="node-proxmox",chip="nvme_nvme0",sensor="temp1"} > 85
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox NVMe critically hot"
+          description: "Proxmox NVMe composite temp is {{ $value }}°C for 5m."
+
+      - alert: ProxmoxCpuPackageHot
+        expr: (node_hwmon_temp_celsius{job="node-proxmox",chip="platform_coretemp_0",sensor="temp1"} > 80) and (node_hwmon_temp_celsius{job="node-proxmox",chip="platform_coretemp_0",sensor="temp1"} <= 90)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox CPU package hot"
+          description: "Proxmox CPU package temp is {{ $value }}°C for 10m."
+
+      - alert: ProxmoxCpuPackageCritical
+        expr: node_hwmon_temp_celsius{job="node-proxmox",chip="platform_coretemp_0",sensor="temp1"} > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox CPU package critically hot"
+          description: "Proxmox CPU package temp is {{ $value }}°C for 5m."
+
+  - name: proxmox
+    rules:
+      - alert: ProxmoxNodeOffline
+        expr: pve_up{id=~"^node/"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox node offline"
+          description: "Proxmox node {{ $labels.id }} is offline."
+
+      - alert: ProxmoxGuestDownOnBoot
+        expr: ((pve_onboot_status{id=~"^(qemu|lxc)/"} == 1) and on(id) (pve_up{id=~"^(qemu|lxc)/"} == 0)) * on(id) group_left(name,node) pve_guest_info
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox guest down"
+          description: "Guest {{ $labels.name }} ({{ $labels.id }}) on {{ $labels.node }} is down but onboot=1."
+
+      - alert: ProxmoxStorageNearlyFull
+        expr: ((pve_disk_usage_bytes{id=~"^storage/"} / pve_disk_size_bytes{id=~"^storage/"}) > 0.90) and ((pve_disk_usage_bytes{id=~"^storage/"} / pve_disk_size_bytes{id=~"^storage/"}) <= 0.95)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox storage nearly full"
+          description: "{{ $labels.id }} >90% used for 10m."
+
+      - alert: ProxmoxStorageCriticallyFull
+        expr: (pve_disk_usage_bytes{id=~"^storage/"} / pve_disk_size_bytes{id=~"^storage/"}) > 0.95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox storage critically full"
+          description: "{{ $labels.id }} >95% used for 5m."
+
+      - alert: ProxmoxReplicationFailed
+        expr: pve_replication_failed_syncs > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox replication failures"
+          description: "{{ $labels.id }} has failed replication syncs ({{ $value }})."

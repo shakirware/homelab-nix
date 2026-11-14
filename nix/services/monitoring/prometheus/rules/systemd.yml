@@ -1,0 +1,69 @@
+groups:
+  - name: systemd
+    rules:
+      - alert: SystemdUnitFailedCritical
+        expr: node_systemd_unit_state{state="failed",name=~"(sshd|systemd-networkd|tailscaled|unbound|adguardhome|caddy|alloy|prometheus-node-exporter|qemu-guest-agent|gluetun-vpn-check)\\.service"} == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical systemd unit failed"
+          description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
+
+      - alert: PodmanContainerUnitFailed
+        expr: node_systemd_unit_state{state="failed",name=~"podman-.*\\.service",name!~"podman-(prometheus|alertmanager|loki)\\.service"} == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container service failed"
+          description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
+
+      # Everything the two rules above and the backup alerts don't cover.
+      - alert: SystemdUnitFailed
+        expr: node_systemd_unit_state{state="failed",name!~"(sshd|systemd-networkd|tailscaled|unbound|adguardhome|caddy|alloy|prometheus-node-exporter|qemu-guest-agent|gluetun-vpn-check)\\.service|podman-.*\\.service|restic-.*\\.service"} == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Systemd unit failed"
+          description: "{{ $labels.instance }} unit {{ $labels.name }} is failed."
+
+      - alert: ContainerRestartLoop
+        expr: increase(node_systemd_service_restart_total{name=~"podman-.*\\.service"}[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarting repeatedly"
+          description: "{{ $labels.instance }} {{ $labels.name }} restarted {{ $value | humanize }} times in the last hour."
+
+      - alert: MediaMountDown
+        expr: |
+          node_systemd_unit_state{
+            job="node",
+            instance=~"(gw|media|storage)\\.@baseDomain@:@nodePort@",
+            name="srv-media.mount",
+            state="active"
+          } == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "/srv/media not mounted"
+          description: "{{ $labels.instance }} srv-media.mount is not active."
+
+      - alert: NfsServerDown
+        expr: |
+          node_systemd_unit_state{
+            job="node",
+            instance="storage.@baseDomain@:@nodePort@",
+            name="nfs-server.service",
+            state="active"
+          } == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NFS server down"
+          description: "storage.@baseDomain@ nfs-server.service is not active."

@@ -1,0 +1,152 @@
+groups:
+  - name: basics
+    rules:
+      - alert: Watchdog
+        expr: vector(1)
+        labels:
+          severity: none
+        annotations:
+          summary: "Watchdog"
+          description: "Alerting pipeline is working."
+
+      - alert: InstanceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+          node: "{{ $labels.instance }}"
+        annotations:
+          summary: "Instance down"
+          description: "{{ $labels.job }} target {{ $labels.instance }} is not reachable."
+
+      - alert: HostRebooted
+        expr: changes(node_boot_time_seconds[5m]) > 0
+        labels:
+          severity: info
+        annotations:
+          summary: "Host rebooted"
+          description: "{{ $labels.instance }} reboot detected."
+
+      - alert: HostClockNotSynced
+        expr: node_timex_sync_status == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Clock not synced"
+          description: "{{ $labels.instance }} reports NTP not synchronized for 10m."
+
+      - alert: HostClockSkew
+        expr: abs(node_timex_offset_seconds) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Clock skew"
+          description: "{{ $labels.instance }} time offset is {{ $value }}s (>0.5s)."
+
+      - alert: HostHighCpuUsage
+        expr: (1 - avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.90
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "{{ $labels.instance }} CPU busy >90% for 15m."
+
+      - alert: HostHighLoad
+        expr: (node_load5 / count by(instance) (node_cpu_seconds_total{mode="idle"})) > 2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High load"
+          description: "{{ $labels.instance }} load5 per core > 2 for 15m."
+
+      - alert: HostMemoryLowWarning
+        expr: ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.10) and ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) >= 0.05)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low memory"
+          description: "{{ $labels.instance }} MemAvailable <10% for 10m."
+
+      - alert: HostMemoryLowCritical
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Very low memory"
+          description: "{{ $labels.instance }} MemAvailable <5% for 5m."
+
+      - alert: HostSwapUsageHigh
+        expr: ((node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / (node_memory_SwapTotal_bytes + 1) > 0.80) and on(instance) ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10) or (rate(node_pressure_memory_waiting_seconds_total[5m]) > 0.10))
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High swap usage under memory pressure"
+          description: "{{ $labels.instance }} swap usage >80% with <10% memory available or tasks stalled on memory >10% of the time, for 10m."
+
+      - alert: HostOOMKills
+        expr: increase(node_vmstat_oom_kill{instance!="media.@baseDomain@:@nodePort@"}[10m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "OOM kills"
+          description: "{{ $labels.instance }} has OOM kills in the last 10m."
+
+      - alert: HostOOMKills
+        expr: increase(node_vmstat_oom_kill{instance="media.@baseDomain@:@nodePort@"}[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "OOM kills"
+          description: "{{ $labels.instance }} has OOM kills in the last 10m; usually FlareSolverr hitting its container memory cap."
+
+      - alert: HostFilesystemReadOnly
+        expr: node_filesystem_readonly{fstype!~"tmpfs|overlay"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Filesystem read-only"
+          description: "{{ $labels.instance }} {{ $labels.mountpoint }} is read-only."
+
+      - alert: HostDiskNearlyFull
+        expr: ((node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.10) and ((node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) >= 0.05)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk nearly full"
+          description: "{{ $labels.instance }} {{ $labels.mountpoint }} < 10% free."
+
+      - alert: HostDiskFullCritical
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk critically full"
+          description: "{{ $labels.instance }} {{ $labels.mountpoint }} < 5% free."
+
+      - alert: HostInodesNearlyFull
+        expr: (node_filesystem_files_free{fstype!~"tmpfs|overlay"} / node_filesystem_files{fstype!~"tmpfs|overlay"}) < 0.10
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Inodes nearly full"
+          description: "{{ $labels.instance }} {{ $labels.mountpoint }} < 10% inodes free."
+
+      - alert: HostNetworkErrors
+        expr: sum by(instance, device) (increase(node_network_receive_errs_total{device!="lo"}[5m]) + increase(node_network_transmit_errs_total{device!="lo"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network errors"
+          description: "{{ $labels.instance }} {{ $labels.device }} has RX/TX errors in the last 5m."
