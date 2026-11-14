@@ -15,16 +15,9 @@ in {
     };
 
     volumes = [ "/srv/appdata/qbittorrent:/config" "/srv/downloads:/data" ];
-
-    ports = [ ];
-
-    extraOptions = [ "--network=container:gluetun" ];
   };
 
-  systemd.services.podman-qbittorrent = {
-    after = [ "podman-gluetun.service" "podman.service" ];
-    requires = [ "podman-gluetun.service" "podman.service" ];
-  };
+  homelab.containers.qbittorrent.vpn = true;
 
   homelab.backup.paths = [ "/srv/appdata/qbittorrent" ];
 }
