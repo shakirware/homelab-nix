@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  tz = "Europe/London";
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
@@ -18,7 +17,7 @@ in {
     environment = {
       PUID = puid;
       PGID = pgid;
-      TZ = tz;
+      TZ = config.time.timeZone;
       FLASK_PORT = toString port;
       INGEST_DIR = "/books";
       SEARCH_MODE = "universal";

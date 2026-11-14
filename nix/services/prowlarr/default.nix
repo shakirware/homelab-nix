@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  tz = "Europe/London";
   puid = "1000";
   pgid = "1001";
 in {
@@ -12,7 +11,7 @@ in {
     environment = {
       PUID = puid;
       PGID = pgid;
-      TZ = tz;
+      TZ = config.time.timeZone;
       # Host headers Prowlarr answers to (loopback and its own hostname are
       # always allowed): Caddy, and vm-media's IP via gluetun's published
       # port, which Sonarr, Radarr, ReadMeABook, Shelfmark and Homepage use.

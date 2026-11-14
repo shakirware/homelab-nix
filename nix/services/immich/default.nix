@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
 
   port = 2283;
   bindIp = "0.0.0.0";
@@ -55,7 +54,7 @@ in {
 
   sops.templates.${envName} = {
     content = ''
-      TZ=${tz}
+      TZ=${config.time.timeZone}
       DB_HOSTNAME=immich-db
       DB_USERNAME=postgres
       DB_DATABASE_NAME=immich
@@ -138,7 +137,7 @@ in {
       autoStart = true;
 
       environment = {
-        TZ = tz;
+        TZ = config.time.timeZone;
         MACHINE_LEARNING_MODEL_TTL = "300";
       };
 

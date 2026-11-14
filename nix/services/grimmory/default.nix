@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
@@ -59,7 +58,7 @@ in {
     environment = {
       PUID = puid;
       PGID = pgid;
-      TZ = tz;
+      TZ = config.time.timeZone;
       MYSQL_DATABASE = "grimmory";
       MYSQL_USER = "grimmory";
     };
@@ -113,7 +112,7 @@ in {
     environment = {
       USER_ID = puid;
       GROUP_ID = pgid;
-      TZ = tz;
+      TZ = config.time.timeZone;
       DATABASE_URL = "jdbc:mariadb://grimmory-db:3306/grimmory";
       DATABASE_USERNAME = "grimmory";
       SWAGGER_ENABLED = "false";

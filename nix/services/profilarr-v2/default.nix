@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
@@ -52,7 +51,7 @@ in {
       autoStart = true;
 
       environment = {
-        TZ = tz;
+        TZ = config.time.timeZone;
         PUID = puid;
         PGID = pgid;
         PARSER_HOST = parserIp;

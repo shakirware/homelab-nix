@@ -1,7 +1,6 @@
 { config, lib, pkgs, home, iot, ... }:
 
 let
-  tz = "Europe/London";
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
@@ -20,7 +19,7 @@ in {
     environment = {
       PUID = puid;
       PGID = pgid;
-      TZ = tz;
+      TZ = config.time.timeZone;
     };
 
     volumes = [ "/srv/appdata/jellyfin:/config" "/srv/media:/data" ];

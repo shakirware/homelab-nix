@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
 
   bindIp = "0.0.0.0";
   port = 5984;
@@ -79,7 +78,7 @@ in {
 
     autoRemoveOnStop = lib.mkForce false;
 
-    environment = { TZ = tz; };
+    environment = { TZ = config.time.timeZone; };
     environmentFiles = [ config.sops.templates."couchdb-obsidian".path ];
 
     volumes = [

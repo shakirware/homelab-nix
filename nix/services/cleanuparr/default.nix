@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  tz = "Europe/London";
 
   bindIp = "0.0.0.0";
   port = 11011;
@@ -22,7 +21,7 @@ in {
     autoStart = true;
 
     environment = {
-      TZ = tz;
+      TZ = config.time.timeZone;
       PORT = toString port;
       PUID = puid;
       PGID = pgid;

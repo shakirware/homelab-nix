@@ -7,7 +7,6 @@
 }:
 
 let
-  tz = "Europe/London";
   port = 8123;
 
   cfgRoot = "/srv/appdata/home-assistant";
@@ -39,7 +38,7 @@ let
       elevation: 0
       unit_system: metric
       currency: GBP
-      time_zone: ${tz}
+      time_zone: ${config.time.timeZone}
       external_url: "https://${homeAssistantHost}"
       internal_url: "https://${homeAssistantHost}"
       packages: !include_dir_named packages
@@ -169,7 +168,7 @@ in
     autoStart = true;
 
     environment = {
-      TZ = tz;
+      TZ = config.time.timeZone;
     };
 
     volumes = [

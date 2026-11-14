@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
 
   hostPort = 3003;
   bindIp = "0.0.0.0";
@@ -55,7 +54,7 @@ in {
       NODE_ENV=production
       PORT=3000
       HOST=0.0.0.0
-      TZ=${tz}
+      TZ=${config.time.timeZone}
 
       DATABASE_URL=postgres://tracearr:${
         config.sops.placeholder."tracearr/db_password"

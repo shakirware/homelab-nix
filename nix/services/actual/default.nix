@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  tz = "Europe/London";
 
   port = 5006;
   bindIp = "0.0.0.0";
@@ -20,7 +19,7 @@ in {
     image = "ghcr.io/actualbudget/actual:26.10.0@sha256:24645e971da6bb1a1f953d6859e307a0b29be1e8b4130a35b3220c209b5b860c";
     autoStart = true;
 
-    environment = { TZ = tz; };
+    environment = { TZ = config.time.timeZone; };
 
     extraOptions = [ "--user=${uid}:${gid}" ];
 

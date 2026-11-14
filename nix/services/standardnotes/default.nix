@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
 
   apiPort = 3000;
   filesPort = 3125;
@@ -161,7 +160,7 @@ in {
       image = serverImage;
       autoStart = true;
 
-      environment = { TZ = tz; };
+      environment = { TZ = config.time.timeZone; };
       environmentFiles = [ envFile ];
 
       ports = [
@@ -223,7 +222,7 @@ in {
       autoStart = true;
 
       environment = {
-        TZ = tz;
+        TZ = config.time.timeZone;
 
         # Key fix: stop the web app defaulting to api.standardnotes.com
         DEFAULT_SYNC_SERVER = apiUrl;
