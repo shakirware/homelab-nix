@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  tz = "Europe/London";
 
   uid = toString config.homelab.ids.uid;
   gid = toString config.homelab.ids.mediaGid;
@@ -30,7 +29,7 @@ in {
     autoStart = true;
 
     environment = {
-      TZ = tz;
+      TZ = config.time.timeZone;
       UMASK = "002";
     };
 

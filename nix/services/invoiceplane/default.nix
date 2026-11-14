@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
 
   bindIp = "0.0.0.0";
   port = 8088;
@@ -131,7 +130,7 @@ in {
     autoStart = true;
 
     environment = {
-      TZ = tz;
+      TZ = config.time.timeZone;
       MARIADB_DATABASE = "invoiceplane";
       MARIADB_USER = "invoiceplane";
       MARIADB_AUTO_UPGRADE = "1";
@@ -154,7 +153,7 @@ in {
     autoStart = true;
 
     environment = {
-      TZ = tz;
+      TZ = config.time.timeZone;
       MYSQL_HOST = "invoiceplane-db";
       MYSQL_PORT = "3306";
       MYSQL_USER = "invoiceplane";

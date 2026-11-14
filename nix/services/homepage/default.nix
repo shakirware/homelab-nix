@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
   cfgDir = "/srv/appdata/homepage";
 
   listenHost = "127.0.0.1";
@@ -165,7 +164,7 @@ in {
     ];
 
     environment = {
-      TZ = tz;
+      TZ = config.time.timeZone;
       HOMEPAGE_ALLOWED_HOSTS = "*";
       PUID = puid;
       PGID = pgid;

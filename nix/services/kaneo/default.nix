@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  tz = "Europe/London";
 
   port = 5173;
   bindIp = "0.0.0.0";
@@ -50,7 +49,7 @@ in {
 
   sops.templates.${envName} = {
     content = ''
-      TZ=${tz}
+      TZ=${config.time.timeZone}
 
       KANEO_CLIENT_URL=https://kaneo.${config.homelab.baseDomain}
 

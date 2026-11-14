@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  tz = "Europe/London";
   bindIp = "0.0.0.0";
 in {
   virtualisation.oci-containers.containers.seerr = {
@@ -9,7 +8,7 @@ in {
     autoStart = true;
 
     environment = {
-      TZ = tz;
+      TZ = config.time.timeZone;
       PORT = "5055";
     };
 

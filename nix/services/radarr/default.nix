@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  tz = "Europe/London";
   puid = toString config.homelab.ids.uid;
   pgid = toString config.homelab.ids.mediaGid;
 
@@ -14,7 +13,7 @@ in {
     environment = {
       PUID = puid;
       PGID = pgid;
-      TZ = tz;
+      TZ = config.time.timeZone;
       # Host headers Radarr answers to (loopback and its own hostname are
       # always allowed): Caddy, and vm-media's IP, which Prowlarr, Seerr,
       # Cleanuparr, Profilarr and Homepage use.

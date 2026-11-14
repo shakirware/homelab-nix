@@ -1,7 +1,6 @@
 { config, lib, ... }:
 
 let
-  tz = "Europe/London";
 
   uid = toString config.homelab.ids.uid;
   gid = toString config.homelab.ids.mediaGid;
@@ -83,7 +82,7 @@ in {
       "--workdir=/app/data"
     ];
 
-    environment = { TZ = tz; };
+    environment = { TZ = config.time.timeZone; };
 
     environmentFiles = [ config.sops.templates.tuliprox.path ];
 

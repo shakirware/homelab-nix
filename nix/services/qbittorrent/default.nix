@@ -1,7 +1,6 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 let
-  tz = "Europe/London";
   puid = "1000";
   pgid = "1001";
 in {
@@ -12,7 +11,7 @@ in {
     environment = {
       PUID = puid;
       PGID = pgid;
-      TZ = tz;
+      TZ = config.time.timeZone;
 
       WEBUI_PORT = "8080";
     };

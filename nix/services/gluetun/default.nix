@@ -1,7 +1,6 @@
 { config, lib, pkgs, home, iot, ... }:
 
 let
-  tz = "Europe/London";
   bindIp = "0.0.0.0";
 
   vpnNet = "vpn-net";
@@ -106,7 +105,7 @@ in {
     ];
 
     environment = {
-      TZ = tz;
+      TZ = config.time.timeZone;
 
       VPN_SERVICE_PROVIDER = "mullvad";
       VPN_TYPE = "wireguard";
