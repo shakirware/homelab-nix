@@ -36,7 +36,18 @@ let
     fi
     ${lib.optionalString (!backupAlertsEnabled) "mv $out/backups.yml $out/backups.yml.disabled"}
   '';
+
+  configCheck = pkgs.runCommand "prometheus-config-check" {
+    nativeBuildInputs = [ pkgs.prometheus.cli ];
+  } ''
+    promtool check rules ${rulesDir}/*.yml
+    sed 's#/etc/prometheus/rules/#${rulesDir}/#' ${prometheusYaml} > prometheus.yml
+    promtool check config prometheus.yml
+    touch $out
+  '';
 in {
+  system.checks = [ configCheck ];
+
   systemd.tmpfiles.rules = lib.mkAfter [ "d ${dataDir} 0750 65534 65534 - -" ];
 
   virtualisation.oci-containers.containers.prometheus = {
