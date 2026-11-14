@@ -29,8 +29,6 @@ in {
 
   virtualisation.oci-containers.containers.proxmox_exporter = {
     image = "prompve/prometheus-pve-exporter:3.10.1@sha256:5678b230735a80816755dc8b5e0fb139a6595e1d4271ace2d22ff82983d1bdf1";
-    autoStart = true;
-
     volumes = [
       "${config.sops.templates.${pveCfgName}.path}:/etc/prometheus/pve.yml:ro"
     ];

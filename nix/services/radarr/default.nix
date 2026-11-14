@@ -8,8 +8,6 @@ let
 in {
   virtualisation.oci-containers.containers.radarr = {
     image = "lscr.io/linuxserver/radarr:version-6.4.4.10685@sha256:fc0ae3c50f8128b97e84381903ec8d6845c3a569641cb7117c124376cccb57c1";
-    autoStart = true;
-
     environment = {
       PUID = puid;
       PGID = pgid;

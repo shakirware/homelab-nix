@@ -74,8 +74,6 @@ in {
 
   virtualisation.oci-containers.containers.couchdb = {
     image = "couchdb:3@sha256:4e8e0a366208a87d5059b0f4fcbefff13c32401a655d4629c19be6288ea77675";
-    autoStart = true;
-
     autoRemoveOnStop = lib.mkForce false;
 
     environment = { TZ = config.time.timeZone; };

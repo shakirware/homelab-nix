@@ -18,8 +18,6 @@ in {
 
   virtualisation.oci-containers.containers.mealie = {
     image = "ghcr.io/mealie-recipes/mealie:v3.30.0@sha256:90f83da6f3ab0a421efc827118a556168573930105f13fa3321768f42163d784";
-    autoStart = true;
-
     environment = {
       TZ = config.time.timeZone;
 

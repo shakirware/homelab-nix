@@ -18,8 +18,6 @@ in {
 
   virtualisation.oci-containers.containers.cleanuparr = {
     image = "ghcr.io/cleanuparr/cleanuparr:2.10.12@sha256:d0212e4c66bd0522e23c5e5da5d3006bd5ff0e0de1e3ecfcf892e039d55721e2";
-    autoStart = true;
-
     environment = {
       TZ = config.time.timeZone;
       PORT = toString port;

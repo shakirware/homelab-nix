@@ -158,8 +158,6 @@ in {
   virtualisation.oci-containers.containers = {
     server_self_hosted = {
       image = serverImage;
-      autoStart = true;
-
       environment = { TZ = config.time.timeZone; };
       environmentFiles = [ envFile ];
 
@@ -178,8 +176,6 @@ in {
 
     localstack_self_hosted = {
       image = localstackImage;
-      autoStart = true;
-
       environment = {
         SERVICES = "sns,sqs";
         HOSTNAME_EXTERNAL = "localstack";
@@ -195,8 +191,6 @@ in {
 
     db_self_hosted = {
       image = mysqlImage;
-      autoStart = true;
-
       environment = {
         MYSQL_DATABASE = "standard_notes_db";
         MYSQL_USER = "std_notes_user";
@@ -210,8 +204,6 @@ in {
 
     cache_self_hosted = {
       image = redisImage;
-      autoStart = true;
-
       volumes = [ "${redisVol}:/data" ];
 
       extraOptions = [ "--network=${snNet}" "--network-alias=cache" ];
@@ -219,8 +211,6 @@ in {
 
     standardnotes_web = {
       image = webImage;
-      autoStart = true;
-
       environment = {
         TZ = config.time.timeZone;
 

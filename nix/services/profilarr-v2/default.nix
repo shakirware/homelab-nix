@@ -40,16 +40,12 @@ in {
   virtualisation.oci-containers.containers = {
     profilarr-v2-parser = {
       image = "ghcr.io/dictionarry-hub/profilarr-parser:2.3.1@sha256:234084df7037e76b98c66f5ab220dc0d10ef8f34145ded57b9af257f057bdda6";
-      autoStart = true;
-
       extraOptions =
         [ "--network=${net}" "--ip=${parserIp}" "--name=profilarr-v2-parser" ];
     };
 
     profilarr-v2 = {
       image = "ghcr.io/dictionarry-hub/profilarr:2.3.1@sha256:352e42dec74ecfd68d13bb198fbc6d9346e3a8c55003026e1814e59319a2176d";
-      autoStart = true;
-
       environment = {
         TZ = config.time.timeZone;
         PUID = puid;

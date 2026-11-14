@@ -26,8 +26,6 @@ in {
 
   virtualisation.oci-containers.containers.pinchflat = {
     image = "ghcr.io/kieraneglin/pinchflat:latest@sha256:01b4f98aabaf3f5fe394213f7a32578c9e84e42080f52e2f8334021a4473b202";
-    autoStart = true;
-
     environment = {
       TZ = config.time.timeZone;
       UMASK = "002";

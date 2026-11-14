@@ -81,8 +81,6 @@ in {
 
   virtualisation.oci-containers.containers.gluetun = {
     image = "qmcgaw/gluetun:v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027";
-    autoStart = true;
-
     # IPv6 is disabled in the shared namespace so every consumer leaves by the
     # same IPv4 address: Cloudflare binds FlareSolverr's cf_clearance cookie to
     # the solving IP.  The WireGuard config carries IPv4 addresses only.
