@@ -41,6 +41,22 @@
           description =
             "Skip TLS verification when proxying to an HTTPS upstream.";
         };
+        probePath = lib.mkOption {
+          type = lib.types.str;
+          default = "/";
+          description = ''
+            Unauthenticated health endpoint that Blackbox probes over HTTPS.
+            Every vhost is probed, so new services are covered by default.
+          '';
+        };
+        probeModule = lib.mkOption {
+          type = lib.types.enum [ "http_2xx" "http_auth_required" ];
+          default = "http_2xx";
+          description = ''
+            Blackbox module for the probe; `http_auth_required` accepts a 401
+            from services that require auth on every path.
+          '';
+        };
       };
     });
     default = [ ];
