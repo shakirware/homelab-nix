@@ -22,16 +22,9 @@ in {
     };
 
     volumes = [ "/srv/appdata/prowlarr:/config" ];
-
-    ports = [ ];
-
-    extraOptions = [ "--network=container:gluetun" ];
   };
 
-  systemd.services.podman-prowlarr = {
-    after = [ "podman-gluetun.service" "podman.service" ];
-    requires = [ "podman-gluetun.service" "podman.service" ];
-  };
+  homelab.containers.prowlarr.vpn = true;
 
   homelab.backup = {
     paths = [ "/srv/appdata/prowlarr/config.xml" ];

@@ -13,6 +13,7 @@
 
     ../../modules/networking/default.nix
     ../../modules/networking/backend-guard.nix
+    ../../modules/containers
 
     ../../modules/dns/domains.nix
     ../../modules/dns/records.nix
