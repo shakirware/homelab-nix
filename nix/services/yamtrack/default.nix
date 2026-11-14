@@ -137,8 +137,8 @@ in {
   };
 
   networking.firewall.interfaces."podman3" = {
-  allowedUDPPorts = lib.mkAfter [ 53 ];
-  allowedTCPPorts = lib.mkAfter [ 53 ];
+  allowedUDPPorts = [ 53 ];
+  allowedTCPPorts = [ 53 ];
 };
 
   homelab.firewall.restrict.${toString port} = [ gwIp ];

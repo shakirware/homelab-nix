@@ -90,5 +90,5 @@ in {
     virtualHosts = vhosts;
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 80 443 ];
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
 }

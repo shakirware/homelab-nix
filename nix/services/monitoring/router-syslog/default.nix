@@ -47,7 +47,7 @@ in {
 
   systemd.services.alloy.after = [ "podman-loki.service" ];
 
-  networking.firewall.allowedUDPPorts = lib.mkAfter [ port ];
+  networking.firewall.allowedUDPPorts = [ port ];
 
   # Only the router may send; anything else could forge log lines.
   homelab.firewall.restrict."${toString port}/udp" = {

@@ -205,7 +205,7 @@ in {
     serviceConfig = {
       Restart = lib.mkForce "on-failure";
       RestartSec = lib.mkForce "5s";
-      ExecStartPre = lib.mkAfter [ waitDb ];
+      ExecStartPre = [ waitDb ];
     };
   };
 

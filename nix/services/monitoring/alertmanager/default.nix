@@ -194,7 +194,7 @@ in {
 
   # alertmanager.${baseDomain} is proxied by Caddy on vm-gw; only that host
   # may reach the (unauthenticated) API.
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+  networking.firewall.allowedTCPPorts = [ port ];
 
   homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
 }

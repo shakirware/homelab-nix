@@ -225,7 +225,7 @@ in {
   systemd.services.podman-server_self_hosted.serviceConfig = {
     Restart = lib.mkForce "on-failure";
     RestartSec = lib.mkForce "5s";
-    ExecStartPre = lib.mkAfter [ waitScript ];
+    ExecStartPre = [ waitScript ];
   };
   systemd.services.podman-db_self_hosted.serviceConfig = {
     Restart = lib.mkForce "on-failure";

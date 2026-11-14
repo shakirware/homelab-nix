@@ -201,7 +201,7 @@ in {
     wants = [ "podman-immich-machine-learning.service" ];
 
     serviceConfig = {
-      ExecStartPre = lib.mkAfter [ waitDb ];
+      ExecStartPre = [ waitDb ];
       CPUWeight = 50;
     };
   };

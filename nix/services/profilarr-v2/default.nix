@@ -40,8 +40,7 @@ in {
   virtualisation.oci-containers.containers = {
     profilarr-v2-parser = {
       image = "ghcr.io/dictionarry-hub/profilarr-parser:2.3.1@sha256:234084df7037e76b98c66f5ab220dc0d10ef8f34145ded57b9af257f057bdda6";
-      extraOptions =
-        [ "--network=${net}" "--ip=${parserIp}" "--name=profilarr-v2-parser" ];
+      extraOptions = [ "--network=${net}" "--ip=${parserIp}" "--name=profilarr-v2-parser" ];
     };
 
     profilarr-v2 = {

@@ -132,8 +132,7 @@ in {
 
       paths = cfg.paths ++ [ dumpDir ];
       exclude = cfg.exclude ++ [ "*.db-wal" "*.db-shm" "*.sqlite-wal" "*.sqlite-shm" ];
-      extraBackupArgs =
-        [ "--tag" "nightly" "--exclude-caches" "--compression" "max" ];
+      extraBackupArgs = [ "--tag" "nightly" "--exclude-caches" "--compression" "max" ];
 
       backupPrepareCommand = toString dumpScript;
       backupCleanupCommand = toString metricsScript;

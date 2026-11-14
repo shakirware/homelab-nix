@@ -73,7 +73,7 @@ in {
     requires = [ "podman.service" ];
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+  networking.firewall.allowedTCPPorts = [ port ];
 
   homelab.firewall.restrict.${toString port} = with config.homelab.ips; [
     gw

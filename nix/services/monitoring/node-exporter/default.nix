@@ -19,7 +19,7 @@ in {
 
   systemd.tmpfiles.rules = lib.mkAfter [ "d ${textfileDir} 0755 root root - -" ];
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+  networking.firewall.allowedTCPPorts = [ port ];
 
   homelab.firewall.restrict.${toString port} = [ promIp ];
 }
