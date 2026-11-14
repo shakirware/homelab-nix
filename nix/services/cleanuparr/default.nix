@@ -1,8 +1,6 @@
 { config, lib, ... }:
 
 let
-
-  bindIp = "0.0.0.0";
   port = 11011;
 
   appdataDir = "/srv/appdata/cleanuparr";
@@ -12,10 +10,6 @@ let
 
   gwIp = config.homelab.ips.gw;
 in {
-  systemd.tmpfiles.rules = lib.mkAfter [
-    "d ${appdataDir} 2775 ${config.homelab.ids.user} media - -"
-  ];
-
   virtualisation.oci-containers.containers.cleanuparr = {
     image = "ghcr.io/cleanuparr/cleanuparr:2.10.12@sha256:d0212e4c66bd0522e23c5e5da5d3006bd5ff0e0de1e3ecfcf892e039d55721e2";
     environment = {
@@ -31,8 +25,6 @@ in {
       "${appdataDir}:/config"
       "/srv/downloads:/data"
     ];
-
-    ports = [ "${bindIp}:${toString port}:${toString port}" ];
   };
 
   systemd.services.podman-cleanuparr = {
@@ -41,9 +33,12 @@ in {
     wants = [ "network-online.target" ];
   };
 
-  homelab.firewall.restrict.${toString port} = {
-    sources = [ gwIp ];
-    localContainers = false;
+  homelab.containers.cleanuparr = {
+    publish.${toString port} = {
+      sources = [ gwIp ];
+      localContainers = false;
+    };
+    appdata = appdataDir;
   };
 
   # events.db is an activity log and is left out.
