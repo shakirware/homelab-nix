@@ -39,6 +39,11 @@
       sshOptions = [ "-o" "IdentitiesOnly=yes" ]
         ++ (if sshKeyEnv == "" then [ ] else [ "-i" sshKeyEnv ]);
 
+      hosts = builtins.attrNames (nixpkgs.lib.filterAttrs (_: type: type == "directory")
+        (builtins.readDir ./nix/hosts));
+
+      hostModule = hostName: ./nix/hosts + "/${hostName}/default.nix";
+
       mkHost = hostName: modulePath:
         nixpkgs.lib.nixosSystem {
           inherit system;
@@ -52,18 +57,8 @@
           ];
         };
     in {
-      nixosConfigurations = {
-        vm-gw = mkHost "vm-gw" ./nix/hosts/vm-gw/default.nix;
-        vm-media = mkHost "vm-media" ./nix/hosts/vm-media/default.nix;
-        vm-storage = mkHost "vm-storage" ./nix/hosts/vm-storage/default.nix;
-        vm-sensitive =
-          mkHost "vm-sensitive" ./nix/hosts/vm-sensitive/default.nix;
-        vm-apps = mkHost "vm-apps" ./nix/hosts/vm-apps/default.nix;
-        vm-monitoring =
-          mkHost "vm-monitoring" ./nix/hosts/vm-monitoring/default.nix;
-        vm-ci = mkHost "vm-ci" ./nix/hosts/vm-ci/default.nix;
-        vm-release = mkHost "vm-release" ./nix/hosts/vm-release/default.nix;
-      };
+      nixosConfigurations = nixpkgs.lib.genAttrs hosts
+        (hostName: mkHost hostName (hostModule hostName));
 
       packages.${system} = {
         proxmox-template = nixos-generators.nixosGenerate {
@@ -78,7 +73,7 @@
         colmena = colmena.packages.${system}.colmena;
       };
 
-      colmenaHive = colmena.lib.makeHive {
+      colmenaHive = colmena.lib.makeHive ({
         meta = { nixpkgs = import nixpkgs { system = system; }; };
 
         defaults = { ... }: {
@@ -90,70 +85,12 @@
           deployment.targetUser = targetUser;
           deployment.sshOptions = sshOptions;
         };
-
-        vm-gw = {
-          deployment.targetHost = "vm-gw";
-          imports = [
-            { networking.hostName = "vm-gw"; }
-            ./nix/hosts/vm-gw/default.nix
-          ];
-        };
-
-        vm-media = {
-          deployment.targetHost = "vm-media";
-          imports = [
-            { networking.hostName = "vm-media"; }
-            ./nix/hosts/vm-media/default.nix
-          ];
-        };
-
-        vm-storage = {
-          deployment.targetHost = "vm-storage";
-          imports = [
-            { networking.hostName = "vm-storage"; }
-            ./nix/hosts/vm-storage/default.nix
-          ];
-        };
-
-        vm-sensitive = {
-          deployment.targetHost = "vm-sensitive";
-          imports = [
-            { networking.hostName = "vm-sensitive"; }
-            ./nix/hosts/vm-sensitive/default.nix
-          ];
-        };
-
-        vm-apps = {
-          deployment.targetHost = "vm-apps";
-          imports = [
-            { networking.hostName = "vm-apps"; }
-            ./nix/hosts/vm-apps/default.nix
-          ];
-        };
-
-        vm-monitoring = {
-          deployment.targetHost = "vm-monitoring";
-          imports = [
-            { networking.hostName = "vm-monitoring"; }
-            ./nix/hosts/vm-monitoring/default.nix
-          ];
-        };
-
-        vm-ci = {
-          deployment.targetHost = "vm-ci";
-          imports = [
-            { networking.hostName = "vm-ci"; }
-            ./nix/hosts/vm-ci/default.nix
-          ];
-        };
-
-        vm-release = {
-          deployment.targetHost = "vm-release";
-          imports = [
-            { networking.hostName = "vm-release"; }
-            ./nix/hosts/vm-release/default.nix
-          ];
-        };
-      };
+      } // nixpkgs.lib.genAttrs hosts (hostName: {
+        deployment.targetHost = hostName;
+        imports = [
+          { networking.hostName = hostName; }
+          (hostModule hostName)
+        ];
+      }));
     };
 }
