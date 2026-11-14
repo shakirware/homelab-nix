@@ -140,7 +140,7 @@ in {
     };
 
     tracearr = {
-      image = "ghcr.io/connorgallopo/tracearr:3.1.5@sha256:bf8c9e3ea2f2c70247f312e1bfcf7b2b5d66f366b24e301a4dddf692e933b389";
+      image = "ghcr.io/connorgallopo/tracearr:3.1.7@sha256:25433cbce1b23e4a9233cdf98f00c3dab642d04f4e1f0f7f20fb3cca2a64e7d3";
       environmentFiles = [ config.sops.templates.${envName}.path ];
 
       extraOptions = [ "--network=${net}" "--ip=${appIp}" "--name=tracearr" ];
