@@ -122,7 +122,7 @@ in {
 
     immich-redis = {
       image =
-        "docker.io/valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d";
+        "docker.io/valkey/valkey:9@sha256:3add1a336a920ea54770a001ab6feb3da5fceea96a40373a3a2cd469b815f0b7";
       extraOptions = [ "--network=${net}" "--ip=${redisIp}" "--name=immich-redis" ];
     };
 

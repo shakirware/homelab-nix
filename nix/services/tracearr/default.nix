@@ -103,7 +103,7 @@ in {
 
   virtualisation.oci-containers.containers = {
     tracearr-db = {
-      image = "timescale/timescaledb:latest-pg16@sha256:322ae364eca3321cf2a48f1ef31213b87843413b3cf8feeebf54e999a26bb731";
+      image = "timescale/timescaledb:latest-pg16@sha256:2f87efeaec6fbdd3ba4a6993b921c05d069cd8e980792cb23c7c5f32a6fe68a7";
       cmd = [
         "postgres"
         "-c"
@@ -131,7 +131,7 @@ in {
     };
 
     tracearr-redis = {
-      image = "redis:8-alpine@sha256:0bf6577d7774e592b29d093e3ac9390eb91e13d72c21e506afce736de5e0eeb0";
+      image = "redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3";
       cmd = [ "redis-server" "--appendonly" "yes" ];
 
       volumes = [ "${redisVol}:/data" ];
