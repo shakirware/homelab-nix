@@ -12,7 +12,7 @@ in {
   ];
 
   virtualisation.oci-containers.containers.jellyfin = {
-    image = "lscr.io/linuxserver/jellyfin:12.2ubu2604-ls55@sha256:38f6ad3bcd487c82933ede7e32d74ab8712fffcff9e87b16dd2e245ab37130f8";
+    image = "lscr.io/linuxserver/jellyfin:12.4ubu2604-ls59@sha256:2f708001387aa9853e744a4a4d572d9970927c479c56d6c9e199f789c5173535";
     environment = {
       PUID = puid;
       PGID = pgid;
