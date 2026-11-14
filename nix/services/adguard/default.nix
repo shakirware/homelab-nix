@@ -60,8 +60,8 @@
     };
   };
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 53 3000 ];
-  networking.firewall.allowedUDPPorts = lib.mkAfter [ 53 ];
+  networking.firewall.allowedTCPPorts = [ 53 3000 ];
+  networking.firewall.allowedUDPPorts = [ 53 ];
 
   homelab.firewall.restrict."3000" = [ ];
 

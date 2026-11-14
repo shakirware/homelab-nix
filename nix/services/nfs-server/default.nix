@@ -32,16 +32,13 @@ in {
   systemd.services.nfs-server.restartTriggers = lib.mkForce [ ];
   systemd.services.nfs-server.reloadTriggers = [ exports ];
 
-  systemd.services.nfs-server.unitConfig.RequiresMountsFor =
-    [ "${exportRoot}/media" "${exportRoot}/photos" ];
+  systemd.services.nfs-server.unitConfig.RequiresMountsFor = [ "${exportRoot}/media" "${exportRoot}/photos" ];
   # Restarting the pool stops nfsd through the requirement above; this brings
   # it back when the pool is mounted again, instead of leaving exports down.
-  systemd.services.nfs-server.wantedBy =
-    [ "srv-media.mount" "export-media.mount" "export-photos.mount" ];
+  systemd.services.nfs-server.wantedBy = [ "srv-media.mount" "export-media.mount" "export-photos.mount" ];
   systemd.services.nfs-server.wants = [ "network-online.target" ];
   systemd.services.nfs-server.requires = [ "media-library-dirs.service" ];
-  systemd.services.nfs-server.after =
-    [ "network-online.target" "media-library-dirs.service" ];
+  systemd.services.nfs-server.after = [ "network-online.target" "media-library-dirs.service" ];
 
   systemd.services.nfs-export-dirs = {
     description = "Create the NFSv4 root and its mount points";
@@ -95,7 +92,7 @@ in {
 
   # NFSv4 is TCP only; port 2049 stays open in the NixOS firewall and the
   # guard narrows it to the client list.
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ 2049 ];
+  networking.firewall.allowedTCPPorts = [ 2049 ];
 
   homelab.firewall.restrict = {
     "2049" = clients;

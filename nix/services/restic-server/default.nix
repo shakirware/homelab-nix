@@ -53,12 +53,10 @@ in {
 
   systemd.tmpfiles.rules = lib.mkAfter [ "d ${dataDir} 0700 restic restic - -" ];
 
-  systemd.services.restic-rest-server.unitConfig.RequiresMountsFor =
-    [ dataDir ];
-  systemd.sockets.restic-rest-server.unitConfig.RequiresMountsFor =
-    [ diskDir ];
+  systemd.services.restic-rest-server.unitConfig.RequiresMountsFor = [ dataDir ];
+  systemd.sockets.restic-rest-server.unitConfig.RequiresMountsFor = [ diskDir ];
 
-  networking.firewall.allowedTCPPorts = lib.mkAfter [ port ];
+  networking.firewall.allowedTCPPorts = [ port ];
 
   homelab.firewall.restrict.${toString port} = clients;
 }

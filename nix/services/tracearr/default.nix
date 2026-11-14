@@ -137,8 +137,7 @@ in {
 
       volumes = [ "${redisVol}:/data" ];
 
-      extraOptions =
-        [ "--network=${net}" "--ip=${redisIp}" "--name=tracearr-redis" ];
+      extraOptions = [ "--network=${net}" "--ip=${redisIp}" "--name=tracearr-redis" ];
     };
 
     tracearr = {
@@ -175,7 +174,7 @@ in {
       "podman.service"
     ];
 
-    serviceConfig.ExecStartPre = lib.mkAfter [ waitDb ];
+    serviceConfig.ExecStartPre = [ waitDb ];
   };
 
   homelab.firewall.restrict.${toString hostPort} = [ config.homelab.ips.gw ];

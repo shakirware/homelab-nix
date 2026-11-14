@@ -147,8 +147,8 @@ in {
   homelab.firewall.restrict.${toString port} = [ config.homelab.ips.gw ];
 
   networking.firewall.interfaces."podman4" = {
-    allowedUDPPorts = lib.mkAfter [ 53 ];
-    allowedTCPPorts = lib.mkAfter [ 53 ];
+    allowedUDPPorts = [ 53 ];
+    allowedTCPPorts = [ 53 ];
   };
 
   homelab.backup = {

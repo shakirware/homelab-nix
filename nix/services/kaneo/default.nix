@@ -141,7 +141,7 @@ in {
       "podman.service"
     ];
 
-    serviceConfig.ExecStartPre = lib.mkAfter [ waitDb ];
+    serviceConfig.ExecStartPre = [ waitDb ];
   };
 
   # aardvark-dns on the gateway answers the containers' DNS.  Matched by

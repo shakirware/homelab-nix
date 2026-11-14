@@ -29,8 +29,7 @@ in {
   };
 
   # Ensure media mount exists before start
-  systemd.services.podman-bazarr.unitConfig.RequiresMountsFor =
-    [ "/srv/media" ];
+  systemd.services.podman-bazarr.unitConfig.RequiresMountsFor = [ "/srv/media" ];
   systemd.services.podman-bazarr.after =
     [ "network-online.target" "srv-media.mount" "podman-sonarr.service" "podman-radarr.service" ];
 
