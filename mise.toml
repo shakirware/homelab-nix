@@ -2,5 +2,5 @@
 _.file = { path = "secrets/env.yaml", redact = true }
 
 [tools]
-opentofu = "1.13.2"
+opentofu = "1.13.9"
 gitleaks = "8.30.1"
