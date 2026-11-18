@@ -7,7 +7,7 @@ let
   port = 3030;
 in {
   virtualisation.oci-containers.containers.readmeabook = {
-    image = "ghcr.io/kikootwo/readmeabook:1.2.13@sha256:b789e19d8cb888e572094c1b790cf4f57c2249a4a7fd1fab8f55633c79f196cd";
+    image = "ghcr.io/kikootwo/readmeabook:1.3.0@sha256:3c4e18563b3e22c7b67bcf3b323e81fda840159ea6c71eee91ab13a2d49b0cf1";
     environment = {
       PUID = puid;
       PGID = pgid;
