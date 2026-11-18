@@ -128,7 +128,7 @@ in {
 
     immich-machine-learning = {
       image =
-        "ghcr.io/immich-app/immich-machine-learning:v3.3.6@sha256:14367bfb374b8576ddf49abd67c5ca0190a4c7fcf6303cdad65d7f7bf1a50bc2";
+        "ghcr.io/immich-app/immich-machine-learning:v3.4.2@sha256:739405742a79bd7447227c553bb62ed5491aa36acf00bc667af7f9c93b6fae91";
       environment = {
         TZ = config.time.timeZone;
         MACHINE_LEARNING_MODEL_TTL = "300";
@@ -147,7 +147,7 @@ in {
 
     immich-server = {
       image =
-        "ghcr.io/immich-app/immich-server:v3.3.6@sha256:e1981983b1c13f6024b57d72e7ecae3342eed1581201ab09fb248932d86c593a";
+        "ghcr.io/immich-app/immich-server:v3.4.2@sha256:fc880c1bf665b4aab1e74c15e56ab871225989cd546536e6b77e771869af06bd";
       environmentFiles = [ config.sops.templates.${envName}.path ];
 
       volumes = [
