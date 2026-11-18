@@ -146,7 +146,7 @@ in {
 
   virtualisation.oci-containers.containers.invoiceplane = {
     # Pin for reproducibility; move to newer tag after testing
-    image = "mhzawadi/invoiceplane:1.7.2.1@sha256:e1d7b0bd36f3d0c73fa513abe8d14fa3db04b4ebc665e7f2b718e5c72d6e1c9c";
+    image = "mhzawadi/invoiceplane:1.7.2.6@sha256:ba241a98d7279aca34e12d157f664167bebb0c8c108b17060132a94e6e72d345";
     environment = {
       TZ = config.time.timeZone;
       MYSQL_HOST = "invoiceplane-db";
