@@ -9,7 +9,7 @@ in {
   homelab.containers.shelfmark.appdata = "/srv/appdata/shelfmark";
 
   virtualisation.oci-containers.containers.shelfmark = {
-    image = "ghcr.io/calibrain/shelfmark:v1.6.2@sha256:0b400a5d58951b35bfede3d9943b632551259c31e130316fe56c5cc0e2e4faea";
+    image = "ghcr.io/calibrain/shelfmark:v1.7.0@sha256:6544e02595271b0267b9acda58fa7f3db6f14942bece51b7aadfe4000cf34f1c";
     environment = {
       PUID = puid;
       PGID = pgid;
