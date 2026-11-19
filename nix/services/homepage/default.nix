@@ -154,7 +154,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.homepage = {
-    image = "ghcr.io/gethomepage/homepage:v2.6.0@sha256:3e38fe788223cb46a3ce1f046ef11667b40f7707fdca0dcbfa3f86c5c42bf1e8";
+    image = "ghcr.io/gethomepage/homepage:v2.8.0@sha256:019d8f063a7299e7c1c51ee4a70b692291809af3244894fbec2c2ac7d1f71b18";
     extraOptions = [
       "--health-cmd=none"
       "--cap-add=NET_RAW"
