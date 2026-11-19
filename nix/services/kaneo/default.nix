@@ -114,7 +114,7 @@ in {
     };
 
     kaneo = {
-      image = "ghcr.io/usekaneo/kaneo:2.49.0@sha256:cd1826b1aba3ce736015cadf6f6c975d923aac00f4b6aaa7aedb29bc722dae49";
+      image = "ghcr.io/usekaneo/kaneo:2.50.0@sha256:03ad082e33945b9c091266af60c7c88865cb2fab37ff33d91cbbcab626b0094d";
       environmentFiles = [ config.sops.templates.${envName}.path ];
 
       extraOptions = [ "--network=${net}" "--ip=${appIp}" "--name=kaneo" ];
