@@ -16,7 +16,7 @@ let
   gwIp = config.homelab.ips.gw;
 in {
   virtualisation.oci-containers.containers.netv = {
-    image = "ghcr.io/jvdillon/netv:0.4.0@sha256:b3258d6a3b5cd6cad7405002e838885d15a3c0625b221cef89fe19239c7f1e9c";
+    image = "ghcr.io/jvdillon/netv:0.5.3@sha256:8dbf4d1179292a54096b574b41b9bf2a9355fd3d417268d89a7832084788a1c0";
     environment = {
       TZ = config.time.timeZone;
       NETV_PORT = toString port;
