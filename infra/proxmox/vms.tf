@@ -120,7 +120,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
     for_each = each.key == "vm-media" ? [1] : []
     content {
       device  = "hostpci0"
-      mapping = proxmox_virtual_environment_hardware_mapping_pci.igpu.name
+      mapping = proxmox_hardware_mapping_pci.igpu.name
       pcie    = true
       rombar  = false
       xvga    = false

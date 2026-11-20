@@ -1,4 +1,4 @@
-resource "proxmox_virtual_environment_hardware_mapping_pci" "igpu" {
+resource "proxmox_hardware_mapping_pci" "igpu" {
   name    = "igpu"
   comment = "Intel UHD 630 at 0000:00:02.0"
 
@@ -9,4 +9,9 @@ resource "proxmox_virtual_environment_hardware_mapping_pci" "igpu" {
     subsystem_id = "1043:8694"
     iommu_group  = 0
   }]
+}
+
+moved {
+  from = proxmox_virtual_environment_hardware_mapping_pci.igpu
+  to   = proxmox_hardware_mapping_pci.igpu
 }
