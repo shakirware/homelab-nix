@@ -63,7 +63,10 @@
   networking.firewall.allowedTCPPorts = [ 53 3000 ];
   networking.firewall.allowedUDPPorts = [ 53 ];
 
-  homelab.firewall.restrict."3000" = [ ];
+  homelab.firewall.restrict."3000" = {
+    sources = [ ];
+    localContainers = true;
+  };
 
   # Settings changed in the UI (mutableSettings); filters re-download and the
   # query log is skipped.
