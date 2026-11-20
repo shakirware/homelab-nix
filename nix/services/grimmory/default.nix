@@ -44,7 +44,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.grimmory-db = {
-    image = "lscr.io/linuxserver/mariadb:11.8.9@sha256:dfd0f601cedf95381781c1b9b27424c608a78ddd97faa484da678873240f65e6";
+    image = "lscr.io/linuxserver/mariadb:11.8.10@sha256:4d9fb8985c06b2099d8421fb4070c4db0f61f3973e3b6828f6607cb0853f292d";
     environment = {
       PUID = puid;
       PGID = pgid;
