@@ -1,4 +1,6 @@
 locals {
+  routeros_version = "7.25.1"
+
   # Mirrors nix/modules/common/addresses.nix.
   ips = {
     router_vlan20 = "192.168.20.1"

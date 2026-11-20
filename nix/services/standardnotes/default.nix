@@ -28,7 +28,7 @@ let
   podmanIfaces = ''{ "podman0", "cni-podman0" }'';
 
   serverImage =
-    "docker.io/standardnotes/server:0d82819cba9694bc9fb5a3fa53e2dbeda05d1242@sha256:6c1532b31dabf5b3e644fb2a458d3795f28138ac1ac5c4505a9fa1cea10524bb";
+    "docker.io/standardnotes/server:latest@sha256:6c1532b31dabf5b3e644fb2a458d3795f28138ac1ac5c4505a9fa1cea10524bb";
   webImage = "docker.io/standardnotes/web:latest@sha256:7a99c571c73d58a23a6f84a27eb53f7768ba087cbc06dd152c9fa310e02c2f0c";
 
   localstackImage = "docker.io/localstack/localstack:3.8@sha256:b279c01f4cfb8f985a482e4014cabc1e2697b9d7a6c8c8db2e40f4d9f93687c7";

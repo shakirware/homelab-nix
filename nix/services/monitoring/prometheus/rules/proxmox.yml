@@ -83,3 +83,23 @@ groups:
         annotations:
           summary: "Proxmox replication failures"
           description: "{{ $labels.id }} has failed replication syncs ({{ $value }})."
+
+  - name: proxmox-updates
+    rules:
+      - alert: ProxmoxSecurityUpdatesPending
+        expr: sum(apt_upgrades_pending{job="node-proxmox",origin=~".*-security.*"}) > 0
+        for: 14d
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox host has pending security updates"
+          description: "{{ $value }} Debian security updates have been pending on the Proxmox host for 14 days. See HOM-31 for the patching steps."
+
+      - alert: ProxmoxRebootRequired
+        expr: node_reboot_required{job="node-proxmox"} == 1
+        for: 14d
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox host needs a reboot"
+          description: "The Proxmox host has needed a reboot for 14 days, usually for a new kernel."
