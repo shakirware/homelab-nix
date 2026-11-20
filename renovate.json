@@ -22,8 +22,27 @@
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Track the RouterOS version the router should run; a PR is the reminder to upgrade it by hand",
+      "managerFilePatterns": ["/(^|/)infra\\/router\\/locals\\.tf$/"],
+      "matchStrings": ["routeros_version\\s*=\\s*\"(?<currentValue>[0-9.]+)\""],
+      "depNameTemplate": "routeros",
+      "datasourceTemplate": "custom.routeros",
+      "versioningTemplate": "loose"
     }
   ],
+
+  "customDatasources": {
+    "routeros": {
+      "defaultRegistryUrlTemplate": "https://upgrade.mikrotik.com/routeros/NEWESTa7.stable",
+      "format": "plain",
+      "transformTemplates": [
+        "{\"releases\": [{\"version\": $split(releases[0].version, \" \")[0]}], \"homepage\": \"https://mikrotik.com/download/changelogs\"}"
+      ]
+    }
+  },
 
   "packageRules": [
     {
@@ -78,6 +97,11 @@
       "enabled": true,
       "groupName": "floating image digests",
       "schedule": ["* 0-4 1 * *"]
+    },
+    {
+      "description": "The Standard Notes server only publishes commit tags, so it follows latest; keep its jumps out of the routine digest group",
+      "matchPackageNames": ["docker.io/standardnotes/server"],
+      "groupName": "standard notes server"
     },
     {
       "description": "Immich server and machine learning must run the same release",
