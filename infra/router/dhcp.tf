@@ -13,8 +13,9 @@ resource "routeros_ip_dhcp_server" "iot" {
   address_pool = routeros_ip_pool.iot.name
   lease_time   = "1d"
   # Refuse a stale address at once instead of letting the client wait it out.
-  authoritative = "yes"
-  comment       = "${local.iot_tag}: IoT and TVs"
+  authoritative             = "yes"
+  dynamic_lease_identifiers = "client-mac,client-id"
+  comment                   = "${local.iot_tag}: IoT and TVs"
 }
 
 resource "routeros_ip_dhcp_server_network" "iot" {
