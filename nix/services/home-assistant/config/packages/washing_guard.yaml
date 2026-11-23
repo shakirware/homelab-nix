@@ -219,11 +219,6 @@ input_number:
     mode: box
 
 input_datetime:
-  washing_snooze_until:
-    name: Washing snooze until
-    has_date: true
-    has_time: true
-
   washing_put_out_at:
     name: Washing put out at
     has_date: true
@@ -1435,7 +1430,7 @@ automation:
       - trigger: state
         entity_id: sensor.washing_guard_rain_stage
 
-      # Keeps the countdown and any expiring snooze moving between polls.
+      # Keeps the countdown moving between polls.
       - trigger: time_pattern
         minutes: "/5"
 
@@ -1459,9 +1454,6 @@ automation:
     actions:
       - variables:
           candidate: "{{ states('sensor.washing_guard_rain_stage') | int(0) }}"
-          snoozed: >-
-            {{ as_timestamp(states('input_datetime.washing_snooze_until'), 0)
-               > as_timestamp(now()) }}
 
       # Establish an event only when none is active.  While an event is active
       # this is skipped entirely, which is what keeps the identity stable as
@@ -1489,10 +1481,6 @@ automation:
       - condition: template
         value_template: >-
           {{ candidate > (states('input_number.washing_alert_stage') | int(0)) }}
-
-      # A snooze defers the advisory stages only.  Stages 3 and 4 always send.
-      - condition: template
-        value_template: "{{ not (snoozed and candidate <= 2) }}"
 
       - variables:
           previous_stage: "{{ states('input_number.washing_alert_stage') | int(0) }}"
@@ -1549,12 +1537,6 @@ automation:
           entity_id: input_datetime.washing_put_out_at
         data:
           datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
-
-      - action: input_datetime.set_datetime
-        target:
-          entity_id: input_datetime.washing_snooze_until
-        data:
-          datetime: "1970-01-01 00:00:00"
 
       - variables:
           candidate: "{{ states('sensor.washing_guard_rain_stage') | int(0) }}"
@@ -1661,12 +1643,6 @@ automation:
         data:
           value: 0
 
-      - action: input_datetime.set_datetime
-        target:
-          entity_id: input_datetime.washing_snooze_until
-        data:
-          datetime: "1970-01-01 00:00:00"
-
   # The genuine-clear rule.  `for` on a plain state trigger expresses the ten
   # continuous minutes directly, so no timestamp bookkeeping helper is needed.
   # Only after this does a later episode become a new event and re-arm.
@@ -1699,12 +1675,6 @@ automation:
         data:
           value: 0
 
-      - action: input_datetime.set_datetime
-        target:
-          entity_id: input_datetime.washing_snooze_until
-        data:
-          datetime: "1970-01-01 00:00:00"
-
   # Telegram inline buttons, following the bin collection callback pattern.
   - id: washing_guard_telegram_callbacks
     alias: "Washing: Telegram callbacks"
@@ -1727,10 +1697,6 @@ automation:
     actions:
       - variables:
           payload: "{{ trigger.event.data.data | default('', true) }}"
-          token: "{{ (trigger.event.data.data | default('', true)).split('_') | last }}"
-          event_id: >-
-            {% set eid = states('input_text.washing_rain_event_id') | trim %}
-            {{ '' if eid in ['unknown', 'unavailable'] else eid }}
           actor: >-
             {{ (trigger.event.data.from_first | default('Someone', true))
                ~ ((' ' ~ trigger.event.data.from_last)
@@ -1943,27 +1909,6 @@ automation:
 
                     {{ state_attr('sensor.washing_guard_recommendation', 'detail')
                        | default('Forecast updating — check again shortly.', true) }}
-
-          - conditions:
-              - condition: template
-                value_template: "{{ payload.startswith('/washing_snooze_') }}"
-              - condition: template
-                value_template: "{{ event_id != '' and token == event_id }}"
-            sequence:
-              - action: input_datetime.set_datetime
-                target:
-                  entity_id: input_datetime.washing_snooze_until
-                data:
-                  datetime: >-
-                    {{ (now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S') }}
-
-              - action: telegram_bot.answer_callback_query
-                data:
-                  config_entry_id: >-
-                    {{ trigger.event.data.bot.config_entry_id }}
-                  callback_query_id: "{{ trigger.event.data.id }}"
-                  message: "Snoozed 10 min 😴 urgent alerts stay on"
-                  show_alert: false
 
         default:
           - action: telegram_bot.answer_callback_query
