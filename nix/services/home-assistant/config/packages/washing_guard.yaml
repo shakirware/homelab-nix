@@ -124,6 +124,12 @@ input_text:
     min: 0
     max: 16
 
+  washing_card_message_id:
+    name: Washing session card message
+    icon: mdi:message-text-outline
+    min: 0
+    max: 32
+
 input_number:
   # Highest stage already sent for the active event.  Escalation compares
   # against this, which is what makes each stage fire at most once.
@@ -250,6 +256,97 @@ input_datetime:
     has_date: false
     has_time: true
     initial: "09:00"
+
+script:
+  washing_guard_post:
+    alias: "Washing: Post to session card"
+    mode: queued
+    max: 10
+    fields:
+      message:
+        required: true
+        selector:
+          text:
+            multiline: true
+      push:
+        default: false
+        selector:
+          boolean:
+      silent:
+        default: false
+        selector:
+          boolean:
+      buttons:
+        default: in
+        selector:
+          select:
+            options:
+              - in
+              - arm
+              - still_out
+              - none
+    sequence:
+      - variables:
+          card_id: >-
+            {% set c = states('input_text.washing_card_message_id') | trim %}
+            {{ '' if c in ['unknown', 'unavailable'] else c }}
+          push_now: "{{ (push | default(false)) | bool or card_id == '' }}"
+          keyboard: >-
+            {% set b = buttons | default('in', true) %}
+            {% if b == 'arm' %}
+            {{ ['✅ Washing is in:/washing_in_card',
+                '↩️ Undo:/washing_undo, 🌦 Weather status:/washing_status'] }}
+            {% elif b == 'still_out' %}
+            {{ ['👍 Still out:/washing_still_out, ✅ It’s in:/washing_in_card'] }}
+            {% elif b == 'none' %}
+            {{ [] }}
+            {% else %}
+            {{ ['✅ Washing is in:/washing_in_card',
+                '🌦 Weather status:/washing_status'] }}
+            {% endif %}
+
+      - if:
+          - condition: template
+            value_template: "{{ push_now }}"
+        then:
+          - action: telegram_bot.send_message
+            data:
+              chat_id:
+                - -4936739997
+              parse_mode: plain_text
+              disable_notification: "{{ (silent | default(false)) | bool }}"
+              message: "{{ message }}"
+              inline_keyboard: "{{ keyboard }}"
+            response_variable: sent
+
+          - if:
+              - condition: template
+                value_template: "{{ card_id != '' }}"
+            then:
+              - action: telegram_bot.edit_replymarkup
+                continue_on_error: true
+                data:
+                  chat_id: -4936739997
+                  message_id: "{{ card_id }}"
+                  inline_keyboard: []
+
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.washing_card_message_id
+            data:
+              value: "{{ sent.chats[0].message_id }}"
+        else:
+          - action: telegram_bot.edit_message
+            continue_on_error: true
+            data:
+              chat_id: -4936739997
+              message_id: "{{ card_id }}"
+              parse_mode: plain_text
+              message: |-
+                {{ message }}
+
+                🕒 Updated {{ now().strftime('%H:%M') }}
+              inline_keyboard: "{{ keyboard }}"
 
 rest:
   # past_minutely_15=1 guarantees a bucket covering the present moment, which
@@ -1387,17 +1484,18 @@ automation:
       - condition: template
         value_template: "{{ not (snoozed and candidate <= 2) }}"
 
+      - variables:
+          previous_stage: "{{ states('input_number.washing_alert_stage') | int(0) }}"
+
       - action: input_number.set_value
         target:
           entity_id: input_number.washing_alert_stage
         data:
           value: "{{ candidate }}"
 
-      - action: telegram_bot.send_message
+      - action: script.washing_guard_post
         data:
-          chat_id:
-            - -4936739997
-          parse_mode: plain_text
+          push: "{{ candidate >= 2 and previous_stage < 2 }}"
           message: >-
             {% set onset = states('sensor.washing_guard_rain_onset') %}
             {% set at = (onset | as_datetime | as_local).strftime('%H:%M')
@@ -1418,17 +1516,9 @@ automation:
             {% if candidate < 4 and at is not none %}
             Expected to start around {{ at }}.
             {% endif %}
-            {% if prob not in ['unknown', 'unavailable'] %}
-            Chance of rain now: {{ prob }}%
-            {% endif %}
-            Rain now: {{ states('sensor.washing_guard_precipitation_now') }} mm
-            Forecast: {{ states('weather.forecast_home') }}
             {% if out_at not in ['unknown', 'unavailable'] %}
-            Put out at {{ (out_at | as_datetime | as_local).strftime('%H:%M') }}.
+            Put out at {{ (out_at | as_datetime | as_local).strftime('%a %H:%M') }}.
             {% endif %}
-          inline_keyboard:
-            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
-            - "😴 Snooze 10 min:/washing_snooze_{{ states('input_text.washing_rain_event_id') }}|🌦 Weather status:/washing_status"
 
   # Confirms arming and reports the current risk.  When rain is already in the
   # horizon this also adopts that stage, so the acknowledgement serves as the
@@ -1503,21 +1593,17 @@ automation:
             {{ (states('input_datetime.washing_put_out_at') ~ '|'
                 ~ states('sensor.washing_guard_drying_plan'))[:255] }}
 
-      - action: telegram_bot.send_message
+      - action: script.washing_guard_post
         data:
-          chat_id:
-            - -4936739997
-          parse_mode: plain_text
+          push: true
+          buttons: arm
           message: >-
             🧺 Washing Guard is on
 
             {{ state_attr('sensor.washing_guard_recommendation', 'detail')
                | default('Weather forecast still updating — keep an eye on the washing.', true) }}
 
-            I’ll warn you if the risk changes.
-          inline_keyboard:
-            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
-            - "🌦 Weather status:/washing_status"
+            This message updates as the forecast changes; I’ll only notify you when you need to act.
 
   # Turning the helper off, from anywhere, is the single reset path.
   - id: washing_guard_reset_on_disarm
@@ -1531,6 +1617,28 @@ automation:
         to: "off"
 
     actions:
+      - variables:
+          card_id: >-
+            {% set c = states('input_text.washing_card_message_id') | trim %}
+            {{ '' if c in ['unknown', 'unavailable'] else c }}
+
+      - if:
+          - condition: template
+            value_template: "{{ card_id != '' }}"
+        then:
+          - action: telegram_bot.edit_replymarkup
+            continue_on_error: true
+            data:
+              chat_id: -4936739997
+              message_id: "{{ card_id }}"
+              inline_keyboard: []
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_card_message_id
+        data:
+          value: ""
+
       - action: input_text.set_value
         target:
           entity_id: input_text.washing_rain_event_id
@@ -1835,11 +1943,9 @@ automation:
         data:
           value: "{{ signature[:255] }}"
 
-      - action: telegram_bot.send_message
+      - action: script.washing_guard_post
         data:
-          chat_id:
-            - -4936739997
-          parse_mode: plain_text
+          push: true
           message: >-
             {% set s = 'sensor.washing_guard_safe_until' %}
             {% set ws = state_attr(s,'window_start') | as_datetime | as_local %}
@@ -1870,9 +1976,6 @@ automation:
             {% if damp in ['high','moderate'] %}
               💧 {{ 'High' if damp == 'high' else 'Moderate' }} overnight damp/dew risk.
             {% endif %}
-          inline_keyboard:
-            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
-            - "🌦 Weather status:/washing_status"
 
   # Alert only when the useful decision materially worsens. Keep a
   # restored signature to avoid spamming on the 10-minute forecast refresh.
@@ -1915,17 +2018,14 @@ automation:
           entity_id: input_text.washing_drying_signature
         data:
           value: "{{ signature[:255] }}"
-      - action: telegram_bot.send_message
+      - action: script.washing_guard_post
         data:
-          chat_id:
-            - -4936739997
-          parse_mode: plain_text
+          push: false
           message: >-
+            🧺 Washing Guard is on
+
             {{ state_attr('sensor.washing_guard_recommendation', 'detail')
                | default('Drying risk changed — check the washing.', true) }}
-          inline_keyboard:
-            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
-            - "🌦 Weather status:/washing_status"
 
   # A single, timely nudge BEFORE it gets dark; the bedtime planner
   # alone would arrive too late to act on sunset/overnight damp.
@@ -1962,18 +2062,13 @@ automation:
           entity_id: input_text.washing_dusk_reminded_on
         data:
           value: "{{ day }}"
-      - action: telegram_bot.send_message
+      - action: script.washing_guard_post
         data:
-          chat_id:
-            - -4936739997
-          parse_mode: plain_text
+          push: true
           message: >-
             🌙 Sunset is around {{ sunset | timestamp_custom('%H:%M', true) }}.
             The washing probably won't be fully dry by then and may get damp again overnight.
             Bring it inside before dusk; finish drying indoors or try again tomorrow.
-          inline_keyboard:
-            - "✅ Washing is in:/washing_in_{{ states('input_text.washing_rain_event_id') }}"
-            - "🌦 Weather status:/washing_status"
 
   # ---------------------------------------------------------------------
   # OVERNIGHT VERDICT LATCH
