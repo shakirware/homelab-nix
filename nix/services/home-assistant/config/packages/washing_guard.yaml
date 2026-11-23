@@ -73,6 +73,10 @@ input_boolean:
     name: Washing thresholds seeded
     icon: mdi:database-check-outline
 
+  washing_day_forecast_muted:
+    name: Washing good-day forecast muted
+    icon: mdi:weather-sunny-off
+
 input_text:
   # Identity of the rain event currently being alerted on.  Set once when an
   # event is first established and deliberately never recomputed while rain
@@ -121,6 +125,12 @@ input_text:
   washing_dusk_reminded_on:
     name: Washing dusk reminder sent
     icon: mdi:weather-sunset-down
+    min: 0
+    max: 16
+
+  washing_day_forecast_sent_on:
+    name: Washing good-day forecast sent
+    icon: mdi:weather-sunny-alert
     min: 0
     max: 16
 
@@ -1827,6 +1837,49 @@ automation:
 
           - conditions:
               - condition: template
+                value_template: "{{ payload == '/washing_out' }}"
+            sequence:
+              - if:
+                  - condition: state
+                    entity_id: input_boolean.washing_outside
+                    state: "off"
+                then:
+                  - action: telegram_bot.answer_callback_query
+                    data:
+                      config_entry_id: >-
+                        {{ trigger.event.data.bot.config_entry_id }}
+                      callback_query_id: "{{ trigger.event.data.id }}"
+                      message: "Washing Guard is on 🧺"
+                      show_alert: false
+
+                  - action: telegram_bot.edit_message
+                    continue_on_error: true
+                    data:
+                      config_entry_id: >-
+                        {{ trigger.event.data.bot.config_entry_id }}
+                      chat_id: "{{ trigger.event.data.chat_id }}"
+                      message_id: "{{ trigger.event.data.message.message_id }}"
+                      parse_mode: plain_text
+                      message: |-
+                        {{ original_message }}
+
+                        🧺 Put out by {{ actor }} at {{ now().strftime('%H:%M') }}.
+                      inline_keyboard: []
+
+                  - action: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.washing_outside
+                else:
+                  - action: telegram_bot.answer_callback_query
+                    data:
+                      config_entry_id: >-
+                        {{ trigger.event.data.bot.config_entry_id }}
+                      callback_query_id: "{{ trigger.event.data.id }}"
+                      message: "Already marked as out 🧺"
+                      show_alert: false
+
+          - conditions:
+              - condition: template
                 value_template: "{{ payload == '/washing_undo' }}"
             sequence:
               - if:
@@ -1920,6 +1973,57 @@ automation:
               callback_query_id: "{{ trigger.event.data.id }}"
               message: "That washing alert is no longer active."
               show_alert: false
+
+  - id: washing_guard_good_drying_day
+    alias: "Washing: Good drying day"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: sensor.washing_guard_drying_plan
+        to: safe
+      - trigger: time_pattern
+        minutes: "/10"
+    conditions:
+      - condition: time
+        after: "07:00:00"
+        before: "11:00:00"
+      - condition: state
+        entity_id: input_boolean.washing_outside
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.washing_day_forecast_muted
+        state: "off"
+      - condition: state
+        entity_id: sensor.washing_guard_drying_plan
+        state: safe
+      - condition: template
+        value_template: >-
+          {{ states('input_text.washing_day_forecast_sent_on') != (now().date() | string)
+             and state_attr('sensor.washing_guard_drying_plan', 'estimated_dry_at') | float(0) > 0 }}
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.washing_day_forecast_sent_on
+        data:
+          value: "{{ now().date() | string }}"
+
+      - action: telegram_bot.send_message
+        data:
+          chat_id:
+            - -4936739997
+          parse_mode: plain_text
+          message: >-
+            {% set p = 'sensor.washing_guard_drying_plan' %}
+            {% set eta = state_attr(p, 'estimated_dry_at') | float(0) %}
+            {% set sunset = state_attr(p, 'sunset_at') | float(0) %}
+            ☀️ Good drying day
+
+            Hang it out now and it should be dry around
+            {{ (((eta + 900) // 1800) * 1800) | timestamp_custom('%H:%M', true) }}
+            (allow 1–2 hours either way). No meaningful rain is forecast before then.
+            {% if sunset > 0 %}Sunset {{ sunset | timestamp_custom('%H:%M', true) }}.{% endif %}
+          inline_keyboard:
+            - "🧺 Washing is out:/washing_out, 🌦 Weather status:/washing_status"
 
   - id: washing_guard_morning_check_in
     alias: "Washing: Morning still-out check"
