@@ -1669,18 +1669,14 @@ automation:
                     Immediate rain data unavailable.
                     {% endif %}
 
-          # Accept for the active event, or when no event is active but the
-          # washing is still marked out, since confirming it is in is safe and
-          # idempotent.  A token from a different, superseded event is refused.
+          # Confirming the washing is in is safe and idempotent, so it is
+          # accepted from any washing message, including superseded alerts.
           - conditions:
               - condition: template
                 value_template: "{{ payload.startswith('/washing_in_') }}"
               - condition: state
                 entity_id: input_boolean.washing_outside
                 state: "on"
-              - condition: template
-                value_template: >-
-                  {{ (event_id != '' and token == event_id) or event_id == '' }}
             sequence:
               - action: input_boolean.turn_off
                 target:
@@ -1909,6 +1905,13 @@ automation:
           {{ stage == 0 and verdict in ['rain','overnight','slow','check_wet','check_now']
              and as_timestamp(now()) - as_timestamp(states('input_datetime.washing_put_out_at'), 0) > 120
              and signature != states('input_text.washing_drying_signature') }}
+      - wait_template: >-
+          {{ states.sensor.washing_guard_recommendation is not none
+             and states.sensor.washing_guard_drying_plan is not none
+             and states.sensor.washing_guard_recommendation.last_updated
+                 >= states.sensor.washing_guard_drying_plan.last_changed }}
+        timeout: "00:00:15"
+        continue_on_timeout: true
       - action: input_text.set_value
         target:
           entity_id: input_text.washing_drying_signature
