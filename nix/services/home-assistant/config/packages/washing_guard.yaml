@@ -300,9 +300,9 @@ script:
             {% set b = buttons | default('in', true) %}
             {% if b == 'arm' %}
             {{ ['✅ Washing is in:/washing_in_card',
-                '↩️ Undo:/washing_undo, 🌦 Weather status:/washing_status'] }}
+                '↩️ Undo:/washing_undo,🌦 Weather status:/washing_status'] }}
             {% elif b == 'still_out' %}
-            {{ ['👍 Still out:/washing_still_out, ✅ It’s in:/washing_in_card'] }}
+            {{ ['👍 Still out:/washing_still_out,✅ It’s in:/washing_in_card'] }}
             {% elif b == 'none' %}
             {{ [] }}
             {% else %}
@@ -1968,7 +1968,7 @@ automation:
             (allow 1–2 hours either way). No meaningful rain is forecast before then.
             {% if sunset > 0 %}Sunset {{ sunset | timestamp_custom('%H:%M', true) }}.{% endif %}
           inline_keyboard:
-            - "🧺 Washing is out:/washing_out, 🌦 Weather status:/washing_status"
+            - "🧺 Washing is out:/washing_out,🌦 Weather status:/washing_status"
 
   - id: washing_guard_morning_check_in
     alias: "Washing: Morning still-out check"
