@@ -61,25 +61,73 @@ automation:
                and states('input_text.bins_active_collection_date') == target_date_iso
              ) }}
 
-      - action: calendar.get_events
-        target:
-          entity_id: calendar.waste_collection_schedule_london_borough_of_hillingdon
-        data:
-          start_date_time: "{{ range_start }}"
-          end_date_time: "{{ range_end }}"
-        response_variable: bin_agenda
+      - variables:
+          calendar_entity: calendar.waste_collection_schedule_london_borough_of_hillingdon
+          schedule_sensor: sensor.waste_collection_schedule_next_bin_collection
+          bin_agenda: {}
+
+      - if:
+          - condition: template
+            value_template: >-
+              {{ states(calendar_entity) not in ['unavailable', 'unknown'] }}
+        then:
+          - action: calendar.get_events
+            target:
+              entity_id: calendar.waste_collection_schedule_london_borough_of_hillingdon
+            data:
+              start_date_time: "{{ range_start }}"
+              end_date_time: "{{ range_end }}"
+            response_variable: bin_agenda
+
+      - variables:
+          calendar_ok: "{{ calendar_entity in bin_agenda }}"
+          sensor_ok: >-
+            {{ states(schedule_sensor) not in ['unavailable', 'unknown'] }}
+          due_names: >-
+            {%- set ns = namespace(names=[]) -%}
+            {%- if calendar_ok -%}
+              {%- for event in bin_agenda[calendar_entity].get('events', []) -%}
+                {%- set name = event.summary | default('Waste collection', true) -%}
+                {%- if (event.start | string)[:10] == target_date_iso
+                      and name not in ns.names -%}
+                  {%- set ns.names = ns.names + [name] -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- elif sensor_ok -%}
+              {%- set wanted = (now().date() + timedelta(days=target_offset | int)).strftime('%d.%m.%Y') -%}
+              {%- for key, value in states[schedule_sensor].attributes.items() -%}
+                {%- if key[-10:] == wanted -%}
+                  {%- for name in (value | string).split(', ') -%}
+                    {%- if name | trim and name | trim not in ns.names -%}
+                      {%- set ns.names = ns.names + [name | trim] -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+            {{ ns.names }}
+
+      - if:
+          - condition: template
+            value_template: >-
+              {{ not calendar_ok and not sensor_ok and reminder_type == 'evening' }}
+        then:
+          - action: telegram_bot.send_message
+            data:
+              chat_id:
+                - -4936739997
+              parse_mode: plain_text
+              message: |-
+                ⚠️ Bin schedule unavailable
+
+                Home Assistant can't read the Hillingdon collection schedule right now, so it can't tell whether bins go out tomorrow. Please check manually.
+          - stop: Bin schedule unavailable
 
       - variables:
           due_bins: >-
-            {%- set calendar_entity =
-              'calendar.waste_collection_schedule_london_borough_of_hillingdon' -%}
-            {%- set events = bin_agenda.get(calendar_entity, {}).get('events', []) -%}
-            {%- set ns = namespace(names=[], lines=[]) -%}
-            {%- for event in events -%}
-              {%- set event_start = event.start | string -%}
-              {%- set name = event.summary | default('Waste collection', true) -%}
+            {%- set ns = namespace(lines=[]) -%}
+            {%- for name in due_names -%}
               {%- set lower_name = name | lower -%}
-              {%- if event_start[:10] == target_date_iso and name not in ns.names -%}
                 {%- if 'food' in lower_name -%}
                   {%- set icon = '🍎' -%}
                 {%- elif 'garden' in lower_name -%}
@@ -89,9 +137,7 @@ automation:
                 {%- else -%}
                   {%- set icon = '🗑️' -%}
                 {%- endif -%}
-                {%- set ns.names = ns.names + [name] -%}
                 {%- set ns.lines = ns.lines + [icon ~ ' ' ~ name] -%}
-              {%- endif -%}
             {%- endfor -%}
             {{ ns.lines | join('\n') }}
 
@@ -317,3 +363,27 @@ automation:
           entity_id: input_text.bins_active_collection_date
         data:
           value: ""
+
+  - id: bins_reload_schedule_when_calendar_unavailable
+    alias: "Bins: Reload collection schedule when calendar is unavailable"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: calendar.waste_collection_schedule_london_borough_of_hillingdon
+        to: unavailable
+        for:
+          minutes: 30
+
+      - trigger: time_pattern
+        minutes: 15
+
+    conditions:
+      - condition: state
+        entity_id: calendar.waste_collection_schedule_london_borough_of_hillingdon
+        state: unavailable
+
+    actions:
+      - action: homeassistant.reload_config_entry
+        target:
+          entity_id: sensor.waste_collection_schedule_next_bin_collection
