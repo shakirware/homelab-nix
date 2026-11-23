@@ -1827,6 +1827,72 @@ automation:
 
           - conditions:
               - condition: template
+                value_template: "{{ payload == '/washing_undo' }}"
+            sequence:
+              - if:
+                  - condition: state
+                    entity_id: input_boolean.washing_outside
+                    state: "on"
+                  - condition: template
+                    value_template: >-
+                      {{ as_timestamp(now())
+                         - as_timestamp(states('input_datetime.washing_put_out_at'), 0)
+                         <= 900 }}
+                then:
+                  - action: input_boolean.turn_off
+                    target:
+                      entity_id: input_boolean.washing_outside
+
+                  - action: telegram_bot.answer_callback_query
+                    data:
+                      config_entry_id: >-
+                        {{ trigger.event.data.bot.config_entry_id }}
+                      callback_query_id: "{{ trigger.event.data.id }}"
+                      message: "Undone ↩️"
+                      show_alert: false
+
+                  - action: telegram_bot.delete_message
+                    continue_on_error: true
+                    data:
+                      config_entry_id: >-
+                        {{ trigger.event.data.bot.config_entry_id }}
+                      chat_id: "{{ trigger.event.data.chat_id }}"
+                      message_id: "{{ trigger.event.data.message.message_id }}"
+                else:
+                  - action: telegram_bot.answer_callback_query
+                    data:
+                      config_entry_id: >-
+                        {{ trigger.event.data.bot.config_entry_id }}
+                      callback_query_id: "{{ trigger.event.data.id }}"
+                      message: "Too late to undo — tap ✅ Washing is in instead."
+                      show_alert: false
+
+          - conditions:
+              - condition: template
+                value_template: "{{ payload == '/washing_still_out' }}"
+              - condition: state
+                entity_id: input_boolean.washing_outside
+                state: "on"
+            sequence:
+              - action: telegram_bot.answer_callback_query
+                data:
+                  config_entry_id: >-
+                    {{ trigger.event.data.bot.config_entry_id }}
+                  callback_query_id: "{{ trigger.event.data.id }}"
+                  message: "👍 Still watching it"
+                  show_alert: false
+
+              - action: script.washing_guard_post
+                data:
+                  push: false
+                  message: >-
+                    👍 {{ actor }} confirmed the washing is still out.
+
+                    {{ state_attr('sensor.washing_guard_recommendation', 'detail')
+                       | default('Forecast updating — check again shortly.', true) }}
+
+          - conditions:
+              - condition: template
                 value_template: "{{ payload.startswith('/washing_snooze_') }}"
               - condition: template
                 value_template: "{{ event_id != '' and token == event_id }}"
@@ -1854,6 +1920,68 @@ automation:
               callback_query_id: "{{ trigger.event.data.id }}"
               message: "That washing alert is no longer active."
               show_alert: false
+
+  - id: washing_guard_morning_check_in
+    alias: "Washing: Morning still-out check"
+    mode: single
+    triggers:
+      - trigger: time
+        at: input_datetime.washing_next_available
+    conditions:
+      - condition: state
+        entity_id: input_boolean.washing_outside
+        state: "on"
+      - condition: template
+        value_template: >-
+          {{ as_timestamp(now())
+             - as_timestamp(states('input_datetime.washing_put_out_at'), as_timestamp(now()))
+             > 8 * 3600 }}
+    actions:
+      - action: script.washing_guard_post
+        data:
+          push: true
+          buttons: still_out
+          message: >-
+            🧺 Is the washing still out?
+
+            It has been marked out since {{ (states('input_datetime.washing_put_out_at')
+              | as_datetime | as_local).strftime('%a %H:%M') }}.
+
+            {{ state_attr('sensor.washing_guard_recommendation', 'detail')
+               | default('Forecast updating — check again shortly.', true) }}
+
+  - id: washing_guard_auto_clear
+    alias: "Washing: Switch off after 36 hours"
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        minutes: "7"
+      - trigger: homeassistant
+        event: start
+    conditions:
+      - condition: state
+        entity_id: input_boolean.washing_outside
+        state: "on"
+      - condition: template
+        value_template: >-
+          {{ as_timestamp(now())
+             - as_timestamp(states('input_datetime.washing_put_out_at'), as_timestamp(now()))
+             > 36 * 3600 }}
+    actions:
+      - action: script.washing_guard_post
+        data:
+          push: true
+          silent: true
+          buttons: none
+          message: >-
+            🧺 Washing Guard switched itself off — the washing had been marked out
+            since {{ (states('input_datetime.washing_put_out_at')
+              | as_datetime | as_local).strftime('%a %H:%M') }}.
+            Turn it back on in Home Assistant if it is genuinely still outside.
+
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.washing_outside
 
   # ---------------------------------------------------------------------
   # PLANNING VERDICT
