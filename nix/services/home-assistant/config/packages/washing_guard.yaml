@@ -304,8 +304,7 @@ template:
         {% set src = 'sensor.washing_guard_rain_source' %}
         {% set m = state_attr(src, 'minutely_15') %}
         {% set cur = state_attr(src, 'current') %}
-        {% set rain_mm = 0.1 %}
-        {% set rain_prob = 60 %}
+        {% set rain_mm = 0.2 %}
         {% set horizon = 45 %}
         {% if m is not mapping or m.time is not defined %}
           {{ none }}
@@ -323,8 +322,7 @@ template:
               {% set ns.cur_p = p %}
               {% set ns.cur_prob = pr %}
             {% endif %}
-            {% if ns.onset is none and (t + 900) > now_ts
-                  and (p >= rain_mm or pr >= rain_prob) %}
+            {% if ns.onset is none and (t + 900) > now_ts and p >= rain_mm %}
               {% set ns.onset = t %}
             {% endif %}
           {% endfor %}
