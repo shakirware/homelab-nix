@@ -138,6 +138,7 @@ The lab runs on a single server built mostly from second-hand components, balanc
 | Memory | 48 GB DDR4 (3 × 16 GB) |
 | Motherboard | ASUS PRIME H370-A |
 | Boot / VM storage | 512 GB NVMe SSD |
+| Download storage | 1 TB Samsung 860 PRO SATA SSD, passed through to `vm-media` for `/srv/downloads` |
 | Bulk storage | 2 × 16 TB Seagate IronWolf Pro HDDs |
 | Case / PSU | Fractal Design Define R5 / Seasonic Focus GX-750 |
 | Router | MikroTik hAP ax2 |
