@@ -127,6 +127,13 @@ let
       project="label=com.docker.compose.project=${name n}"
       ${docker} ps -aq --filter "$project" | xargs -r ${docker} rm -fv
       ${docker} network ls -q --filter "$project" | xargs -r ${docker} network rm
+      for c in $(${docker} ps -aq); do
+        [ "$(${docker} inspect -f '{{.Name}}' "$c" 2>/dev/null)" = "/${container n}" ] && continue
+        mounts=$(${docker} inspect -f '{{range .Mounts}}{{println .Source}}{{end}}' "$c" 2>/dev/null || true)
+        if grep -qE '^${workDir n}(/|$)' <<<"$mounts"; then
+          ${docker} rm -fv "$c" >/dev/null
+        fi
+      done
       ${ensureImage}
       exec 3</run/github-runner-${toString n}/token
       rm -f /run/github-runner-${toString n}/token
