@@ -37,12 +37,13 @@ in {
     systemd.services.homelab-upgrade-pacer = {
       description = "Move a few library titles at a time onto the upgrade profiles and search them";
       after = [ "podman-radarr.service" "podman-sonarr.service" ];
+      unitConfig.RequiresMountsFor = [ "/srv/downloads" config.homelab.nfsMount.mountPoint ];
       environment = {
         PACER_APPLY = if cfg.apply then "1" else "0";
         PACER_MOVIES_PER_RUN = toString cfg.moviesPerRun;
         PACER_SEASONS_PER_RUN = toString cfg.seasonsPerRun;
         PACER_MAX_QUEUE = toString cfg.maxQueue;
-        PACER_MEDIA_PATH = "/srv/media";
+        PACER_MEDIA_PATH = config.homelab.nfsMount.mountPoint;
         PACER_DOWNLOADS_PATH = "/srv/downloads";
         PACER_STATE_PATH = "/var/lib/homelab-upgrade-pacer/state.json";
       };

@@ -44,6 +44,8 @@ in {
   systemd.services.podman-cleanuparr.unitConfig.RequiresMountsFor =
     lib.mkAfter [ "/srv/downloads" ];
 
+  homelab.upgradePacer.apply = true;
+
   sops = {
     defaultSopsFile = ../../../secrets/vm-media.yaml;
     defaultSopsFormat = "yaml";
