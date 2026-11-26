@@ -38,6 +38,7 @@
 
     ../../services/profilarr-v2
     ../../services/cleanuparr
+    ../../services/upgrade-pacer
 
     ../../services/tuliprox
 
