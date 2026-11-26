@@ -65,12 +65,13 @@ def log(msg):
 
 
 def queue_bytes_left(app):
-    total, page = 0, 1
+    downloads, page = {}, 1
     while True:
         r = call(app, "GET", f"queue?page={page}&pageSize=200&includeUnknownMovieItems=true&includeUnknownSeriesItems=true")
-        total += sum(int(x.get("sizeleft", 0)) for x in r["records"])
+        for x in r["records"]:
+            downloads[x.get("downloadId") or f"id-{x['id']}"] = int(x.get("sizeleft", 0))
         if page * 200 >= r["totalRecords"]:
-            return total, r["totalRecords"]
+            return sum(downloads.values()), len(downloads)
         page += 1
 
 
