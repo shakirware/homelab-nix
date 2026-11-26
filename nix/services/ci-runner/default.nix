@@ -127,6 +127,13 @@ let
       project="label=com.docker.compose.project=${name n}"
       ${docker} ps -aq --filter "$project" | xargs -r ${docker} rm -fv
       ${docker} network ls -q --filter "$project" | xargs -r ${docker} network rm
+      for c in $(${docker} ps -aq); do
+        [ "$(${docker} inspect -f '{{.Name}}' "$c" 2>/dev/null)" = "/${container n}" ] && continue
+        mounts=$(${docker} inspect -f '{{range .Mounts}}{{println .Source}}{{end}}' "$c" 2>/dev/null || true)
+        if grep -qE '^${workDir n}(/|$)' <<<"$mounts"; then
+          ${docker} rm -fv "$c" >/dev/null
+        fi
+      done
       ${ensureImage}
       exec 3</run/github-runner-${toString n}/token
       rm -f /run/github-runner-${toString n}/token
@@ -210,6 +217,17 @@ let
   # Every 10 minutes: above 75% use, drop everything unused at once.
   diskGuard = pkgs.writeShellScript "ci-disk-guard" ''
     set -uo pipefail
+    now=$(date +%s)
+    ${docker} ps -q | while read -r c; do
+      info=$(${docker} inspect -f '{{.Name}} {{.State.StartedAt}}' "$c" 2>/dev/null) || continue
+      cname=''${info%% *}
+      case "$cname" in /gha-runner-*) continue ;; esac
+      started=$(date -d "''${info#* }" +%s 2>/dev/null) || continue
+      if [ $((now - started)) -gt 7200 ]; then
+        echo "removing $cname: running for $(( (now - started) / 60 )) minutes"
+        ${docker} rm -fv "$c" >/dev/null
+      fi
+    done
     used=$(df --output=pcent / | tail -1 | tr -dc 0-9)
     [ "$used" -lt 75 ] && exit 0
     if ${busy}; then echo "disk at $used% but a job is running"; exit 0; fi
