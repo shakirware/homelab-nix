@@ -5,7 +5,7 @@ let
   pgid = "1001";
 in {
   virtualisation.oci-containers.containers.prowlarr = {
-    image = "lscr.io/linuxserver/prowlarr:version-2.7.0.5723@sha256:6660787a99b2e58203539583663c973b48979fc00ff2cb78dc0ea17429e1f6ef";
+    image = "lscr.io/linuxserver/prowlarr:version-3.1.0.5799@sha256:2806c9b763810589c42157730d547c293639e55c7610e9f5069314854639ec48";
     environment = {
       PUID = puid;
       PGID = pgid;
