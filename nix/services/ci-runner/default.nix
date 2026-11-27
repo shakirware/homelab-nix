@@ -10,7 +10,8 @@
 
 let
   cfg = config.homelab.ciRunner;
-  inherit (cfg) repo labels;
+  inherit (cfg) repo;
+  labels = n: lib.concatStringsSep "," ([ cfg.labels ] ++ cfg.extraLabels.${toString n} or [ ]);
   runners = lib.range 1 cfg.count;
 
   user = "ci";
@@ -145,7 +146,7 @@ let
       exec ${docker} run --rm -i --init --name ${container n} \
         --user 0 -e RUNNER_ALLOW_RUNASROOT=1 -e RUNNER_MANUALLY_TRAP_SIG=1 \
         -e RUNNER_REPO=${repo} -e RUNNER_NAME=${name n} \
-        -e RUNNER_LABELS=${labels} -e RUNNER_WORKDIR=${workDir n} \
+        -e RUNNER_LABELS=${labels n} -e RUNNER_WORKDIR=${workDir n} \
         -e RUNNER_TOOL_CACHE=${toolCache n} \
         -e AGENT_TOOLSDIRECTORY=${toolCache n} \
         -e COMPOSE_PROJECT_NAME=${name n} \
@@ -245,6 +246,12 @@ in {
     labels = lib.mkOption {
       type = lib.types.str;
       description = "Comma-separated runner labels that workflows target.";
+    };
+    extraLabels = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf lib.types.str);
+      default = { };
+      example = { "1" = [ "e2e" ]; };
+      description = "Labels added to single runners, keyed by runner number.";
     };
     count = lib.mkOption {
       type = lib.types.ints.positive;
