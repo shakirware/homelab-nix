@@ -12,6 +12,7 @@ in {
   homelab.ciRunner = {
     repo = "shakirware/locum-shifts-aggregator";
     labels = "vm-ci";
+    extraLabels."1" = [ "e2e" ];
     # Jobs barely use more than 2 cores each, so the 4 vCPUs pay off as
     # parallel runners: 3 brought the benchmark workflow from 387s to 172s.
     count = 3;
