@@ -100,7 +100,7 @@ in {
 
   virtualisation.oci-containers.containers = {
     kaneo-db = {
-      image = "postgres:16-alpine@sha256:1d5b02d3a9941fbd52437db4107f8c52d6297dac553ca1e5c299ebb3756b4857";
+      image = "postgres:16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d";
       environment = {
         POSTGRES_USER = "kaneo";
         POSTGRES_DB = "kaneo";

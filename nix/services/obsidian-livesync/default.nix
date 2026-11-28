@@ -72,7 +72,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.couchdb = {
-    image = "couchdb:3@sha256:907eab5b7e55ab7cfd241d39b90b2a335ea40bef82acee5a37388c08bf201dda";
+    image = "couchdb:3@sha256:0ba6b4b8dd823232185fa2c7de04634b925be62f97c9b7cbece7dd9119470e17";
     autoRemoveOnStop = lib.mkForce false;
 
     environment = { TZ = config.time.timeZone; };
