@@ -125,7 +125,7 @@ in {
   };
 
   virtualisation.oci-containers.containers.invoiceplane-db = {
-    image = "mariadb:12.3@sha256:4ebbcf100a3ba320766dfa0e1af008df12261301db6ef72798c7650f70794aed";
+    image = "mariadb:12.3@sha256:7a6c5d2070f93bb2b233ca818e46dc5ae2f25dd655f794e5216e36dba2d114a3";
     environment = {
       TZ = config.time.timeZone;
       MARIADB_DATABASE = "invoiceplane";

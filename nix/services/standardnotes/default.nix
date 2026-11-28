@@ -29,10 +29,10 @@ let
 
   serverImage =
     "docker.io/standardnotes/server:latest@sha256:6c1532b31dabf5b3e644fb2a458d3795f28138ac1ac5c4505a9fa1cea10524bb";
-  webImage = "docker.io/standardnotes/web:latest@sha256:7a99c571c73d58a23a6f84a27eb53f7768ba087cbc06dd152c9fa310e02c2f0c";
+  webImage = "docker.io/standardnotes/web:latest@sha256:b59b20d71a7baf1ab365a51218dae30e0877fad24622d6cccc8e76e079b4d27d";
 
   localstackImage = "docker.io/localstack/localstack:3.8@sha256:b279c01f4cfb8f985a482e4014cabc1e2697b9d7a6c8c8db2e40f4d9f93687c7";
-  mysqlImage = "docker.io/library/mysql:8@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902";
+  mysqlImage = "docker.io/library/mysql:8@sha256:8c233bad33d520a7aae1c1e619c3a9775f4a1ba2d463d692fada04ec7f40be00";
   redisImage = "docker.io/library/redis:6.2-alpine@sha256:3f9c6e23ed6bea3b41d0ef709fc164c1a0b7c00d5a21a60e0e9c33ada5496881";
 
   mysqlVol = "standardnotes-mysql";
